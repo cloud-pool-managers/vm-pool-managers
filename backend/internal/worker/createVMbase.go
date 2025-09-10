@@ -46,7 +46,7 @@ func CreateVMbase(cfg models.Config) error {
 		return fmt.Errorf("failed to create VM : %w", err)
 	}
 
-	jobs.DecrementPending("admin")
+	jobs.DecrementPending("PoolVms", "admin")
 	log.Printf("[VM] Creating server ID=%s Name=%s\n", server.ID, server.Name)
 
 	// Waiting for server to start
