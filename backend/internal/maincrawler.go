@@ -1,13 +1,16 @@
 package internal
 
 import (
+	"PoolManagerVM/backend/internal/jobs"
+	"PoolManagerVM/backend/internal/worker"
+	"PoolManagerVM/backend/models"
 	"PoolManagerVM/backend/utils"
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"time"
-
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 )
 
 func Monitor(c context.Context) {
@@ -22,37 +25,118 @@ func Monitor(c context.Context) {
 
 		case <-ticker.C:
 			log.Println("Checking serverpools...")
-			allServers, err := utils.GetAllServers()
-			if err != nil {
-				log.Fatalf("Error : %v", err)
-				return
-			}
-			CheckAndCreate(allServers)
+			CheckAndCreate()
 		}
 	}
 }
 
 // works only if one type of server in pool
-func CheckAndCreate(allServers []servers.Server) {
-	serverPools := map[string][]servers.Server{}
-	minVM := map[string]int{}
-	maxVM := map[string]int{}
-
-	for _, s := range allServers {
-		poolID := s.Metadata["serverpool"]
-		serverPools[poolID] = append(serverPools[poolID], s)
-		minVM[poolID] = utils.ParseInt(s.Metadata["minVM"])
-		maxVM[poolID] = utils.ParseInt(s.Metadata["maxVM"])
+func CheckAndCreate() {
+	serverpools, err := utils.GetAllServerPool()
+	if err != nil {
+		log.Println("Error, fetching serverpool from OpenStack:", err)
 	}
-
-	for poolID, serversInPool := range serverPools {
-		active := len(serversInPool)
-		missing := minVM[poolID] - active
-		if missing > 0 {
-			fmt.Printf("Serverpool %s: missing %d VM(s)\n", poolID, missing)
-			for range missing {
-				// go createVM(poolID, active, missing)
+	for _, sp := range serverpools {
+		mapToCreate := utils.MissingServersByParam(sp)
+		for i, missing := range mapToCreate {
+			for j := 0; j < missing; j++ {
+				worker.AddJob(*worker.CreateJob(sp.ServerpoolID, worker.CreateVM, NewCreateServerJob(sp, sp.Params[i])), false)
+				jobs.IncrementPending(sp.ServerpoolID, sp.UserID, i)
 			}
 		}
 	}
+
+	pool, found := FindServerpool(serverpools, "admin", "PoolVms")
+	if found {
+		fmt.Println("base found : ", pool)
+	} else {
+		log.Println("Base serverpool not found, creating")
+		createBaseServerJob()
+	}
+}
+
+func createBaseServerJob() {
+	pool, param, err := CreateServerpoolFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+	worker.AddJob(*worker.CreateJob(os.Getenv("SERVER_NAME"), worker.CreateVM, NewCreateServerJob(pool, param)), false)
+	jobs.IncrementPending(pool.ServerpoolID, pool.UserID, 1)
+}
+
+func CreateServerpoolFromEnv() (models.Serverpool, models.Param, error) {
+	// Lire les variables d'environnement
+	imageRef := os.Getenv("SERVER_IMAGE_REF")
+	flavorRef := os.Getenv("SERVER_FLAVOR_REF")
+	poolID := os.Getenv("METADATA_SERVERPOOL_ID")
+	userID := os.Getenv("METADATA_USER_ID")
+
+	minVMStr := os.Getenv("METADATA_MIN_VM")
+	maxVMStr := os.Getenv("METADATA_MAX_VM")
+
+	// Convertir MinVM et MaxVM en int
+	minVM, err := strconv.Atoi(minVMStr)
+	if err != nil {
+		return models.Serverpool{}, models.Param{}, err
+	}
+	maxVM, err := strconv.Atoi(maxVMStr)
+	if err != nil {
+		return models.Serverpool{}, models.Param{}, err
+	}
+
+	// Construire le param
+	param := models.Param{
+		ServerpoolID: poolID,
+		UserID:       userID,
+		ImageRef:     imageRef,
+		FlavorRef:    flavorRef,
+		Networks:     models.JSONStringSlice{os.Getenv("NETWORK_ID")},
+		MinVM:        minVM,
+		MaxVM:        maxVM,
+		PendingJobs:  0,
+	}
+
+	// Construire le serverpool
+	pool := models.Serverpool{
+		ServerpoolID: poolID,
+		UserID:       userID,
+		Params:       []models.Param{param},
+		ListServ:     []models.Server{}, // vide au départ
+	}
+
+	return pool, param, nil
+}
+
+// Exemple : création d’un Job pour un serveur à partir d’un Param
+func NewCreateServerJob(pool models.Serverpool, param models.Param) map[string]string {
+	networkValue, err := param.Networks.Value()
+	if err != nil {
+		networkValue = []byte("[]") // fallback
+	}
+
+	// convertir []byte en string
+	networkBytes, ok := networkValue.([]byte)
+	if !ok {
+		networkBytes = []byte("[]")
+	}
+	networkJSON := string(networkBytes)
+
+	return utils.BuildDataMap(
+		"serverpool_id", pool.ServerpoolID,
+		"user_id", pool.UserID,
+		"image_ref", param.ImageRef,
+		"flavor_ref", param.FlavorRef,
+		"networks", networkJSON,
+		"paramID", strconv.FormatUint(uint64(param.ID), 10),
+	)
+}
+
+// FindServerpool cherche un Serverpool dans un slice à partir de userID et serverpoolID
+func FindServerpool(pools []models.Serverpool, userID, poolID string) (*models.Serverpool, bool) {
+	for i := range pools {
+		if pools[i].UserID == userID && pools[i].ServerpoolID == poolID {
+			return &pools[i], true
+		}
+	}
+	return nil, false // pas trouvé
 }

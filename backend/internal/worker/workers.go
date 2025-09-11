@@ -3,6 +3,7 @@ package worker
 import (
 	"PoolManagerVM/backend/internal/jobs"
 	"PoolManagerVM/backend/models"
+	"PoolManagerVM/backend/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -77,13 +78,22 @@ func processJob(workerID int, job Job) {
 				log.Println("Error unmarshall metadata: ", err)
 			}
 		}
+
+		var networks models.JSONStringSlice
+		if err := networks.Scan(job.Data["networks"]); err != nil {
+			log.Println("Failed to parse networks:", err)
+			networks = models.JSONStringSlice{} // fallback
+		}
+
+		paramID := utils.ParseInt(job.Data["paramID"])
 		fmt.Println("Worker ", workerID, " takes the job of creating a VM")
 		jobs.CreateVM(models.Server{
 			Name:      fmt.Sprintf(`%s-%s`, job.Data["Name"], uuid.New().String()),
-			FlavorRef: job.Data["FlavorRef"],
-			ImageRef:  job.Data["ImageRef"],
+			FlavorRef: job.Data["flavor_ref"],
+			ImageRef:  job.Data["image_ref"],
 			Metadata:  metadata,
-		})
+			Networks:  networks,
+		}, uint(paramID))
 		fmt.Println("Worker ", workerID, " finished its job")
 	}
 }

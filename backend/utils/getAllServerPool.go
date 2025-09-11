@@ -27,34 +27,65 @@ func GetAllServerPool() ([]models.Serverpool, error) {
 
 		key := PoolKey{UserID: userID, PoolID: poolID}
 
-		// Créer le param pour ce serveur
+		// Récupérer ImageRef et FlavorRef
+		var imageID, flavorID string
+		if s.Image != nil {
+			if id, ok := s.Image["id"].(string); ok {
+				imageID = id
+			}
+		}
+		if s.Flavor != nil {
+			if id, ok := s.Flavor["id"].(string); ok {
+				flavorID = id
+			}
+		}
+
+		// Construire le param
 		param := models.Param{
-			ServerpoolID: s.Metadata["serverpool-id"],
-			UserID:       s.Metadata["userID"],
+			ServerpoolID: poolID,
+			UserID:       userID,
 			MinVM:        ParseInt(s.Metadata["minVM"]),
 			MaxVM:        ParseInt(s.Metadata["maxVM"]),
 			PendingJobs:  0,
-			ImageRef:     s.Image["id"].(string),
-			FlavorRef:    s.Flavor["id"].(string),
+			ImageRef:     imageID,
+			FlavorRef:    flavorID,
 			Networks:     models.JSONStringSlice{},
 		}
 
+		// Récupérer les IPs
 		networks := []string{}
-
 		for _, addrList := range s.Addresses {
-			for _, addr := range addrList.([]interface{}) {
-				m := addr.(map[string]interface{})
+			list, ok := addrList.([]interface{})
+			if !ok {
+				continue
+			}
+			for _, addr := range list {
+				m, ok := addr.(map[string]interface{})
+				if !ok {
+					continue
+				}
 				if ip, ok := m["addr"].(string); ok {
 					networks = append(networks, ip)
 				}
 			}
 		}
-
-		// Affecter à param.Networks
 		param.Networks = models.JSONStringSlice(networks)
 
+		// Créer le modèle Server
+		serverModel := models.Server{
+			ID:           s.ID,
+			Name:         s.Name,
+			Status:       s.Status,
+			FlavorRef:    flavorID,
+			ImageRef:     imageID,
+			Networks:     models.JSONStringSlice(networks),
+			Metadata:     s.Metadata,
+			ServerpoolID: poolID,
+			UserID:       userID,
+		}
+
 		if pool, exists := poolMap[key]; exists {
-			// Vérifier si le param existe déjà
+			// Ajouter param si nécessaire
 			found := false
 			for _, p := range pool.Params {
 				if p.MinVM == param.MinVM &&
@@ -65,19 +96,20 @@ func GetAllServerPool() ([]models.Serverpool, error) {
 					break
 				}
 			}
-
 			if !found {
-				// Ajouter le nouveau param
 				pool.Params = append(pool.Params, param)
-				poolMap[key] = pool
 			}
 
+			// Ajouter le serveur
+			pool.ListServ = append(pool.ListServ, serverModel)
+			poolMap[key] = pool
 		} else {
-			// Premier param pour ce pool
+			// Premier param et serveur pour ce pool
 			poolMap[key] = models.Serverpool{
 				ServerpoolID: poolID,
 				UserID:       userID,
 				Params:       []models.Param{param},
+				ListServ:     []models.Server{serverModel},
 			}
 		}
 	}

@@ -13,7 +13,7 @@ import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
-func CreateVM(serv models.Server) error {
+func CreateVM(serv models.Server, paramID uint) error {
 	opts := &clientconfig.ClientOpts{
 		Cloud: os.Getenv("OPTS_CLOUD"),
 	}
@@ -28,6 +28,7 @@ func CreateVM(serv models.Server) error {
 		FlavorRef: serv.FlavorRef,
 		ImageRef:  serv.ImageRef,
 		Metadata:  serv.Metadata,
+		Networks:  []servers.Network{{UUID: os.Getenv("NETWORK_ID")}},
 	}
 
 	createOptsExt := keypairs.CreateOptsExt{
@@ -35,12 +36,16 @@ func CreateVM(serv models.Server) error {
 		KeyName:           os.Getenv("API_KEYNAME"),
 	}
 
+	log.Printf("Creating server with Name=%s, Image=%s, Flavor=%s, Key=%s, Metadata=%v\n",
+		createOpts.Name, createOpts.ImageRef, createOpts.FlavorRef, createOptsExt.KeyName, createOpts.Metadata)
+
 	server, err := servers.Create(client, createOptsExt).Extract()
 	if err != nil {
+		log.Println("failed to create VM:", err)
 		return fmt.Errorf("failed to create VM: %w", err)
 	}
 
-	DecrementPending(serv.Metadata["serverpool-id"], serv.Metadata["userID"])
+	DecrementPending(serv.Metadata["serverpool-id"], serv.Metadata["userID"], int(paramID))
 	log.Println("[VM] Creating server ID=", server.ID, " , Name=", server.Name)
 
 	for {
