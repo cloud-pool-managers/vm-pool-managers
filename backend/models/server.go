@@ -17,14 +17,27 @@ package models
 // 	// avec SecurityGroup, création d'une table de jointure ServerSecurityGroup
 // }
 
+// type Server struct {
+// 	ID         string `gorm:"primaryKey"`
+// 	Name       string
+// 	Status     string
+// 	FlavorRef  string
+// 	ImageRef   string
+// 	Networks   []string
+// 	PoolID     *uint
+// 	Metadata   map[string]string
+// 	ServerPool *ServerPool `gorm:"foreignKey:PoolID"`
+// }
+
 type Server struct {
-	ID         string `gorm:"primaryKey"`
-	Name       string
-	Status     string
-	FlavorRef  string
-	ImageRef   string
-	Networks   []string
-	PoolID     *uint
-	Metadata   map[string]string
-	ServerPool *ServerPool `gorm:"foreignKey:PoolID"`
+	ID           string `gorm:"primaryKey"`
+	Name         string
+	Status       string
+	FlavorRef    string
+	ImageRef     string
+	Networks     JSONStringSlice `gorm:"type:text"` // Slice stocké en JSON
+	Metadata     JSONStringMap   `gorm:"type:text"` // Map stockée en JSON
+	ServerpoolID string          // clé étrangère vers Serverpool
+	UserID       string          // clé étrangère vers Serverpool
+	ServerPool   *Serverpoolv2   `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
 }

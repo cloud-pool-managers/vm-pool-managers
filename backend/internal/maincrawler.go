@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
@@ -33,6 +32,7 @@ func Monitor(c context.Context) {
 	}
 }
 
+// works only if one type of server in pool
 func CheckAndCreate(allServers []servers.Server) {
 	serverPools := map[string][]servers.Server{}
 	minVM := map[string]int{}
@@ -41,16 +41,8 @@ func CheckAndCreate(allServers []servers.Server) {
 	for _, s := range allServers {
 		poolID := s.Metadata["serverpool"]
 		serverPools[poolID] = append(serverPools[poolID], s)
-		min, err := strconv.Atoi(s.Metadata["minVM"])
-		if err != nil {
-			//stuff
-		}
-		minVM[poolID] = min
-		max, err := strconv.Atoi(s.Metadata["maxVM"])
-		if err != nil {
-			//stuff
-		}
-		maxVM[poolID] = max
+		minVM[poolID] = utils.ParseInt(s.Metadata["minVM"])
+		maxVM[poolID] = utils.ParseInt(s.Metadata["maxVM"])
 	}
 
 	for poolID, serversInPool := range serverPools {

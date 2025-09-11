@@ -29,8 +29,11 @@ type Job struct {
 	// retryCount int
 }
 
-var HighPriorityJobs chan Job
-var NormalPriorityJobs chan Job
+var (
+	HighPriorityJobs   chan Job
+	NormalPriorityJobs chan Job
+	jobCount           uint64
+)
 
 func LaunchWorkers(numWorkers int, wg *sync.WaitGroup, ctx context.Context) {
 	HighPriorityJobs = make(chan Job, 50)
@@ -66,19 +69,6 @@ func worker(id int, wg *sync.WaitGroup, ctx context.Context) {
 }
 
 func processJob(workerID int, job Job) {
-	// if job.Type == CreateVMAdmin {
-	// 	cfg, err := utils.LoadConfig("config.toml")
-	// 	if err != nil {
-	// 		log.Printf("Error\n")
-	// 		return
-	// 	}
-	// 	fmt.Println("Worker ", workerID, " takes the job of creating a base model VM")
-	// 	CreateVMbase(*cfg)
-	// 	fmt.Println("Worker ", workerID, " finished its job")
-	// } else {
-	// 	// sleep
-	// 	time.Sleep(time.Second)
-	// }
 	switch job.Type {
 	case CreateVM:
 		metadata := map[string]string{}
@@ -87,16 +77,16 @@ func processJob(workerID int, job Job) {
 				log.Println("Error unmarshall metadata: ", err)
 			}
 		}
+		fmt.Println("Worker ", workerID, " takes the job of creating a VM")
 		jobs.CreateVM(models.Server{
 			Name:      fmt.Sprintf(`%s-%s`, job.Data["Name"], uuid.New().String()),
 			FlavorRef: job.Data["FlavorRef"],
 			ImageRef:  job.Data["ImageRef"],
 			Metadata:  metadata,
 		})
+		fmt.Println("Worker ", workerID, " finished its job")
 	}
 }
-
-var jobCount uint64
 
 func CreateJob(name string, JobType JobType, data map[string]string) *Job {
 	jobCount++

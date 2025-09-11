@@ -12,18 +12,20 @@ type ServerPool struct {
 
 // a tester
 type Serverpoolv2 struct {
-	ID           uint
-	ServerpoolID string
-	UserID       string
-	Params       []Param
-	ListServ     []Server
+	ServerpoolID string   `gorm:"primaryKey"`
+	UserID       string   `gorm:"primaryKey"`
+	Params       []Param  `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"` // relation has-many
+	ListServ     []Server `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
 }
 
 type Param struct {
-	ImageRef    string
-	FlavorRef   string
-	Networks    []string
-	MinVM       int
-	MaxVM       int
-	PendingJobs int
+	ID           uint   `gorm:"primaryKey;autoIncrement"`
+	ServerpoolID string // clé étrangère
+	UserID       string // clé étrangère
+	ImageRef     string
+	FlavorRef    string
+	Networks     JSONStringSlice `gorm:"type:text"`
+	MinVM        int
+	MaxVM        int
+	PendingJobs  int
 }
