@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"PoolManagerVM/backend/models"
+	"PoolManagerVM/backend/utils"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -13,7 +15,37 @@ import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
-func CreateVM(serv models.Server, paramID uint) error {
+func CreateVM(workerID int, job models.Job) error {
+
+	metadata := map[string]string{}
+	if metaStr, ok := job.Data["Metadata"]; ok && metaStr != "" {
+		if err := json.Unmarshal([]byte(metaStr), &metadata); err != nil {
+			log.Println("Error unmarshall metadata: ", err)
+		}
+	}
+	metadata["user_id"] = job.Data["user_id"]
+	metadata["serverpool_id"] = job.Data["serverpool_id"]
+	metadata["min_vm"] = job.Data["min_vm"]
+	metadata["max_vm"] = job.Data["max_vm"]
+
+	var networks models.JSONStringSlice
+	if err := networks.Scan(job.Data["networks"]); err != nil {
+		log.Println("Failed to parse networks:", err)
+		networks = models.JSONStringSlice{} // fallback
+	}
+
+	paramID := utils.ParseInt(job.Data["ID"])
+	fmt.Println("Worker ", workerID, " takes the job of creating a VM")
+
+	serv := models.Server{
+		Name:         job.Data["name"],
+		FlavorRef:    job.Data["flavor_ref"],
+		ImageRef:     job.Data["image_ref"],
+		UserID:       job.Data["user_id"],
+		ServerpoolID: job.Data["serverpool_id"],
+		Metadata:     metadata,
+		Networks:     networks,
+	}
 
 	opts := &clientconfig.ClientOpts{
 		Cloud: os.Getenv("OPTS_CLOUD"),
@@ -43,7 +75,7 @@ func CreateVM(serv models.Server, paramID uint) error {
 		return fmt.Errorf("failed to create VM: %w", err)
 	}
 
-	DecrementPending(paramID)
+	DecrementPending(uint(paramID))
 	log.Println("[VM] Creating server ID=", server.ID, " , Name=", server.Name)
 
 	for {
@@ -64,6 +96,8 @@ func CreateVM(serv models.Server, paramID uint) error {
 		log.Printf("[VM] Waiting for server %s (status=%s)\n", current.ID, current.Status)
 		time.Sleep(3 * time.Second)
 	}
+
+	fmt.Println("Worker ", workerID, " finished its job")
 
 	return nil
 }

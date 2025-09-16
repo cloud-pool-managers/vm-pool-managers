@@ -113,7 +113,7 @@ func DeleteServerpool(c *gin.Context) {
 			var args []string
 			args = append(args, "instance_id")
 			args = append(args, s.ID)
-			worker.AddJob(*worker.CreateJob(worker.DeleteVM, utils.BuildDataMap(args)), true)
+			worker.AddJob(*worker.CreateJob(models.DeleteVM, utils.BuildDataMap(args)), true)
 		}
 	}
 

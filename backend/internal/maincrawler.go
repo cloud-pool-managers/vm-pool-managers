@@ -55,7 +55,7 @@ func CheckAndCreate() {
 		}
 		missing := p.MinVM - (count + p.PendingJobs)
 		for i := 0; i < missing; i++ {
-			worker.AddJob(*worker.CreateJob(worker.CreateVM, utils.BuildDataMap(utils.FlatstringSP(p))), false)
+			worker.AddJob(*worker.CreateJob(models.CreateVM, utils.BuildDataMap(utils.FlatstringSP(p))), false)
 			jobs.IncrementPending(p.ID)
 		}
 	}
@@ -73,7 +73,7 @@ func CheckAndCreate() {
 			log.Println("Error: can't create param from env: ", err)
 		}
 		for i := 0; i < base_p.MinVM; i++ {
-			worker.AddJob(*worker.CreateJob(worker.CreateVM, utils.BuildDataMap(utils.FlatstringSP(base_p))), false)
+			worker.AddJob(*worker.CreateJob(models.CreateVM, utils.BuildDataMap(utils.FlatstringSP(base_p))), false)
 			jobs.IncrementPending(base_p.ID)
 		}
 	}
