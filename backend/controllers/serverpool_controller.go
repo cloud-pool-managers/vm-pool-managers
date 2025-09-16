@@ -58,6 +58,16 @@ func CreateServerpool(c *gin.Context) {
 		return
 	}
 
+	// if err:= config.Database.Create(&models.Serverpool{
+	// UserID:       user.Email,
+	// 	ServerpoolID: body.Namesp,
+	// 	ImageRef:     body.ImageRef,
+	// 	FlavorRef:    body.FlavorRef,
+	// 	Networks:     models.JSONStringSlice{body.Networks},
+	// 	MinVM:        body.MinVM,
+	// 	MaxVM:        body.MaxVM,
+	// PendingJobs:  0,
+	// }).Error; err != nil {
 	if err := config.Database.Create(&models.Serverpool{
 		UserID:       user.Email,
 		ServerpoolID: body.Namesp,
