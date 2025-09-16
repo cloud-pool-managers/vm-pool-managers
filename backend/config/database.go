@@ -13,8 +13,10 @@ import (
 	"PoolManagerVM/backend/utils"
 )
 
+// global variable to get access to the database anywhere in the code
 var Database *gorm.DB
 
+// boot the database
 func Start_DB() {
 	var err error
 	Database, err = gorm.Open(sqlite.Open("PoolManagerVM.db"), &gorm.Config{})
@@ -25,6 +27,7 @@ func Start_DB() {
 	Database.AutoMigrate(&models.User{}, &models.Serverpool{}, &models.Server{})
 }
 
+// routine to maintain a cohesive database with the reality on OpenStack
 func Sync_DB(ctx context.Context) {
 	do_sync()
 	first = false
@@ -42,6 +45,7 @@ func Sync_DB(ctx context.Context) {
 	}
 }
 
+// check if server in the database still exist on Openstack, update the database if not
 func delete_serv() {
 	allserv, err := utils.GetAllServers()
 	if err != nil {
@@ -80,6 +84,8 @@ func delete_serv() {
 
 var first = true
 
+// synchronize the database to Openstack, creating entries if news instances are made on Openstack
+// create pools only if it is the first occurence of the routine
 func do_sync() {
 	log.Println("Resync !")
 	allpool, err := utils.GetAllServerPool()

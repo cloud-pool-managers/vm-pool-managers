@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// return a list of all serverpool (might not be useful)
 func GetServerpool(c *gin.Context) {
 
 	allServers, err := utils.GetAllServers()
@@ -32,6 +33,9 @@ func GetServerpool(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"servers": activeServs})
 }
 
+// create a serverpool in DB, instances will be created by maincrawler
+// take only the name of the new serverpool, with authentication before
+// create serverpool with base config for now, adding possibles configuration from form
 func CreateServerpool(c *gin.Context) {
 	//essai avec les meme image et flavor que admin
 	userID, exist := c.Get("user_id")
@@ -74,6 +78,8 @@ func CreateServerpool(c *gin.Context) {
 	})
 }
 
+// delete a serverpool in DB and lauching jobs to delete instances
+// takes only serverpool_ID and need to be authenticated
 func DeleteServerpool(c *gin.Context) {
 	userID, exist := c.Get("user_id")
 	if !exist {

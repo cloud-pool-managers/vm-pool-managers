@@ -15,6 +15,25 @@ import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
+// CreateVM handles the creation of a new virtual machine (VM) on OpenStack.
+// It is executed by a worker, using the details provided in the job payload.
+//
+// Workflow:
+//   1. Extracts metadata, network configuration, and VM parameters from the job.
+//   2. Builds a Server definition with user information, serverpool, flavor, image, and metadata.
+//   3. Initializes an OpenStack compute client using the cloud configuration (from OPTS_CLOUD).
+//   4. Creates the VM with a unique name, specified flavor, image, keypair, and network.
+//   5. Waits for the VM to reach the ACTIVE state, or fails if it reaches the ERROR state.
+//   6. Logs progress and decrements the "pending jobs" counter once the creation request is submitted.
+//
+// Parameters:
+//   - workerID: ID of the worker handling this job, used for logging.
+//   - job:      A Job struct containing all VM creation parameters (flavor, image, network, etc.).
+//
+// Returns:
+//   - error: An error if the VM creation fails, the compute client cannot be initialized,
+//            or the VM enters an ERROR state. Returns nil if the VM becomes ACTIVE successfully.
+
 func CreateVM(workerID int, job models.Job) error {
 
 	metadata := map[string]string{}

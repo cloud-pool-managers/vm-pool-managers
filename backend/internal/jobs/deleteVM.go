@@ -8,6 +8,21 @@ import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
+// DeleteVM deletes an existing virtual machine (VM) from OpenStack.
+//
+// Workflow:
+//  1. Reads the cloud configuration name from the OPTS_CLOUD environment variable.
+//  2. Initializes an OpenStack compute client using the clouds.yaml configuration.
+//  3. Sends a delete request for the VM with the given instance ID.
+//  4. Returns an error if the environment variable is missing, the client cannot be created,
+//     or the deletion request fails.
+//
+// Parameters:
+//   - instanceID: The unique identifier of the VM to be deleted.
+//
+// Returns:
+//   - error: An error if the client setup fails or the VM deletion request fails.
+//     Returns nil if the VM is successfully deleted.
 func DeleteVM(instanceID string) error {
 	cloudName := os.Getenv("OPTS_CLOUD")
 	if cloudName == "" {

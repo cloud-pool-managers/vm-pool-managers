@@ -16,6 +16,9 @@ type LoginInput struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// Endpoint to login
+// takes email and password
+// return JWT in body
 func LoginUser(c *gin.Context) {
 	var input LoginInput
 	if err := c.ShouldBindJSON(&input); err != nil {

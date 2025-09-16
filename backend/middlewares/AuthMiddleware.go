@@ -8,6 +8,19 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// AuthMiddleware is a Gin middleware that validates JWT access tokens in incoming requests.
+//
+// Workflow:
+//  1. Reads the "Authorization" header from the request.
+//     - Expects the format: "Bearer <token>".
+//  2. Parses and validates the JWT using HMAC and the configured secret.
+//  3. If the token is missing, invalid, or has a wrong signature, it returns 401 Unauthorized and aborts the request.
+//  4. If valid, extracts the "user_id" claim from the token and stores it in the Gin context for use by downstream handlers.
+//  5. Calls c.Next() to continue processing the request.
+//
+// Usage:
+//
+//	router.Use(AuthMiddleware())
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")

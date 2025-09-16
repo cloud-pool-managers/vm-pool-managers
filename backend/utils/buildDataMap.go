@@ -5,8 +5,17 @@ import (
 	"fmt"
 )
 
-// BuildDataMap construit une map[string]string à partir d'arguments variadiques.
-// Usage : BuildDataMap("clé1", "val1", "clé2", "val2", ...)
+// BuildDataMap converts a flat slice of strings into a map[string]string.
+//
+// Parameters:
+//   - kv: A slice of strings where elements appear in key-value pairs: [key1, value1, key2, value2, ...].
+//
+// Returns:
+//   - map[string]string: A map containing the key-value pairs.
+//
+// Panics:
+//   - If the length of kv is not even (every key must have a corresponding value).
+
 func BuildDataMap(kv []string) map[string]string {
 	if len(kv)%2 != 0 {
 		panic("BuildDataMap requires an even number of arguments (clé, valeur)")
@@ -21,6 +30,14 @@ func BuildDataMap(kv []string) map[string]string {
 	return data
 }
 
+// FlatstringSP flattens a Serverpool struct into a slice of strings suitable for BuildDataMap.
+//
+// Parameters:
+//   - p: The Serverpool struct to flatten.
+//
+// Returns:
+//   - []string: A flat slice containing keys and values of the Serverpool's fields in the order:
+//     "ID", "serverpool_id", "user_id", "image_ref", "flavor_ref", "networks", "min_vm", "max_vm".
 func FlatstringSP(p models.Serverpool) []string {
 	var flat []string
 	flat = append(flat,
