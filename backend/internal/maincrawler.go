@@ -7,10 +7,13 @@ import (
 	"PoolManagerVM/backend/models"
 	"PoolManagerVM/backend/utils"
 	"context"
+	"errors"
 	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Monitor periodically checks server pools and ensures the minimum number of VMs are running.
@@ -88,6 +91,15 @@ func CheckAndCreate() {
 		base_p, err := CreateServerpoolFromEnv()
 		if err != nil {
 			log.Println("Error: can't create param from env: ", err)
+		}
+		if err := config.Database.First(&base_p, "serverpool_id = ? AND user_id = ?", base_p.ServerpoolID, base_p.UserID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				config.Database.Create(&base_p)
+			} else {
+				log.Println("Error Database: ", err)
+			}
+		} else {
+			config.Database.Model(&base_p).Updates(base_p)
 		}
 		for i := 0; i < base_p.MinVM; i++ {
 			worker.AddJob(*worker.CreateJob(models.CreateVM, utils.BuildDataMap(utils.FlatstringSP(base_p))), false)
