@@ -4,6 +4,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 )
 
 type JSONStringSlice []string
@@ -71,4 +73,12 @@ func (j JSONStringMap) Value() (driver.Value, error) {
 		return "{}", nil
 	}
 	return json.Marshal(j)
+}
+
+func (j JSONStringSlice) ToNetworks() []servers.Network {
+	nets := make([]servers.Network, 0, len(j))
+	for _, id := range j {
+		nets = append(nets, servers.Network{UUID: id})
+	}
+	return nets
 }

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"PoolManagerVM/backend/models"
+	"encoding/json"
 	"fmt"
 )
 
@@ -46,7 +47,13 @@ func FlatstringSP(p models.Serverpool) []string {
 		"user_id", p.UserID,
 		"image_ref", p.ImageRef,
 		"flavor_ref", p.FlavorRef,
-		"networks", fmt.Sprint(p.Networks), // JSONStringSlice, converti en string
+		"networks", func() string {
+			b, err := json.Marshal(p.Networks)
+			if err != nil {
+				return "[]"
+			}
+			return string(b)
+		}(), // JSONStringSlice, converti en string
 		"min_vm", fmt.Sprint(p.MinVM),
 		"max_vm", fmt.Sprint(p.MaxVM))
 	return flat

@@ -91,7 +91,7 @@
 
 <!-- NavBar -->
 <div class="min-h-screen bg-gradient-to-b from-gray-300 via-gray-400 to-gray-900">
-	<Navbar class=" sticky start-0 top-0 z-20 w-full bg-gray-900/70 backdrop-blur-md shadow-md rounded-b-2xl">
+	<Navbar color="gray" class=" sticky start-0 top-0 z-20 w-full bg-gray-900/70 backdrop-blur-md shadow-md rounded-b-2xl">
 		<NavBrand href="/">
 			<img src="src/lib/assets/IDCS.png" class="me-3 h-6 sm:h-9" alt="ICDS Logo" />
 			<span class="self-center text-xl font-semibold whitespace-nowrap text-gray-300 dark:text-white">CloudPoolManager</span>

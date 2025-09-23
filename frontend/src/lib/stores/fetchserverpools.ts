@@ -24,8 +24,8 @@ export interface Server {
   id: string;
   name: string;
   status: string;
-  flavor_id: string;
-  image_id: string;
+  flavor: { id: string; name: string | null };
+  image: { id: string; name: string | null };
   addresses: Record<string, { addr: string }[]>;
   created: string;
   updated?: string;
@@ -95,6 +95,7 @@ function createServerpoolStore() {
         throw new Error("Impossible de récupérer les serveurs du serverpool");
       }
       const data = await res.json();
+      console.log("Data received for servers in serverpool:", data);
       return data.servers || [];
     } catch (err) {
       console.error(err);
@@ -172,6 +173,10 @@ async function fetchAllImages(): Promise<ImageOption[]> {
 export interface FlavorOption {
   value: string;
   name: string;
+  disk: number;
+  ram: number;
+  vcpus: number;
+  rxtx_factor: number;
 }
 
 async function fetchAllFlavors(): Promise<FlavorOption[]> {
@@ -186,7 +191,11 @@ async function fetchAllFlavors(): Promise<FlavorOption[]> {
     const data = await res.json();
     return (data.flavors || []).map((flavor: any) => ({
       value: flavor.id,
-      name: flavor.name || flavor.id
+      name: flavor.name || flavor.id,
+      disk: flavor.disk,
+      ram: flavor.ram,
+      vcpus: flavor.vcpus,
+      rxtx_factor: flavor.rxtx_factor
     }));
   } catch (err) {
     console.error(err);
@@ -211,7 +220,11 @@ async function fetchAllNetworks(): Promise<NetworkOption[]> {
     const data = await res.json();
     return (data.networks || []).map((net: any) => ({
       value: net.id,
-      name: net.name || net.id
+      name: net.name || net.id,
+      disk: net.disk,
+      ram: net.ram,
+      vcpus: net.vcpus,
+      rxtx_factor: net.rxtx_factor
     }));
   } catch (err) {
     console.error(err);
@@ -219,7 +232,27 @@ async function fetchAllNetworks(): Promise<NetworkOption[]> {
   }
 }
 
+// Supprimer un serverpool
+async function deleteServerpool(serverpoolId: string) {
+  const token = get(authStore);
+  try {
+    const res = await fetch(`http://localhost:8080/serverpool/${serverpoolId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      throw new Error("Impossible de supprimer le serverpool");
+    } else {
+      // Actualiser la liste des serverpools après la suppression
+      await serverpoolStore.fetchServerpools();
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
 // Exports
 
-export { createServerpool, fetchAllImages, fetchAllFlavors, fetchAllNetworks };
+export { createServerpool, fetchAllImages, fetchAllFlavors, fetchAllNetworks, deleteServerpool };
 export const serverpoolStore = createServerpoolStore();

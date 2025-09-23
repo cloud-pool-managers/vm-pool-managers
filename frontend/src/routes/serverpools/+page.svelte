@@ -1,19 +1,18 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { authStore, serverpoolStore, createServerpool , fetchAllImages, fetchAllFlavors , fetchAllNetworks} from '$lib/index';
+import { authStore, serverpoolStore, createServerpool , fetchAllImages, fetchAllFlavors , fetchAllNetworks, deleteServerpool} from '$lib/index';
 import type { ImageOption , FlavorOption , NetworkOption } from '$lib/index';
-import { Button, Dropdown, DropdownItem, Table, TableBody, TableHead, TableBodyCell, TableBodyRow, TableHeadCell, Modal , Label, Input, Select , Range, Checkbox } from 'flowbite-svelte';
+import { Button, Dropdown, DropdownItem, Table, TableBody, TableHead, TableBodyCell, TableBodyRow, TableHeadCell, Modal , Label, Input, Select , MultiSelect } from 'flowbite-svelte';
 import { ChevronDownOutline } from 'flowbite-svelte-icons';
 
-
-// Typage pour un serveur
+// Typage serveur
 interface Server {
   id: string;
   name: string;
   status: string;
-  flavor_id: string;
-  image_id: string;
+  flavor: { id: string; name: string | null };
+  image: { id: string; name: string | null };
   addresses: Record<string, { addr: string }[]>;
   created: string;
   updated?: string;
@@ -28,18 +27,18 @@ let token: string | null = null;
 $: token = $authStore;
 
 let serverpools;
-
 $: ({ user, serverpools, error } = $serverpoolStore);
 
 let interval: ReturnType<typeof setInterval>;
 
 onMount(async () => {
   if (!token) {
-    goto('/'); // redirige si pas connecté
+    goto('/'); 
     return;
   } else {
     serverpoolStore.fetchServerpools();
     interval = setInterval(serverpoolStore.fetchServerpools, 50000);
+
     const apiImages = await fetchAllImages();
     images = apiImages
       .filter(img => img.status === 'active')
@@ -48,21 +47,22 @@ onMount(async () => {
         name: img.name || img.value,
         status: img.status
       }));
-    console.log("Images disponibles :", images);
 
     const apiFlavors = await fetchAllFlavors();
     flavors = apiFlavors.map(flavor => ({
       value: flavor.value,
-      name: flavor.name || flavor.value
+      name: flavor.name || flavor.value,
+      disk: flavor.disk,
+      ram: flavor.ram,
+      vcpus: flavor.vcpus,
+      rxtx_factor: flavor.rxtx_factor
     }));
-    console.log("Flavors disponibles :", flavors);
 
     const apiNetworks = await fetchAllNetworks();
     networks = apiNetworks.map(net => ({
       value: net.value,
       name: net.name || net.value
     }));
-    console.log("Réseaux disponibles :", networks);
   }
 });
 
@@ -72,13 +72,10 @@ onDestroy(() => {
 
 let servers: Server[] = [];
 let selectedsp: string = 'Choisissez le serverpool';
-let selectedImage: string = '';
-let selectedFlavor: string = '';
-let selectedNetwork: string = '';
+let selectedNetwork: string[] = [];
 
 let loadingServers = false;
 
-// Quand on clique sur un item du dropdown, on charge les serveurs du pool sélectionné
 const handleClick = async (e: Event) => {
   e.preventDefault();
   const target = e.target as HTMLButtonElement;
@@ -117,10 +114,8 @@ async function handleCreateServerpool(event: Event) {
   }
 
   try {
-    // 2. Nettoyer la liste des réseaux
     const networks = networksStr.split(',').map(n => n.trim()).filter(n => n);
 
-    // 3. Créer le serverpool avec le flavor.id
     await createServerpool({
       namesp,
       image_ref,
@@ -130,7 +125,6 @@ async function handleCreateServerpool(event: Event) {
       max_vm
     });
 
-    // 4. Succès
     createSuccess = true;
     setTimeout(() => {
       form.reset();
@@ -143,28 +137,60 @@ async function handleCreateServerpool(event: Event) {
   }
 }
 
+async function handleDeleteServerpool(serverpoolId: string) {
+  if (!confirm(`Êtes-vous sûr de vouloir supprimer le serverpool ${serverpoolId} ?`)) {
+    return;
+  }
+  try {
+    await deleteServerpool(serverpoolId);
+    if (selectedsp === serverpoolId) {
+      selectedsp = 'Choisissez le serverpool';
+      servers = [];
+    }
+  } catch (err: any) {
+    alert(err.message || "Erreur lors de la suppression du serverpool");
+  }
+}
+
+// Helpers
+function getFlavorNameById(id: string): string {
+  const flavor = flavors.find(f => f.value === id);
+  return flavor ? flavor.name : id;
+}
+
+function getImageNameById(id: string): string {
+  const img = images.find(i => i.value === id);
+  return img ? img.name : id;
+}
+
+let selectedNetworks: string[] = [];
+let selectedFlavor: string = "";
 </script>
 
-
-
-<!-- Dropdown pour choisir un serverpool -->
-<Button size="md" class="w-48 h-12">{selectedsp}<ChevronDownOutline class="ms-2 h-6 text-white" /></Button>
+<!-- Dropdown -->
+<Button size="md" class="w-48 h-12">
+  {selectedsp}<ChevronDownOutline class="ms-2 h-6 text-white" />
+</Button>
 <Dropdown simple isOpen={false} class="mt-2">
   {#each serverpools as sp}
     <DropdownItem name={sp.serverpool_id} onclick={handleClick}>{sp.serverpool_id}</DropdownItem>
   {/each}
 </Dropdown>
 
-<!-- Table des serveurs -->
+<!-- Table -->
 {#if loadingServers}
   <p>Chargement des serveurs...</p>
-{:else if servers.length}
-  <Table>
+{:else if servers.length > 0}
+  <Table hoverable={true} class="mt-4" striped={true} color="gray">
+    <caption>
+      {selectedsp}
+      <p class="text-sm font-normal">Flavor: {getFlavorNameById(servers[0].flavor.id)}</p>
+      <p class="text-sm font-normal">Image: {getImageNameById(servers[0].image.id)}</p>
+    </caption>
+
     <TableHead>
       <TableHeadCell>Nom</TableHeadCell>
       <TableHeadCell>Status</TableHeadCell>
-      <TableHeadCell>Flavor</TableHeadCell>
-      <TableHeadCell>Image</TableHeadCell>
       <TableHeadCell>IP</TableHeadCell>
       <TableHeadCell>Créé le</TableHeadCell>
     </TableHead>
@@ -173,8 +199,6 @@ async function handleCreateServerpool(event: Event) {
         <TableBodyRow>
           <TableBodyCell>{s.name}</TableBodyCell>
           <TableBodyCell>{s.status}</TableBodyCell>
-          <TableBodyCell>{s.flavor_id}</TableBodyCell>
-          <TableBodyCell>{s.image_id}</TableBodyCell>
           <TableBodyCell>
             {#if s.addresses}
               {#each Object.values(s.addresses) as net}
@@ -189,50 +213,57 @@ async function handleCreateServerpool(event: Event) {
       {/each}
     </TableBody>
   </Table>
+  <Button size="sm" color="blue" class="mt-2" onclick={() => handleDeleteServerpool(selectedsp)}>Supprimer le serverpool</Button>
 {:else}
   <p>Aucun serveur trouvé pour ce serverpool.</p>
 {/if}
 
-
-
-<!-- Formulaire pour creer un serverpool  -->
+<!-- Modal -->
 <Button size="md" color="green" class="mt-4" onclick={() => createspModal = true}>Créer un serverpool</Button>
 
 {#if createspModal}
   <Modal bind:open={createspModal} class="bg-gray-400" focustrap={true}>
-  <form class="flex flex-col space-y-6" on:submit|preventDefault={handleCreateServerpool}>
-    <h3 class="mb-4 text-2xl font-medium text-gray-800">Créer un Serverpool</h3>
-    {#if createError}
-      <Label color="red">{createError}</Label>
-    {/if}
-    {#if createSuccess}
-      <Label color="green" class="text-xl">Serverpool créé avec succès</Label>
-    {/if}
-    <Label class="space-y-2 text-xl">
-      <span>Nom du Serverpool</span>
-      <Input type="text" name="namesp" placeholder="Nom du serverpool" required />
-    </Label>
-    <Label class="space-y-2 text-xl">
-      <span>Image Ref</span>
-      <Select name="image_ref" items={images} bind:value={selectedImage} required />
-    </Label>
-    <Label class="space-y-2 text-xl">
-      <span>Flavor Ref</span>
-      <Select name="flavor_ref" items={flavors} bind:value={selectedFlavor} required />
-    </Label>
-    <Label class="space-y-2 text-xl">
-      <span>Réseaux</span>
-      <Select name="networks" items={networks} bind:value={selectedNetwork} required />
-    </Label>
-    <Label class="space-y-2 text-xl">
-      <span>Min VM</span>
-      <Input type="number" name="min_vm" min="1" value="1" required />
-    </Label>
-    <Label class="space-y-2 text-xl">
-      <span>Max VM</span>
-      <Input type="number" name="max_vm" min="1" value="1" required />
-    </Label>
-    <Button type="submit" color="green">Créer</Button>
-  </form>
-</Modal>
+    <form class="flex flex-col space-y-6" on:submit|preventDefault={handleCreateServerpool}>
+      <h3 class="mb-4 text-2xl font-medium text-gray-800">Créer un Serverpool</h3>
+      {#if createError}
+        <Label color="red">{createError}</Label>
+      {/if}
+      {#if createSuccess}
+        <Label color="green" class="text-xl">Serverpool créé avec succès</Label>
+      {/if}
+      <Label class="space-y-2 text-xl">
+        <span>Nom du Serverpool</span>
+        <Input type="text" name="namesp" placeholder="Nom du serverpool" required />
+      </Label>
+      <Label class="space-y-2 text-xl">
+        <span>Image Ref</span>
+        <Select name="image_ref" items={images} required />
+      </Label>
+      <Label class="space-y-2 text-xl">
+        <span>Flavor Ref</span>
+        <Select name="flavor_ref" items={flavors} bind:value={selectedFlavor} required />
+        {#if selectedFlavor}
+          {#each flavors.filter(f => f.value === selectedFlavor) as flavor}
+            <p>Disk: {flavor.disk} GB</p>
+            <p>RAM: {flavor.ram} MB</p>
+            <p>vCPUs: {flavor.vcpus}</p>
+            <p>RXTX Factor: {flavor.rxtx_factor}</p>
+          {/each}
+        {/if}
+      </Label>
+      <Label class="space-y-2 text-xl">
+        <span>Réseaux</span>
+        <MultiSelect name="networks" items={networks} value={selectedNetworks} placeholder="Sélectionnez les réseaux" required size="md"/>
+      </Label>
+      <Label class="space-y-2 text-xl">
+        <span>Min VM</span>
+        <Input type="number" name="min_vm" min="1" value="1" required />
+      </Label>
+      <Label class="space-y-2 text-xl">
+        <span>Max VM</span>
+        <Input type="number" name="max_vm" min="1" value="1" required />
+      </Label>
+      <Button type="submit" color="green">Créer</Button>
+    </form>
+  </Modal>
 {/if}

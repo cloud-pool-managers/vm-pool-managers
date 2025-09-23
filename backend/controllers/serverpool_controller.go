@@ -77,16 +77,6 @@ func CreateServerpool(c *gin.Context) {
 		MaxVM:        body.MaxVM,
 		PendingJobs:  0,
 	}).Error; err != nil {
-		// if err := config.Database.Create(&models.Serverpool{
-		// 	UserID:       user.Email,
-		// 	ServerpoolID: body.Namesp,
-		// 	ImageRef:     os.Getenv("SERVER_IMAGE_REF"),
-		// 	FlavorRef:    os.Getenv("SERVER_FLAVOR_REF"),
-		// 	Networks:     models.JSONStringSlice{os.Getenv("NETWORK_ID")},
-		// 	MinVM:        2,
-		// 	MaxVM:        4,
-		// 	PendingJobs:  0,
-		// }).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot create serverpool"})
 		return
 	}
@@ -106,11 +96,9 @@ func DeleteServerpool(c *gin.Context) {
 		return
 	}
 
-	var body struct {
-		Namesp string `json:"namesp"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	serverpoolID := c.Param("id")
+	if serverpoolID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing serverpool_id"})
 		return
 	}
 
@@ -120,7 +108,7 @@ func DeleteServerpool(c *gin.Context) {
 		return
 	}
 
-	if err := config.Database.Where("user_id = ? AND serverpool_id = ?", user.Email, body.Namesp).
+	if err := config.Database.Where("user_id = ? AND serverpool_id = ?", user.Email, serverpoolID).
 		Delete(&models.Serverpool{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot delete serverpool"})
 		return
@@ -134,7 +122,7 @@ func DeleteServerpool(c *gin.Context) {
 
 	for _, ops := range allServers {
 		s := models.FromGopherServer(ops)
-		if s.UserID == user.Email && s.ServerpoolID == body.Namesp {
+		if s.UserID == user.Email && s.ServerpoolID == serverpoolID {
 			var args []string
 			args = append(args, "instance_id")
 			args = append(args, s.ID)
@@ -144,7 +132,7 @@ func DeleteServerpool(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "serverpool deleted",
-		"serverpool": body.Namesp,
+		"serverpool": serverpoolID,
 	})
 }
 
@@ -201,20 +189,27 @@ func GetServersInServerpool(c *gin.Context) {
 		ms := models.FromGopherServer(s)
 		if ms.UserID == userEmail && ms.ServerpoolID == serverpoolID {
 			serversInPool = append(serversInPool, gin.H{
-				"id":        s.ID,
-				"name":      s.Name,
-				"status":    s.Status,
-				"flavor_id": s.Flavor["name"],
-				"image_id":  s.Image["name"],
+				"id":     s.ID,
+				"name":   s.Name,
+				"status": s.Status,
+				"flavor": gin.H{
+					"id":   s.Flavor["id"],
+					"name": s.Flavor["name"],
+				},
+				"image": gin.H{
+					"id":   s.Image["id"],
+					"name": s.Image["name"],
+				},
 				"addresses": s.Addresses,
 				"created":   s.Created,
 				"updated":   s.Updated,
 				"host_id":   s.HostID,
 				"progress":  s.Progress,
 			})
+
 		}
 	}
-
+	// fmt.Println("SERVERS IN POOL:", serversInPool)
 	c.JSON(http.StatusOK, gin.H{"servers": serversInPool})
 }
 
@@ -265,6 +260,7 @@ func GetallFlavors(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
 		return
 	}
+	// utils.PrintAllFlavor(allFlavors)
 
 	ctx.JSON(http.StatusOK, gin.H{"flavors": allFlavors})
 }
