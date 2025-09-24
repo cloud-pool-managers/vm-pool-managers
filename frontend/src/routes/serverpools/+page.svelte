@@ -260,14 +260,12 @@ let selectedImage: string = "";
           {/each}
         {/if}
       </Label>
-      <Label class="space-y-2 text-xl">
         <span>Réseaux</span>
-        <MultiSelect name="networks" bind:value={selectedNetworks} items={networks} placeholder="Sélectionnez les réseaux" required size="md"/>
+        <MultiSelect name="networks" bind:value={selectedNetworks} items={networks} placeholder="Sélectionnez les réseaux" required />
         {#if selectedNetworks.length === 0}
           <p class="text-sm text-gray-500">Aucun réseau sélectionné</p>
         {/if}
         <p>{selectedNetworks}</p>
-      </Label>
       <Label class="space-y-2 text-xl">
         <span>Min VM</span>
         <Input type="number" name="min_vm" min="1" value="1" required />
