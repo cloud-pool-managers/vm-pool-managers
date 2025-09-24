@@ -146,7 +146,8 @@ export interface ImageOption {
   value: string;
   name: string;
   status: string;
-  // Ajoute d'autres champs si besoin
+  Mindisk: number;
+  Minram: number;
 }
 
 async function fetchAllImages(): Promise<ImageOption[]> {
@@ -162,7 +163,9 @@ async function fetchAllImages(): Promise<ImageOption[]> {
     return (data.images || []).map((img: any) => ({
       value: img.id,
       name: img.name || img.id,
-      status: img.status
+      status: img.status,
+      Mindisk: img.min_disk,
+      Minram: img.min_ram
     }));
   } catch (err) {
     console.error(err);

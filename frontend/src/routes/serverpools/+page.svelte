@@ -45,7 +45,9 @@ onMount(async () => {
       .map(img => ({
         value: img.value,
         name: img.name || img.value,
-        status: img.status
+        status: img.status,
+        Mindisk: img.Mindisk,
+        Minram: img.Minram
       }));
 
     const apiFlavors = await fetchAllFlavors();
@@ -72,7 +74,6 @@ onDestroy(() => {
 
 let servers: Server[] = [];
 let selectedsp: string = 'Choisissez le serverpool';
-let selectedNetwork: string[] = [];
 
 let loadingServers = false;
 
@@ -120,7 +121,7 @@ async function handleCreateServerpool(event: Event) {
       namesp,
       image_ref,
       flavor_ref,
-      networks,
+      networks: selectedNetworks,
       min_vm,
       max_vm
     });
@@ -165,6 +166,7 @@ function getImageNameById(id: string): string {
 
 let selectedNetworks: string[] = [];
 let selectedFlavor: string = "";
+let selectedImage: string = "";
 </script>
 
 <!-- Dropdown -->
@@ -237,7 +239,14 @@ let selectedFlavor: string = "";
       </Label>
       <Label class="space-y-2 text-xl">
         <span>Image Ref</span>
-        <Select name="image_ref" items={images} required />
+        <Select name="image_ref" items={images} required bind:value={selectedImage} />
+        {#if selectedImage}
+          {#each images.filter(img => img.value === selectedImage) as img}
+            <p>Status: {img.status}</p>
+            <p>Min Disk: {img.Mindisk} GB</p>
+            <p>Min RAM: {img.Minram} MB</p>
+          {/each}
+        {/if}
       </Label>
       <Label class="space-y-2 text-xl">
         <span>Flavor Ref</span>
@@ -253,7 +262,11 @@ let selectedFlavor: string = "";
       </Label>
       <Label class="space-y-2 text-xl">
         <span>Réseaux</span>
-        <MultiSelect name="networks" items={networks} value={selectedNetworks} placeholder="Sélectionnez les réseaux" required size="md"/>
+        <MultiSelect name="networks" bind:value={selectedNetworks} items={networks} placeholder="Sélectionnez les réseaux" required size="md"/>
+        {#if selectedNetworks.length === 0}
+          <p class="text-sm text-gray-500">Aucun réseau sélectionné</p>
+        {/if}
+        <p>{selectedNetworks}</p>
       </Label>
       <Label class="space-y-2 text-xl">
         <span>Min VM</span>

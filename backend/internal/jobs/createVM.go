@@ -75,6 +75,7 @@ func CreateVM(workerID int, job models.Job) error {
 
 	client, err := clientconfig.NewServiceClient(context.Background(), "compute", opts)
 	if err != nil {
+		DecrementPending(uint(paramID))
 		return fmt.Errorf("failed to create compute client: %w", err)
 	}
 

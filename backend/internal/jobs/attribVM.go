@@ -35,6 +35,7 @@ func AttribVM(workerID int, job models.Job) error {
 
 	provider, err := clientconfig.AuthenticatedClient(context.Background(), opts)
 	if err != nil {
+		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 		return fmt.Errorf("erreur auth OpenStack: %w", err)
 	}
 
@@ -43,6 +44,7 @@ func AttribVM(workerID int, job models.Job) error {
 	// 2. Créer un client Compute (Nova)
 	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{})
 	if err != nil {
+		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 		return fmt.Errorf("erreur init ComputeV2: %w", err)
 	}
 
@@ -50,6 +52,7 @@ func AttribVM(workerID int, job models.Job) error {
 
 	allServers, err := utils.GetAllServers()
 	if err != nil {
+		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 		return fmt.Errorf("erreur récupération des serveurs: %w", err)
 	}
 
@@ -67,6 +70,7 @@ func AttribVM(workerID int, job models.Job) error {
 
 	if target == nil {
 		log.Println("No suitable server found for attribution")
+		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 		return fmt.Errorf("aucun serveur cible trouvé")
 	}
 
@@ -84,6 +88,7 @@ func AttribVM(workerID int, job models.Job) error {
 	_, err = servers.UpdateMetadata(context.Background(), client, target.ID, newMetadata).Extract()
 	if err != nil {
 		log.Println("Failed to update server metadata:", err)
+		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 		return fmt.Errorf("erreur mise à jour serveur: %w", err)
 	}
 	DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
