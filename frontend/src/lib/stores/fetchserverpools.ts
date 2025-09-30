@@ -33,6 +33,28 @@ export interface Server {
   progress?: number;
 }
 
+export interface ImageOption {
+  value: string;
+  name: string;
+  status: string;
+  Mindisk: number;
+  Minram: number;
+}
+
+export interface FlavorOption {
+  value: string;
+  name: string;
+  disk: number;
+  ram: number;
+  vcpus: number;
+  rxtx_factor: number;
+}
+
+export interface NetworkOption {
+  value: string;
+  name: string;
+}
+
 interface ServerpoolStore {
   user: User | null;
   serverpools: Serverpool[];
@@ -141,14 +163,6 @@ async function createServerpool(serverpool: {
   }
 }
 
-export interface ImageOption {
-  value: string;
-  name: string;
-  status: string;
-  Mindisk: number;
-  Minram: number;
-}
-
 async function fetchAllImages(): Promise<ImageOption[]> {
   const token = get(authStore);
   try {
@@ -159,7 +173,7 @@ async function fetchAllImages(): Promise<ImageOption[]> {
       throw new Error("Impossible de récupérer les images");
     }
     const data = await res.json();
-    return (data.images || []).map((img: any) => ({
+    return data.map((img: any) => ({
       value: img.id,
       name: img.name || img.id,
       status: img.status,
@@ -172,15 +186,6 @@ async function fetchAllImages(): Promise<ImageOption[]> {
   }
 }
 
-export interface FlavorOption {
-  value: string;
-  name: string;
-  disk: number;
-  ram: number;
-  vcpus: number;
-  rxtx_factor: number;
-}
-
 async function fetchAllFlavors(): Promise<FlavorOption[]> {
   const token = get(authStore);
   try {
@@ -191,7 +196,7 @@ async function fetchAllFlavors(): Promise<FlavorOption[]> {
       throw new Error("Impossible de récupérer les flavors");
     }
     const data = await res.json();
-    return (data.flavors || []).map((flavor: any) => ({
+    return data.map((flavor: any) => ({
       value: flavor.id,
       name: flavor.name || flavor.id,
       disk: flavor.disk,
@@ -205,11 +210,6 @@ async function fetchAllFlavors(): Promise<FlavorOption[]> {
   }
 }
 
-export interface NetworkOption {
-  value: string;
-  name: string;
-}
-
 async function fetchAllNetworks(): Promise<NetworkOption[]> {
   const token = get(authStore);
   try {
@@ -220,7 +220,7 @@ async function fetchAllNetworks(): Promise<NetworkOption[]> {
       throw new Error("Impossible de récupérer les réseaux");
     }
     const data = await res.json();
-    return (data.networks || []).map((net: any) => ({
+    return data.map((net: any) => ({
       value: net.id,
       name: net.name || net.id,
       disk: net.disk,

@@ -39,6 +39,7 @@ func Monitor(c context.Context) {
 		case <-ticker.C:
 			log.Println("Checking serverpools...")
 			CheckAndCreate()
+			// attachVolume()
 		}
 	}
 }
@@ -191,4 +192,24 @@ func CreateServerpoolFromEnv() (models.Serverpool, error) {
 	}
 
 	return pool, nil
+}
+
+func attachVolume() {
+	allServ, err := utils.GetAllServers()
+	if err != nil {
+		log.Println("Failed to get all servers:", err)
+		return
+	}
+	for _, serv := range allServ {
+		if utils.NoVolAttached(serv) {
+			log.Printf("Attaching volume to server %s\n", serv.ID)
+			worker.AddJob(*worker.CreateJob(models.CreateVolumeAndAttach, map[string]string{
+				"size":        os.Getenv("VOLUME_SIZE"),
+				"description": os.Getenv("VOLUME_DESCRIPTION"),
+				"name":        os.Getenv("VOLUME_NAME"),
+				"volume_type": os.Getenv("VOLUME_TYPE"),
+				"server_id":   serv.ID,
+			}), false)
+		}
+	}
 }

@@ -2,12 +2,15 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"PoolManagerVM/backend/models"
 	"PoolManagerVM/backend/utils"
@@ -24,7 +27,96 @@ func Start_DB() {
 		panic("failed to connect database")
 	}
 
-	Database.AutoMigrate(&models.User{}, &models.Serverpool{}, &models.Server{})
+	Database.AutoMigrate(&models.User{}, &models.Serverpool{}, &models.Server{}, &models.Image{}, &models.Flavor{}, &models.Network{})
+}
+
+func SyncImage(ctx context.Context) {
+	allImages := utils.GetAllImages(ctx)
+
+	for _, img := range allImages {
+		imageRecord := models.Image{
+			ID:               img.ID,
+			Name:             img.Name,
+			Status:           string(img.Status),     // si c’est un type custom
+			Visibility:       string(img.Visibility), // idem
+			CreatedAt:        img.CreatedAt,
+			UpdatedAt:        img.UpdatedAt,
+			Owner:            img.Owner,
+			Protected:        img.Protected,
+			Hidden:           img.Hidden,
+			Checksum:         img.Checksum,
+			File:             img.File,
+			Schema:           img.Schema,
+			ContainerFormat:  img.ContainerFormat,
+			DiskFormat:       img.DiskFormat,
+			MinDiskGigabytes: img.MinDiskGigabytes,
+			MinRAMMegabytes:  img.MinRAMMegabytes,
+			SizeBytes:        img.SizeBytes,
+			VirtualSize:      img.VirtualSize,
+			Tags:             strings.Join(img.Tags, ","),
+			ImportMethods:    strings.Join(img.OpenStackImageImportMethods, ","),
+			StoreIDs:         strings.Join(img.OpenStackImageStoreIDs, ","),
+		}
+
+		Database.Clauses(clause.OnConflict{
+			UpdateAll: true,
+		}).Create(&imageRecord)
+	}
+}
+
+func SyncFlavor(ctx context.Context) {
+	allFlavors := utils.GetallFlavors(ctx) // À adapter au bon nom
+
+	for _, fl := range allFlavors {
+		var extraSpecsJSON string
+		if fl.ExtraSpecs != nil {
+			data, _ := json.Marshal(fl.ExtraSpecs)
+			extraSpecsJSON = string(data)
+		}
+
+		flavorRecord := models.Flavor{
+			ID:          fl.ID,
+			Name:        fl.Name,
+			Disk:        fl.Disk,
+			RAM:         fl.RAM,
+			VCPUs:       fl.VCPUs,
+			RxTxFactor:  fl.RxTxFactor,
+			Swap:        fl.Swap,
+			Ephemeral:   fl.Ephemeral,
+			IsPublic:    fl.IsPublic,
+			Description: fl.Description,
+			ExtraSpecs:  extraSpecsJSON,
+		}
+
+		Database.Clauses(clause.OnConflict{
+			UpdateAll: true,
+		}).Create(&flavorRecord)
+	}
+}
+
+func SyncNetwork(ctx context.Context) {
+	allNetworks := utils.GetAllNetworks(ctx) // à adapter selon ton utilitaire
+
+	for _, net := range allNetworks {
+		networkRecord := models.Network{
+			ID:                    net.ID,
+			Name:                  net.Name,
+			Description:           net.Description,
+			AdminStateUp:          net.AdminStateUp,
+			Status:                net.Status,
+			TenantID:              net.TenantID,
+			ProjectID:             net.ProjectID,
+			Shared:                net.Shared,
+			RevisionNumber:        net.RevisionNumber,
+			Subnets:               strings.Join(net.Subnets, ","),
+			AvailabilityZoneHints: strings.Join(net.AvailabilityZoneHints, ","),
+			Tags:                  strings.Join(net.Tags, ","),
+		}
+
+		Database.Clauses(clause.OnConflict{
+			UpdateAll: true,
+		}).Create(&networkRecord)
+	}
 }
 
 // routine to maintain a cohesive database with the reality on OpenStack
@@ -33,6 +125,7 @@ func Sync_DB(ctx context.Context) {
 	first = false
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
+	count := 12
 	for {
 		select {
 		case <-ctx.Done():
@@ -41,6 +134,13 @@ func Sync_DB(ctx context.Context) {
 		case <-ticker.C:
 			do_sync()
 			delete_serv()
+			count++
+			if count >= 12 {
+				SyncImage(ctx)
+				SyncFlavor(ctx)
+				SyncNetwork(ctx)
+				count = 0
+			}
 		}
 	}
 }

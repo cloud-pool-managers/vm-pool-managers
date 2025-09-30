@@ -69,6 +69,8 @@ onMount(async () => {
       value: net.value,
       name: net.name || net.value
     }));
+
+    
     selectedsp = $page.params.id || 'Choisissez le serverpool';
     await handleSelectServerpool(selectedsp);
   }

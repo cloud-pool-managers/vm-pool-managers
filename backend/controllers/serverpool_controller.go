@@ -9,10 +9,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/v2/openstack/image/v2/images"
-	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/utils/v2/openstack/clientconfig"
 )
 
@@ -214,82 +211,31 @@ func GetServersInServerpool(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"servers": serversInPool})
 }
 
-func GetAllImages(ctx *gin.Context) {
-	opts := &clientconfig.ClientOpts{
-		Cloud: os.Getenv("OPTS_CLOUD"),
-	}
-
-	client, err := clientconfig.NewServiceClient(ctx, "image", opts)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
+func GetAllImages(c *gin.Context) {
+	var images []models.Image
+	if err := config.Database.Find(&images).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch images"})
 		return
 	}
-
-	allPages, err := images.List(client, images.ListOpts{}).AllPages(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
-		return
-	}
-
-	allImages, err := images.ExtractImages(allPages)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{"images": allImages})
+	c.JSON(http.StatusOK, images)
 }
 
-func GetallFlavors(ctx *gin.Context) {
-	opts := &clientconfig.ClientOpts{
-		Cloud: os.Getenv("OPTS_CLOUD"),
-	}
-
-	client, err := clientconfig.NewServiceClient(ctx, "compute", opts)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
+func GetallFlavors(c *gin.Context) {
+	var flavor []models.Flavor
+	if err := config.Database.Find(&flavor).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch flavors"})
 		return
 	}
-
-	allPages, err := flavors.ListDetail(client, flavors.ListOpts{}).AllPages(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
-		return
-	}
-	allFlavors, err := flavors.ExtractFlavors(allPages)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
-		return
-	}
-	// utils.PrintAllFlavor(allFlavors)
-
-	ctx.JSON(http.StatusOK, gin.H{"flavors": allFlavors})
+	c.JSON(http.StatusOK, flavor)
 }
 
-func GetAllNetworks(ctx *gin.Context) {
-	opts := &clientconfig.ClientOpts{
-		Cloud: os.Getenv("OPTS_CLOUD"),
-	}
-
-	client, err := clientconfig.NewServiceClient(ctx, "network", opts)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
+func GetAllNetworks(c *gin.Context) {
+	var networks []models.Network
+	if err := config.Database.Find(&networks).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch networks"})
 		return
 	}
-
-	allPages, err := networks.List(client, networks.ListOpts{}).AllPages(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
-		return
-	}
-
-	allNets, err := networks.ExtractNetworks(allPages)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{"networks": allNets})
+	c.JSON(http.StatusOK, networks)
 }
 
 type RebuildRequest struct {

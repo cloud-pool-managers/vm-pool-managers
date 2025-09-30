@@ -6,6 +6,7 @@ const (
 	CreateVM JobType = iota
 	DeleteVM
 	AttribVM
+	CreateVolumeAndAttach
 )
 
 type Job struct {
