@@ -42,3 +42,13 @@ func DecrementPending(ServerpoolID uint) {
 		log.Println("Error: ", result.Error)
 	}
 }
+
+func ChangePendingVol(serverID string) {
+	res := config.Database.Model(&models.Server{}).
+		Where("id = ?", serverID).
+		UpdateColumn("vol_pending", gorm.Expr("NOT vol_pending"))
+
+	if res.Error != nil {
+		log.Println("Error: ", res.Error)
+	}
+}

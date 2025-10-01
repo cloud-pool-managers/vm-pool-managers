@@ -14,7 +14,10 @@ require (
 	gorm.io/gorm v1.30.3
 )
 
-require github.com/gofrs/uuid/v5 v5.3.2 // indirect
+require (
+	github.com/gofrs/uuid/v5 v5.3.2 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+)
 
 require (
 	github.com/bytedance/sonic v1.13.3 // indirect

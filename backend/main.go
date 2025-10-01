@@ -4,6 +4,7 @@ import (
 	"PoolManagerVM/backend/config"
 	"PoolManagerVM/backend/internal"
 	"PoolManagerVM/backend/internal/worker"
+	"PoolManagerVM/backend/models"
 	"PoolManagerVM/backend/routes"
 	"context"
 	"log"
@@ -22,7 +23,9 @@ func main() {
 
 	// loading .env
 	config.LoadEnvConfig()
+	models.CreateParams()
 
+	log.Println(models.BlockstorageClient)
 	// creating context to stop cleanly
 	ctx, cancel := context.WithCancel(context.Background())
 

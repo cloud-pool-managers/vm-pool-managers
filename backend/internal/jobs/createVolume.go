@@ -1,16 +1,14 @@
 package jobs
 
 import (
+	"PoolManagerVM/backend/config"
 	"PoolManagerVM/backend/models"
 	"PoolManagerVM/backend/utils"
 	"context"
 	"log"
-	"os"
 
-	"github.com/gophercloud/gophercloud/v2"
-	"github.com/gophercloud/gophercloud/v2/openstack"
-	"github.com/gophercloud/gophercloud/v2/openstack/blockstorage/v3/volumes"
-	"github.com/gophercloud/utils/v2/openstack/clientconfig"
+	"github.com/gophercloud/gophercloud/v2/openstack/blockstorage/v2/volumes"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/volumeattach"
 )
 
 func CreateVolumeAndAttach(workerID int, job models.Job) error {
@@ -22,67 +20,37 @@ func CreateVolumeAndAttach(workerID int, job models.Job) error {
 		VolumeType:  job.Data["volume_type"],
 	}
 
-	provider, err := clientconfig.AuthenticatedClient(context.Background(), &clientconfig.ClientOpts{
-		Cloud: os.Getenv("OPTS_CLOUD"),
-	})
-	if err != nil {
-		log.Println("Failed to authenticate:", err)
-		return err
-	}
-
-	BlockStorageClient, err := openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{
-		Availability: gophercloud.AvailabilityPublic,
-	})
-	if err != nil {
-		log.Println("Failed to create BlockStorageV3 client:", err)
-		return err
-	}
-
 	volumeSchedulerHintOpts := volumes.SchedulerHintOpts{}
 
-	newVolume, err := volumes.Create(context.Background(), BlockStorageClient, volumeOpts, volumeSchedulerHintOpts).Extract()
+	newVolume, err := volumes.Create(context.Background(), models.BlockstorageClient, volumeOpts, volumeSchedulerHintOpts).Extract()
 	if err != nil {
 		log.Println("Failed to create volume:", err)
 		log.Println(volumeOpts)
+		ChangePendingVol(job.Data["server_id"])
 		return err
 	}
 	log.Println("Volume created with ID:", newVolume.ID)
 	log.Println(newVolume)
 
-	allServs, err := utils.GetAllServers()
+	createopts := volumeattach.CreateOpts{
+		Device:   "/dev/vdc",
+		VolumeID: newVolume.ID,
+	}
+
+	res, err := volumeattach.Create(context.TODO(), models.ComputeClient, job.Data["server_id"], createopts).Extract()
 	if err != nil {
-		log.Println("Failed to get all servers:", err)
+		log.Println("error :", err)
+		ChangePendingVol(job.Data["server_id"])
 		return err
 	}
 
-	// if serv.id is in job.data
-	// log.Println("Attaching volunme to server ", job.Data["server_id"])
-	// attachOpts := volumes.AttachOpts{
-	// 	InstanceUUID: job.Data["server_id"],
-	// 	MountPoint:   "/dev/vdb",
-	// 	Mode:         "rw",
-	// }
-	// err = volumes.Attach(context.Background(), client, newVolume.ID, attachOpts).ExtractErr()
-	// if err != nil {
-	// 	log.Println("Failed to attach volume:", err)
-	// 	return err
-	// }
+	log.Println(res)
 
-	for _, serv := range allServs {
-		if utils.NoVolAttached(serv) && serv.Status == "ACTIVE" {
-			log.Printf("Attaching volume to server %s\n", serv.ID)
-			attachOpts := volumes.AttachOpts{
-				InstanceUUID: serv.ID,
-				MountPoint:   "/dev/vdb",
-				Mode:         "rw",
-			}
-			err = volumes.Attach(context.Background(), BlockStorageClient, newVolume.ID, attachOpts).ExtractErr()
-			if err != nil {
-				log.Println("Failed to attach volume:", err)
-				return err
-			}
-			break
-		}
+	result := config.Database.Model(&models.Server{}).
+		Where("id = ?", job.Data["server_id"]).
+		Update("attach_volume_id", newVolume.ID).Error
+	if result != nil {
+		return result
 	}
 
 	log.Printf("Worker %d completed the job of creating and attaching a volume\n", workerID)

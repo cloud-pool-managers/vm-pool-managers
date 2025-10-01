@@ -7,17 +7,18 @@ import (
 )
 
 type Server struct {
-	ID           string `gorm:"primaryKey"`
-	Name         string
-	Status       string
-	FlavorRef    string
-	ImageRef     string
-	Networks     JSONStringSlice `gorm:"type:text"`
-	Metadata     JSONStringMap   `gorm:"type:text"`
-	ServerpoolID string
-	UserID       string
-	// Relation avec Serverpool (clé composite)
-	ServerPool *Serverpool `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
+	ID             string `gorm:"primaryKey"`
+	Name           string
+	Status         string
+	FlavorRef      string
+	ImageRef       string
+	Networks       JSONStringSlice `gorm:"type:text"`
+	Metadata       JSONStringMap   `gorm:"type:text"`
+	ServerpoolID   string
+	UserID         string
+	ServerPool     *Serverpool `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
+	AttachVolumeID string
+	VolPending     bool `gorm:"default:false; not null"`
 }
 
 func FromGopherServer(s servers.Server) Server {

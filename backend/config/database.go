@@ -220,19 +220,3 @@ func do_sync() {
 		}
 	}
 }
-
-//quand passage a Postgres, utiliser :
-// Database.Clauses(clause.OnConflict{
-//     Columns:   []clause.Column{{Name: "serverpool_id"}, {Name: "user_id"}},
-//     UpdateAll: true, // fait un UPDATE si conflit
-// }).Create(&sp)
-
-// Database.Clauses(clause.OnConflict{
-//     Columns:   []clause.Column{
-//         {Name: "serverpool_id"},
-//         {Name: "user_id"},
-//         {Name: "image_ref"},
-//         {Name: "flavor_ref"},
-//     },
-//     UpdateAll: true,
-// }).Create(&paramsFromOpenStack)

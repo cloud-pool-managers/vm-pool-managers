@@ -39,7 +39,7 @@ func Monitor(c context.Context) {
 		case <-ticker.C:
 			log.Println("Checking serverpools...")
 			CheckAndCreate()
-			// attachVolume()
+			attachVolume()
 		}
 	}
 }
@@ -201,8 +201,9 @@ func attachVolume() {
 		return
 	}
 	for _, serv := range allServ {
-		if utils.NoVolAttached(serv) {
+		if utils.NoVolAttached(serv) && utils.NoVolAttachedDB(models.FromGopherServer(serv), config.Database) {
 			log.Printf("Attaching volume to server %s\n", serv.ID)
+			jobs.ChangePendingVol(models.FromGopherServer(serv).ID)
 			worker.AddJob(*worker.CreateJob(models.CreateVolumeAndAttach, map[string]string{
 				"size":        os.Getenv("VOLUME_SIZE"),
 				"description": os.Getenv("VOLUME_DESCRIPTION"),
