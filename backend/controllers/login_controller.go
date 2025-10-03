@@ -27,10 +27,13 @@ func LoginUser(c *gin.Context) {
 	}
 
 	var user models.User
+	config.DBmu.Lock()
 	if err := config.Database.Where("email = ?", input.Email).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		config.DBmu.Unlock()
 		return
 	}
+	config.DBmu.Unlock()
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Password"})

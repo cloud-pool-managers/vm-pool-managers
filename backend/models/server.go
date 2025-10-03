@@ -19,6 +19,7 @@ type Server struct {
 	ServerPool     *Serverpool `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
 	AttachVolumeID string
 	VolPending     bool `gorm:"default:false; not null"`
+	Reattrib       bool `gorm:"default:false; not null"`
 }
 
 func FromGopherServer(s servers.Server) Server {

@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"PoolManagerVM/backend/config"
 	"PoolManagerVM/backend/models"
 	"PoolManagerVM/backend/utils"
 	"context"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
+	"gorm.io/gorm"
 )
 
 type MetadataUpdate struct {
@@ -32,14 +34,17 @@ func AttribVM(workerID int, job models.Job) error {
 	}
 
 	var target *servers.Server
+	config.DBmu.Lock()
 	for i := range allServers {
 		srv := &allServers[i]
 		log.Printf("Checking server ID: %s, Metadata: %v\n", srv.ID, srv.Metadata)
-		if srv.Metadata["user_id"] == "admin" && srv.Metadata["serverpool_id"] == "pool_vms" {
+		if srv.Metadata["user_id"] == "admin" && srv.Metadata["serverpool_id"] == "pool_vms" && !checkReattrib(*srv) {
 			target = srv
+			updateReattrib(models.FromGopherServer(*target))
 			break
 		}
 	}
+	config.DBmu.Unlock()
 
 	if target == nil {
 		log.Println("No suitable server found for attribution")
@@ -75,4 +80,26 @@ func AttribVM(workerID int, job models.Job) error {
 	DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 
 	return nil
+}
+
+func checkReattrib(serv servers.Server) bool {
+	var s models.Server
+
+	if err := config.Database.Select("reattrib").Where("id = ?", serv.ID).
+		First(&s).Error; err != nil {
+		log.Println("Error fetching updated reattrib:", err)
+		return true
+	}
+	return s.Reattrib
+
+}
+
+func updateReattrib(serv models.Server) {
+	res := config.Database.Model(&models.Server{}).
+		Where("id = ?", serv.ID).
+		UpdateColumn("reattrib", gorm.Expr("NOT reattrib"))
+
+	if res.Error != nil {
+		log.Println("Error: ", res.Error)
+	}
 }

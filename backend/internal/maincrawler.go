@@ -63,6 +63,7 @@ func CheckAndCreate() {
 		servadminmap = make(map[string]bool)
 	)
 
+	config.DBmu.Lock()
 	res_servs := config.Database.Find(&servs)
 	if res_servs.Error != nil {
 		log.Println(res_servs.Error)
@@ -89,6 +90,8 @@ func CheckAndCreate() {
 		missing := p.MinVM - (count + p.PendingJobs)
 		for i := 0; i < missing; i++ {
 			if p.ImageRef == os.Getenv("SERVER_IMAGE_REF") && p.FlavorRef == os.Getenv("SERVER_FLAVOR_REF") && len(p.Networks) == 1 && p.Networks[0] == os.Getenv("NETWORK_ID") && countadmin > 0 && p.UserID != "admin" {
+				log.Println("Attributing VM for pool:", p.ServerpoolID)
+				jobs.IncrementPending(p.ID)
 				worker.AddJob((*worker.CreateJob(models.AttribVM, map[string]string{
 					"ID":            fmt.Sprint(p.ID),
 					"serverpool_id": p.ServerpoolID,
@@ -97,11 +100,10 @@ func CheckAndCreate() {
 					"max_vm":        fmt.Sprint(p.MaxVM),
 				})), true)
 				countadmin--
-				jobs.IncrementPending(p.ID)
 			} else {
 				log.Println("Creating VM for pool:", p)
-				worker.AddJob(*worker.CreateJob(models.CreateVM, utils.BuildDataMap(utils.FlatstringSP(p))), false)
 				jobs.IncrementPending(p.ID)
+				worker.AddJob(*worker.CreateJob(models.CreateVM, utils.BuildDataMap(utils.FlatstringSP(p))), false)
 			}
 		}
 	}
@@ -130,6 +132,7 @@ func CheckAndCreate() {
 			jobs.IncrementPending(base_p.ID)
 		}
 	}
+	config.DBmu.Unlock()
 }
 
 // serverisinpool checks if a server belongs to a given server pool.
@@ -202,10 +205,12 @@ func attachVolume() {
 		log.Println("Failed to get all servers:", err)
 		return
 	}
+	config.DBmu.Lock()
 	for _, serv := range allServ {
 		var server models.Server
 		if err := config.Database.Select("vol_pending").Where("id = ?", serv.ID).First(&server).Error; err != nil {
 			log.Println("Error fetching updated vol_pending:", err)
+			config.DBmu.Unlock()
 			return
 		}
 		if utils.NoVolAttached(serv) && utils.NoVolAttachedDB(models.FromGopherServer(serv), config.Database) && serv.Status == "ACTIVE" && !server.VolPending {
@@ -220,6 +225,7 @@ func attachVolume() {
 			}), false)
 		}
 	}
+	config.DBmu.Unlock()
 }
 
 func volnotattached() {

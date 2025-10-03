@@ -62,8 +62,10 @@ func CreateServerpool(c *gin.Context) {
 	}
 
 	var user models.User
+	config.DBmu.Lock()
 	if err := config.Database.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		config.DBmu.Unlock()
 		return
 	}
 
@@ -78,8 +80,10 @@ func CreateServerpool(c *gin.Context) {
 		PendingJobs:  0,
 	}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot create serverpool"})
+		config.DBmu.Unlock()
 		return
 	}
+	config.DBmu.Unlock()
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "serverpool created",
@@ -103,16 +107,20 @@ func DeleteServerpool(c *gin.Context) {
 	}
 
 	var user models.User
+	config.DBmu.Lock()
 	if err := config.Database.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		config.DBmu.Unlock()
 		return
 	}
 
 	if err := config.Database.Where("user_id = ? AND serverpool_id = ?", user.Email, serverpoolID).
 		Delete(&models.Serverpool{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot delete serverpool"})
+		config.DBmu.Unlock()
 		return
 	}
+	config.DBmu.Unlock()
 
 	// pour tout les servers qui ont la paire user.email et body.namesp, creer un job highpriority pour les delete de openstack
 	allServers, err := utils.GetAllServers()

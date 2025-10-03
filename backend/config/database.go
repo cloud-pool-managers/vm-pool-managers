@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"gorm.io/driver/sqlite"
@@ -17,7 +18,10 @@ import (
 )
 
 // global variable to get access to the database anywhere in the code
-var Database *gorm.DB
+var (
+	Database *gorm.DB
+	DBmu     sync.Mutex
+)
 
 // boot the database
 func Start_DB() {
@@ -168,6 +172,7 @@ func Sync_DB(ctx context.Context) {
 			log.Println("Resync stopped")
 			return
 		case <-ticker.C:
+			DBmu.Lock()
 			do_sync()
 			delete_serv()
 			delete_volumes()
@@ -179,6 +184,7 @@ func Sync_DB(ctx context.Context) {
 				SyncVolumes(ctx)
 				count = 0
 			}
+			DBmu.Unlock()
 		}
 	}
 }
