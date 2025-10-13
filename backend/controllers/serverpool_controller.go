@@ -49,12 +49,13 @@ func CreateServerpool(c *gin.Context) {
 	}
 
 	var body struct {
-		Namesp    string   `json:"namesp"`
-		ImageRef  string   `json:"image_ref"`
-		FlavorRef string   `json:"flavor_ref"`
-		Networks  []string `json:"networks"`
-		MinVM     int      `json:"min_vm"`
-		MaxVM     int      `json:"max_vm"`
+		Namesp      string   `json:"namesp"`
+		ImageRef    string   `json:"image_ref"`
+		FlavorRef   string   `json:"flavor_ref"`
+		Networks    []string `json:"networks"`
+		MinVM       int      `json:"min_vm"`
+		MaxVM       int      `json:"max_vm"`
+		Config_file int      `json:"config_file"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -164,6 +165,7 @@ func GetMyServerpools(c *gin.Context) {
 				"serverpool_id": sp.ServerpoolID,
 				"image_ref":     sp.ImageRef,
 				"flavor_ref":    sp.FlavorRef,
+				"networks":      sp.Networks,
 				"min_vm":        sp.MinVM,
 				"max_vm":        sp.MaxVM,
 			})

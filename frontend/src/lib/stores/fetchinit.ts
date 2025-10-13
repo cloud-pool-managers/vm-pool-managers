@@ -150,13 +150,13 @@ export const serverpoolStore = createServerpoolStore();
 
 export function handleWebSocketMessage(message: string) {
   try {
-    const { action, data } = JSON.parse(message);
+    const { action, data , tag } = JSON.parse(message);
 
     serverpoolStore.update(state => {
       const newState = { ...state };
 
-      // --- 🧱 SERVERPOOL CHANGES ---
-      if (data.ServerpoolID || data.serverpool_id) {
+      // --- SERVERPOOL CHANGES ---
+      if (tag === "serverpool") {
         const spId = data.ServerpoolID || data.serverpool_id;
 
         switch (action) {
@@ -184,8 +184,8 @@ export function handleWebSocketMessage(message: string) {
         }
       }
 
-      // --- ⚙️ SERVER CHANGES ---
-      if (data.ID && data.ServerpoolID) {
+      // --- SERVER CHANGES ---
+      if (tag === "server") {
         const spId = data.ServerpoolID;
         const servers = newState.servers[spId] || [];
 
@@ -226,16 +226,16 @@ export function handleWebSocketMessage(message: string) {
         }
       }
 
-      // --- 🛠️ CONFIG CHANGES ---
-      if (data.ConfigID) {
-        const configId = data.ConfigID;
+      // --- CONFIG CHANGES ---
+      if (tag === "config") {
+        const configId = data.id;
 
         switch (action) {
           case "created": {
             const newConfig: Config = {
               id: configId,
-              name: data.Name,
-              data: data.Data,
+              name: data.name,
+              data: data.data,
             };
             newState.configs = [...newState.configs, newConfig];
             break;

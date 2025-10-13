@@ -29,15 +29,16 @@ var Hub = WebSocketHub{
 type WSMessage struct {
 	Action string `json:"action"`
 	Data   any    `json:"data"`
+	Tag    string `json:"tag"`
 }
 
 // Envoi d’un message à un utilisateur
-func SendMessageToUser(userID, action string, data any) {
+func SendMessageToUser(userID, action string, data any, tag string) {
 	Hub.Mu.Lock()
 	defer Hub.Mu.Unlock()
 
 	if conn, ok := Hub.Clients[userID]; ok {
-		message := WSMessage{Action: action, Data: data}
+		message := WSMessage{Action: action, Data: data, Tag: tag}
 		payload, err := json.Marshal(message)
 		if err != nil {
 			log.Println("Error marshalling WebSocket message:", err)

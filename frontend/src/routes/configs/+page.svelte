@@ -3,7 +3,8 @@
     import { authStore, serverpoolStore, createConfig } from '$lib/index';
 	import { ChevronDownOutline } from "flowbite-svelte-icons";
 	import { onMount } from "svelte";
-	import type { Config } from "@sveltejs/kit";
+	import type { Config } from "$lib/stores/fetchinit";
+	import { updateConfig } from "$lib/stores/configHandler";
 
 
     let configs: string = "Configurations";
@@ -12,18 +13,32 @@
     let text: string = "";
     let newconfigname: string = "";
     let configlist: Config[] = [];
+    let configid: number = -1;
     
     $: token = $authStore;
     $: configlist = $serverpoolStore.configs;
+
+    $: configid = configlist.find(c => c.name === newconfigname)?.id || -1;
+
 
 
     const handleClickDropdown = async (e: Event) => {
         e.preventDefault();
         const target = e.target as HTMLButtonElement;
         configs = target.name;
-        text = configlist.find(c => c.name === target.name)?.script || "";
+        text = configlist.find(c => c.name === target.name)?.data || "";
         textspacedisplay = true;
+        newconfigname = target.name;
+        configid = configlist.find(c => c.name === target.name)?.id || -1;
+    }
 
+    const handleNewConfig = async (e: Event) => {
+        e.preventDefault();
+        configs = "Configurations";
+        text = "";
+        textspacedisplay = true;
+        newconfigname = "";
+        configid = -1;
     }
     
     onMount(async () => {
@@ -39,6 +54,11 @@
         await createConfig(newconfigname, text);
     }
 
+    async function handleupdateConfig() {
+        console.log("Updating configuration:", configid, newconfigname, text);
+        await updateConfig(configid, newconfigname, text);
+    }
+
 </script>
 
 <Button size="md" class="w-48 h-12">
@@ -50,7 +70,7 @@
     {/each}
 </Dropdown>
 
-<Button size="md" class="w-48 h-12 mt-4" onclick={() => textspacedisplay = true}>
+<Button size="md" class="w-48 h-12 mt-4" onclick={handleNewConfig}>
     Create a new configuration
 </Button>
 
@@ -59,5 +79,9 @@
     <Textarea id="textarea-id" placeholder="#!/bin/bash" rows={15} bind:value={text} />
     <Label for="config-name" class="mb-2 mt-2">Nom de la configuration</Label>
     <Input id="config-name" type="text" placeholder="Configuration Name" class="mt-2 mb-2" bind:value={newconfigname} />
-    <Button size="md" class="w-48 h-12 mt-2" onclick={handlecreateConfig}>Save Configuration</Button>
+    {#if configid !== -1}
+        <Button size="md" class="w-48 h-12 mt-2" onclick={handleupdateConfig}>Update Configuration</Button>
+    {:else}
+        <Button size="md" class="w-48 h-12 mt-2" onclick={handlecreateConfig}>Save Configuration</Button>
+    {/if}
 {/if}

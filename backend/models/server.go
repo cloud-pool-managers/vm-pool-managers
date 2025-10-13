@@ -79,14 +79,14 @@ func PrintServer(server Server) error {
 
 func (s *Server) AfterCreate(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
-		websockethandler.SendMessageToUser(s.UserID, "created", s)
+		websockethandler.SendMessageToUser(s.UserID, "created", s, "server")
 	}
 	return nil
 }
 
 func (s *Server) AfterUpdate(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
-		websockethandler.SendMessageToUser(s.UserID, "updated", s)
+		websockethandler.SendMessageToUser(s.UserID, "updated", s, "server")
 	}
 	return nil
 }
@@ -95,7 +95,7 @@ func (s *Server) AfterDelete(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
 		websockethandler.SendMessageToUser(s.UserID, "deleted", map[string]string{
 			"serverpool_id": s.ServerpoolID,
-		})
+		}, "server")
 	}
 	return nil
 }

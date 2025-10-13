@@ -18,6 +18,6 @@ func UserRoutes(r *gin.Engine) {
 		users.GET("/me/configs", middlewares.AuthMiddleware(), controllers.GetUserConfigs)
 		users.POST("/me/configs", middlewares.AuthMiddleware(), controllers.CreateUserConfig(config.Database))
 		users.DELETE("/me/configs/:config_id", middlewares.AuthMiddleware(), controllers.DeleteUserConfig(config.Database))
-		users.PUT("/me/configs/:config_id", middlewares.AuthMiddleware(), controllers.UpdateUserConfig(config.Database))
+		users.POST("/me/configs/:config_id", middlewares.AuthMiddleware(), controllers.UpdateUserConfig(config.Database))
 	}
 }

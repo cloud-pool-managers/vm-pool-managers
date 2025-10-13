@@ -50,14 +50,14 @@ func PrintMapServerpool(m []Serverpool) error {
 
 func (s *Serverpool) AfterCreate(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
-		websockethandler.SendMessageToUser(s.UserID, "created", s)
+		websockethandler.SendMessageToUser(s.UserID, "created", s, "serverpool")
 	}
 	return nil
 }
 
 func (s *Serverpool) AfterUpdate(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
-		websockethandler.SendMessageToUser(s.UserID, "updated", s)
+		websockethandler.SendMessageToUser(s.UserID, "updated", s, "serverpool")
 	}
 	return nil
 }
@@ -66,7 +66,7 @@ func (s *Serverpool) AfterDelete(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
 		websockethandler.SendMessageToUser(s.UserID, "deleted", map[string]string{
 			"serverpool_id": s.ServerpoolID,
-		})
+		}, "serverpool")
 	}
 	return nil
 }

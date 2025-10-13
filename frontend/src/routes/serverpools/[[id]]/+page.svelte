@@ -60,8 +60,6 @@ onMount(async () => {
 	selectedsp = $page.params.id || 'Choisissez le serverpool';
 	await handleSelectServerpool(selectedsp);
   }
-
-
 });
 
 let servers: Server[] = [];
@@ -100,8 +98,9 @@ async function handleCreateServerpool(event: Event) {
   const networksStr = data.get('networks') as string;
   const min_vm = Number(data.get('min_vm'));
   const max_vm = Number(data.get('max_vm'));
+  const config_file = Number(data.get('config_file'));
 
-  if (!namesp || !image_ref || !flavor_ref || !networksStr || !min_vm || !max_vm) {
+  if (!namesp || !image_ref || !flavor_ref || !networksStr || !min_vm || !max_vm || !config_file) {
 	createError = "Tous les champs sont requis";
 	return;
   }
@@ -115,7 +114,8 @@ async function handleCreateServerpool(event: Event) {
 	  flavor_ref,
 	  networks: selectedNetworks,
 	  min_vm,
-	  max_vm
+	  max_vm,
+	  config_file
 	});
 
 	createSuccess = true;
@@ -173,6 +173,7 @@ let selectedNetworks: string[] = [];
 let selectedFlavor: string = "";
 let selectedImage: string = "";
 let selectedGroupImage: string = "";
+let selectedConfigFile: string = "";
 
 $: if (selectedGroupImage) {
   fetchGroupImages(selectedGroupImage).then(data => {
@@ -188,7 +189,7 @@ $: if (!createspModal){
   selectedNetworks = [];
 }
 
-$: console.log("sp:", store.serverpools);
+$: console.log("Selected Config File:", selectedConfigFile);
 
 </script>
 
@@ -316,6 +317,14 @@ $: console.log("sp:", store.serverpools);
 	  <Label class="space-y-2 text-xl">
 		<span>Max VM</span>
 		<Input type="number" name="max_vm" min="1" value="1" required />
+	  </Label>
+	  <Label class="space-y-2 text-xl">
+		<span>Config File</span>
+		<Select name="config_file" required placeholder="Sélectionnez un fichier de configuration" bind:value={selectedConfigFile}>
+			{#each $serverpoolStore.configs as { name, id}}
+				<option value={id}> {name}</option>
+			{/each}
+		</Select>
 	  </Label>
 	  <Button type="submit" class="bg-option-500">Créer</Button>
 	</form>

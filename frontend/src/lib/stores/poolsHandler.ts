@@ -10,6 +10,7 @@ async function createServerpool(serverpool: {
   networks: string[];
   min_vm: number;
   max_vm: number;
+  config_file: number;
 }) {
   const token = get(authStore);
   try {

@@ -36,3 +36,4 @@ go.work.sum
 *.sum
 .task
 frontend/src/routes/colors/
+backend/bin/

@@ -129,7 +129,7 @@ func CreateUserConfig(db *gorm.DB) gin.HandlerFunc {
 
 func DeleteUserConfig(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, exist := c.Get("user_id")
+		userID, exist := c.Get("email")
 		if !exist {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
 			return
@@ -154,30 +154,31 @@ func DeleteUserConfig(db *gorm.DB) gin.HandlerFunc {
 
 func UpdateUserConfig(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, exist := c.Get("user_id")
+		userID, exist := c.Get("email")
 		if !exist {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not connected"})
 			return
 		}
 
-		configID := c.Param("config_id")
+		var input struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+			Data string `json:"data"`
+		}
+
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		var configPool models.ConfigPool
-		if err := db.First(&configPool, configID).Error; err != nil {
+		if err := db.First(&configPool, input.ID).Error; err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "config not found"})
 			return
 		}
 
 		if configPool.UserID != userID.(string) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "you do not have permission to update this config"})
-			return
-		}
-
-		var input struct {
-			Name string `json:"name"`
-			Data string `json:"data"`
-		}
-		if err := c.ShouldBindJSON(&input); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusForbidden, gin.H{"error": "you do not have permission to update this config", "user": userID.(string), "config_user": configPool.UserID})
 			return
 		}
 

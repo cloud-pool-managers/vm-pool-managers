@@ -15,21 +15,21 @@ type ConfigPool struct {
 
 func (c *ConfigPool) AfterCreate(tx *gorm.DB) (err error) {
 	if c.UserID != "admin" {
-		websockethandler.SendMessageToUser(c.UserID, "config_created", c)
+		websockethandler.SendMessageToUser(c.UserID, "created", c, "config")
 	}
 	return nil
 }
 
 func (c *ConfigPool) AfterUpdate(tx *gorm.DB) (err error) {
 	if c.UserID != "admin" {
-		websockethandler.SendMessageToUser(c.UserID, "config_updated", c)
+		websockethandler.SendMessageToUser(c.UserID, "updated", c, "config")
 	}
 	return nil
 }
 
 func (c *ConfigPool) AfterDelete(tx *gorm.DB) (err error) {
 	if c.UserID != "admin" {
-		websockethandler.SendMessageToUser(c.UserID, "config_deleted", c)
+		websockethandler.SendMessageToUser(c.UserID, "deleted", c, "config")
 	}
 	return nil
 }
