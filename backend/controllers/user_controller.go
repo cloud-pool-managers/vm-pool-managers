@@ -11,17 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// return a list of all users (not useful)
-func GetUsers(c *gin.Context) {
-	var users []models.User
-	result := config.Database.Find(&users)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, users)
-}
-
 // Create a user in the database
 // takes name, email and password
 func CreateUser(db *gorm.DB) gin.HandlerFunc {

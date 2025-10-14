@@ -43,7 +43,7 @@ export interface NetworkOption {
 export async function fetchAllFlavors(): Promise<FlavorOption[]> {
   const token = get(authStore);
   try {
-    const res = await fetch('http://localhost:8080/serverpool/flavor', {
+    const res = await fetch('http://localhost:8080/datafetch/flavor', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) {
@@ -67,7 +67,7 @@ export async function fetchAllFlavors(): Promise<FlavorOption[]> {
 export async function fetchAllNetworks(): Promise<NetworkOption[]> {
   const token = get(authStore);
   try {
-    const res = await fetch('http://localhost:8080/serverpool/networks', {
+    const res = await fetch('http://localhost:8080/datafetch/networks', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) {
@@ -92,7 +92,7 @@ export async function fetchGroupImages(group :string): Promise<ImageOption[]> {
   const token = get(authStore);
 
   try {
-    const res = await fetch('http://localhost:8080/serverpool/imagegroup', {
+    const res = await fetch('http://localhost:8080/datafetch/imagegroup', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -123,7 +123,7 @@ export async function fetchGroupImageName(): Promise<GroupeImageName[]> {
   const token = get(authStore);
 
   try {
-    const res = await fetch(`http://localhost:8080/serverpool/groupimagesname`, {
+    const res = await fetch(`http://localhost:8080/datafetch/groupimagesname`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`

@@ -51,6 +51,7 @@
         // Logique pour créer une nouvelle configuration
         console.log("Creating new configuration:", newconfigname, text);
         await createConfig(newconfigname, text);
+        configs = newconfigname;
     }
 
     async function handleupdateConfig() {
@@ -61,6 +62,11 @@
     async function handledeleteConfig() {
         console.log("Deleting configuration:", configid);
         await deleteConfig(configid);
+        configs = "Configurations";
+        text = "";
+        textspacedisplay = false;
+        newconfigname = "";
+        configid = -1;
     }
 
 </script>

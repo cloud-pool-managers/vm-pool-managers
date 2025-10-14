@@ -7,35 +7,11 @@ import (
 	"PoolManagerVM/backend/utils"
 	"net/http"
 	"os"
-	"sort"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"github.com/gophercloud/utils/v2/openstack/clientconfig"
 )
-
-// return a list of all serverpool (might not be useful)
-func GetServerpool(c *gin.Context) {
-
-	allServers, err := utils.GetAllServers()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-		return
-	}
-
-	var activeServs []gin.H
-	for _, s := range allServers {
-		activeServs = append(activeServs, gin.H{
-			"id":       s.ID,
-			"name":     s.Name,
-			"HostID":   s.HostID,
-			"status":   s.Status,
-			"Progress": s.Progress,
-		})
-	}
-	c.JSON(http.StatusOK, gin.H{"servers": activeServs})
-}
 
 // create a serverpool in DB, instances will be created by maincrawler
 // take only the name of the new serverpool, with authentication before
@@ -116,8 +92,15 @@ func DeleteServerpool(c *gin.Context) {
 		return
 	}
 
-	if err := config.Database.Where("user_id = ? AND serverpool_id = ?", user.Email, serverpoolID).
-		Delete(&models.Serverpool{}).Error; err != nil {
+	var sp models.Serverpool
+
+	if err := config.Database.First(&sp, "user_id = ? AND serverpool_id = ?", user.Email, serverpoolID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "serverpool not found"})
+		config.DBmu.Unlock()
+		return
+	}
+
+	if err := config.Database.Delete(&sp).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot delete serverpool"})
 		config.DBmu.Unlock()
 		return
@@ -225,97 +208,6 @@ func GetServersInServerpool(c *gin.Context) {
 	}
 	// fmt.Println("SERVERS IN POOL:", serversInPool)
 	c.JSON(http.StatusOK, gin.H{"servers": serversInPool})
-}
-
-func GetallFlavors(c *gin.Context) {
-	var flavor []models.Flavor
-	if err := config.Database.Find(&flavor).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch flavors"})
-		return
-	}
-
-	sort.Slice(flavor, func(i, j int) bool {
-		return flavor[i].Name < flavor[j].Name
-	})
-
-	c.JSON(http.StatusOK, flavor)
-}
-
-func GetAllNetworks(c *gin.Context) {
-	var networks []models.Network
-	if err := config.Database.Find(&networks).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch networks"})
-		return
-	}
-
-	sort.Slice(networks, func(i, j int) bool {
-		return networks[i].Name < networks[j].Name
-	})
-
-	c.JSON(http.StatusOK, networks)
-}
-
-type GroupRequest struct {
-	Group string `json:"group"`
-}
-
-func GetGroupeImage(c *gin.Context) {
-	var req GroupRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
-		return
-	}
-
-	var images []models.Image
-	if err := config.Database.Find(&images).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch images"})
-		return
-	}
-
-	var filtered []models.Image
-	for _, img := range images {
-		named := strings.ToLower(utils.FirstLetters(img.Name))
-		if named == strings.ToLower(req.Group) {
-			filtered = append(filtered, img)
-		}
-	}
-
-	sort.Slice(filtered, func(i, j int) bool {
-		return filtered[i].Name < filtered[j].Name
-	})
-
-	c.JSON(http.StatusOK, filtered)
-}
-
-type GroupeImageName struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-func GetGroupeImagename(c *gin.Context) {
-	groupMap := make(map[string][]string)
-	var images []models.Image
-
-	if err := config.Database.Find(&images).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch images"})
-		return
-	}
-
-	for _, img := range images {
-		named := strings.ToLower(utils.FirstLetters(img.Name))
-		groupMap[named] = append(groupMap[named], img.Name)
-	}
-
-	var groupList []GroupeImageName
-	for k := range groupMap {
-		groupList = append(groupList, GroupeImageName{Name: k, Value: k})
-	}
-
-	sort.Slice(groupList, func(i, j int) bool {
-		return groupList[i].Name < groupList[j].Name
-	})
-
-	c.JSON(http.StatusOK, groupList)
 }
 
 type RebuildRequest struct {

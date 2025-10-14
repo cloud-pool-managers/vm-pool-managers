@@ -11,6 +11,7 @@ export interface User {
 }
 
 export interface Serverpool {
+  ID: string;
   serverpool_id: string;
   image_ref: string;
   flavor_ref: string;
@@ -157,12 +158,13 @@ export function handleWebSocketMessage(message: string) {
 
       // --- SERVERPOOL CHANGES ---
       if (tag === "serverpool") {
-        const spId = data.ServerpoolID || data.serverpool_id;
+        const spId = data.ServerpoolID;
 
         switch (action) {
           case "created": {
             // Ajout d’un nouveau serverpool
             const newSp: Serverpool = {
+              ID: data.ID,
               serverpool_id: data.ServerpoolID,
               image_ref: data.ImageRef,
               flavor_ref: data.FlavorRef,
@@ -177,6 +179,7 @@ export function handleWebSocketMessage(message: string) {
           }
           case "deleted": {
             // Suppression d’un serverpool
+            console.log("Deleting serverpool with ID:", spId);
             newState.serverpools = newState.serverpools.filter(sp => sp.serverpool_id !== spId);
             delete newState.servers[spId];
             break;
@@ -221,6 +224,9 @@ export function handleWebSocketMessage(message: string) {
           }
           case "deleted": {
             newState.servers[spId] = servers.filter(s => s.id !== data.ID);
+            if (newState.servers[spId].length === 0) {
+              delete newState.servers[spId];
+            }
             break;
           }
         }

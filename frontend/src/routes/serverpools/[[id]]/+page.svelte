@@ -3,8 +3,8 @@ import { onDestroy, onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { authStore, serverpoolStore, createServerpool , fetchAllFlavors , fetchAllNetworks, deleteServerpool, rebuildServer, fetchGroupImages , fetchGroupImageName } from '$lib/index';
 import type { ImageOption , FlavorOption , NetworkOption , GroupeImageName} from '$lib/index';
-import { Button, Dropdown, DropdownItem, Table, TableBody, TableHead, TableBodyCell, TableBodyRow, TableHeadCell, Modal , Label, Input, Select , MultiSelect, Spinner } from 'flowbite-svelte';
-import { ChevronDownOutline } from 'flowbite-svelte-icons';
+import { Button, Dropdown, DropdownItem, Table, TableBody, TableHead, TableBodyCell, TableBodyRow, TableHeadCell, Modal , Label, Input, Select , MultiSelect, Spinner, Clipboard } from 'flowbite-svelte';
+import { CheckOutline, ChevronDownOutline } from 'flowbite-svelte-icons';
 import { page } from '$app/stores';
 
 // Typage serveur
@@ -25,12 +25,39 @@ let images: ImageOption[] = [];
 let flavors: FlavorOption[] = [];
 let networks: NetworkOption[] = [];
 let token: string | null = null;
-$: token = $authStore;
-
-$: store = $serverpoolStore;
-
 let selectedsp: string = 'Choisissez le serverpool';
 let groupimagename: GroupeImageName[] = [];
+let servers: Server[] = [];
+let selectedNetworks: string[] = [];
+let selectedFlavor: string = "";
+let selectedImage: string = "";
+let selectedGroupImage: string = "";
+let selectedConfigFile: string = "";
+let createspModal = false;
+let createError = "";
+let createSuccess = false;
+
+$: clipboardsuccess = false;
+$: token = $authStore;
+$: store = $serverpoolStore;
+$: servers = $serverpoolStore.servers[selectedsp] || [];
+
+$: if (selectedGroupImage) {
+  fetchGroupImages(selectedGroupImage).then(data => {
+	images = data;
+	selectedImage = '';
+  });
+}
+
+$: if (!createspModal){
+  selectedFlavor = "";
+  selectedGroupImage = "";
+  selectedImage = "";
+  selectedNetworks = [];
+}
+
+$: console.log("Selected Config File:", selectedConfigFile);
+
 
 onMount(async () => {
   if (!token) {
@@ -58,31 +85,17 @@ onMount(async () => {
 	groupimagename = apiGroupImageName;
 
 	selectedsp = $page.params.id || 'Choisissez le serverpool';
-	await handleSelectServerpool(selectedsp);
   }
 });
 
-let servers: Server[] = [];
 
-$: servers = $serverpoolStore.servers[selectedsp] || [];
-
-let loadingServers = false;
 
 const handleClick = async (e: Event) => {
   e.preventDefault();
   const target = e.target as HTMLButtonElement;
   selectedsp = target.name;
-  await handleSelectServerpool(selectedsp);
 };
 
-async function handleSelectServerpool(serverpoolId: string) {
-  loadingServers = true;
-  loadingServers = false;
-}
-
-let createspModal = false;
-let createError = "";
-let createSuccess = false;
 
 async function handleCreateServerpool(event: Event) {
   event.preventDefault();
@@ -152,7 +165,6 @@ async function handleRebuildServer(server: Server) {
   try {
 	await rebuildServer(server.id, server.name, server.image.id);
 	alert(`Rebuild du serveur ${server.name} (${server.id}) lancé avec succès.`);
-	await handleSelectServerpool(selectedsp);
   } catch (err: any) {
 	alert(err.message || "Erreur lors du rebuild du serveur");
   }
@@ -169,27 +181,7 @@ function getImageNameById(id: string): string {
   return img ? img.name : id;
 }
 
-let selectedNetworks: string[] = [];
-let selectedFlavor: string = "";
-let selectedImage: string = "";
-let selectedGroupImage: string = "";
-let selectedConfigFile: string = "";
 
-$: if (selectedGroupImage) {
-  fetchGroupImages(selectedGroupImage).then(data => {
-	images = data;
-	selectedImage = '';
-  });
-}
-
-$: if (!createspModal){
-  selectedFlavor = "";
-  selectedGroupImage = "";
-  selectedImage = "";
-  selectedNetworks = [];
-}
-
-$: console.log("Selected Config File:", selectedConfigFile);
 
 </script>
 
@@ -198,15 +190,13 @@ $: console.log("Selected Config File:", selectedConfigFile);
   {selectedsp}<ChevronDownOutline class="ms-2 h-6 text-white" />
 </Button>
 <Dropdown simple isOpen={false} class="mt-2">
-  {#each store.serverpools as sp}
+  {#each $serverpoolStore.serverpools as sp}
 	<DropdownItem name={sp.serverpool_id} onclick={handleClick}>{sp.serverpool_id}</DropdownItem>
   {/each}
 </Dropdown>
 
 <!-- Table -->
-{#if loadingServers}
-  <p>Chargement des serveurs...</p>
-{:else if servers.length > 0}
+{#if servers.length > 0}
   <Table hoverable={true} striped={false} class="mt-4 w-full text-tertiary-50">
   <caption class="text-left mb-2">
 	{selectedsp}
@@ -237,7 +227,10 @@ $: console.log("Selected Config File:", selectedConfigFile);
 		  {#if s.addresses}
 			{#each Object.values(s.addresses) as net}
 			  {#each net as addr}
-				{addr.addr}{';  '}
+				{addr.addr}{'\n'}
+				<Clipboard bind:value={addr.addr} bind:success={clipboardsuccess} class="w-14">
+					{#if clipboardsuccess}<CheckOutline />{:else}Copy{/if}
+				</Clipboard>
 			  {/each}
 			{/each}
 		  {/if}

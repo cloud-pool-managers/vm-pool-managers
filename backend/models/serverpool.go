@@ -3,6 +3,7 @@ package models
 import (
 	"PoolManagerVM/backend/websockethandler"
 	"fmt"
+	"log"
 
 	"gorm.io/gorm"
 )
@@ -65,9 +66,8 @@ func (s *Serverpool) AfterUpdate(tx *gorm.DB) (err error) {
 
 func (s *Serverpool) AfterDelete(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
-		websockethandler.SendMessageToUser(s.UserID, "deleted", map[string]string{
-			"serverpool_id": s.ServerpoolID,
-		}, "serverpool")
+		log.Println("Sending delete message to user:", s.UserID, "for serverpool:", s.ServerpoolID)
+		websockethandler.SendMessageToUser(s.UserID, "deleted", s, "serverpool")
 	}
 	return nil
 }

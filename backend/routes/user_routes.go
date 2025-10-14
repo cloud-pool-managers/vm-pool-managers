@@ -11,7 +11,6 @@ import (
 func UserRoutes(r *gin.Engine) {
 	users := r.Group("/users")
 	{
-		users.GET("", controllers.GetUsers)
 		users.GET("/me", middlewares.AuthMiddleware(), controllers.GetProfile)
 		users.POST("", controllers.CreateUser(config.Database))
 		users.DELETE("/me", middlewares.AuthMiddleware(), controllers.DeleteUser)

@@ -94,9 +94,7 @@ func (s *Server) AfterUpdate(tx *gorm.DB) (err error) {
 
 func (s *Server) AfterDelete(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
-		websockethandler.SendMessageToUser(s.UserID, "deleted", map[string]string{
-			"serverpool_id": s.ServerpoolID,
-		}, "server")
+		websockethandler.SendMessageToUser(s.UserID, "deleted", s, "server")
 	}
 	return nil
 }
