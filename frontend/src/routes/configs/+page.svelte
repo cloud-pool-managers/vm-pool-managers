@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { Button, Dropdown, DropdownItem , Label, Textarea, Input } from "flowbite-svelte";
-    import { authStore, serverpoolStore, createConfig } from '$lib/index';
+    import { authStore, serverpoolStore, createConfig, updateConfig, deleteConfig } from '$lib/index';
 	import { ChevronDownOutline } from "flowbite-svelte-icons";
 	import { onMount } from "svelte";
 	import type { Config } from "$lib/stores/fetchinit";
-	import { updateConfig } from "$lib/stores/configHandler";
 
 
     let configs: string = "Configurations";
@@ -59,6 +58,11 @@
         await updateConfig(configid, newconfigname, text);
     }
 
+    async function handledeleteConfig() {
+        console.log("Deleting configuration:", configid);
+        await deleteConfig(configid);
+    }
+
 </script>
 
 <Button size="md" class="w-48 h-12">
@@ -76,12 +80,14 @@
 
 {#if textspacedisplay}
     <Label for="textarea-id" class="mb-2">Votre script de configuration</Label>
-    <Textarea id="textarea-id" placeholder="#!/bin/bash" rows={15} bind:value={text} />
+    <Textarea id="textarea-id" placeholder="#!/bin/bash" rows={25} bind:value={text} class="w-full"/>
     <Label for="config-name" class="mb-2 mt-2">Nom de la configuration</Label>
     <Input id="config-name" type="text" placeholder="Configuration Name" class="mt-2 mb-2" bind:value={newconfigname} />
     {#if configid !== -1}
         <Button size="md" class="w-48 h-12 mt-2" onclick={handleupdateConfig}>Update Configuration</Button>
+        <Button size="md" class="w-48 h-12 mt-2" onclick={handledeleteConfig}>Delete Configuration</Button>
     {:else}
         <Button size="md" class="w-48 h-12 mt-2" onclick={handlecreateConfig}>Save Configuration</Button>
+        <Button size="md" class="w-48 h-12 mt-2" onclick={handledeleteConfig} disabled >Delete Configuration</Button>
     {/if}
 {/if}

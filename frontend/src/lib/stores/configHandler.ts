@@ -48,3 +48,23 @@ export async function updateConfig(
         throw err;
     }
 }
+
+export async function deleteConfig(
+    configId: number
+) {
+    const token = get(authStore);
+    try {
+        const res = await fetch(`http://localhost:8080/users/me/configs/${configId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!res.ok) {
+            throw new Error("Impossible de supprimer la configuration");
+        }
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
