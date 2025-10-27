@@ -8,16 +8,16 @@ import (
 )
 
 type Server struct {
-	ID             string `gorm:"primaryKey"`
-	Name           string
-	Status         string
-	FlavorRef      string
-	ImageRef       string
-	Networks       JSONStringSlice `gorm:"type:text"`
-	Metadata       JSONStringMap   `gorm:"type:text"`
-	ServerpoolID   string
-	UserID         string
-	ServerPool     *Serverpool `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
+	ID           string `gorm:"primaryKey"`
+	Name         string
+	Status       string
+	FlavorRef    string
+	ImageRef     string
+	Networks     JSONStringSlice `gorm:"type:text"`
+	Metadata     JSONStringMap   `gorm:"type:text"`
+	ServerpoolID string
+	UserID       string
+	// ServerPool     *Serverpool `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
 	AttachVolumeID string
 	VolPending     bool `gorm:"default:false; not null"`
 	Reattrib       bool `gorm:"default:false; not null"`
@@ -70,9 +70,9 @@ func PrintServer(server Server) error {
 	fmt.Printf("UserID: %s\n", server.UserID)
 
 	// Si la relation ServerPool est chargée
-	if server.ServerPool != nil {
-		PrintServerpool(*server.ServerPool)
-	}
+	// if server.ServerPool != nil {
+	// 	PrintServerpool(*server.ServerPool)
+	// }
 
 	return nil
 }

@@ -1,82 +1,44 @@
 package main
 
 import (
-	"PoolManagerVM/control_center/config"
-	"PoolManagerVM/control_center/models"
-	"PoolManagerVM/control_center/routes"
 	"context"
+	"control_center/config"
+	cc "control_center/grpc"
+	"control_center/pb"
 	"log"
-	"net/http"
+	"net"
 	"os"
-	"os/signal"
-	"sync"
-	"syscall"
-	"time"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+
+	"google.golang.org/grpc"
 )
 
 func main() {
 
-	// loading .env
-	config.LoadEnvConfig()
-	models.CreateParams()
-
-	// creating context to stop cleanly
-	ctx, cancel := context.WithCancel(context.Background())
+	if err := godotenv.Load(); err != nil {
+		panic("Error on loading .env")
+	}
 
 	//starting database
 	config.Start_DB()
-	go config.Sync_DB(ctx)
+	go config.Sync_DB(context.Background())
 
-	//configuring gin server
-	r := gin.Default()
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
-	routes.UserRoutes(r)
-	routes.ServerpoolRoutes(r)
-	routes.LoginRoutes(r)
-	routes.WebSocketRoutes(r)
-	routes.DatafetchRoutes(r)
+	grpcServer := grpc.NewServer()
+	controlCenter := &cc.ControlCenterServer{DB: config.Database}
+	pb.RegisterControlCenterServer(grpcServer, controlCenter)
 
-	//preparing workers
-	var wg sync.WaitGroup
-	worker.LaunchWorkers(5, &wg, ctx)
-
-	// 	//starting goroutines
-	go internal.Monitor(ctx)
-
-	//starting server gin in go routine
-	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: r,
+	port := os.Getenv("CONTROL_CENTER_PORT")
+	if port == "" {
+		port = "50051"
 	}
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
-		}
-	}()
-	log.Println("Server started on port 8080")
-
-	// bloc instruction to shutdown cleanly
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
-	log.Println("Shutdown signal received")
-	cancel()
-	ctxTimeout, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelTimeout()
-	if err := srv.Shutdown(ctxTimeout); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+	list, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		panic("Impossible d'écouter sur le port" + port)
 	}
-	wg.Wait()
 
-	log.Println("Program exited cleanly")
+	log.Println("Server lancé sur ", port)
+	if err := grpcServer.Serve(list); err != nil {
+		log.Fatalf("Erreur server gRPC : %v", err)
+	}
 }

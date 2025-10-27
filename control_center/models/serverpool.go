@@ -17,8 +17,8 @@ type Serverpool struct {
 	MinVM        int
 	MaxVM        int
 	PendingJobs  int
-	ListServ     []Server `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
-	ConfigID     int
+	// ListServ     []Server `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
+	ConfigID int
 }
 
 func PrintServerpool(sp Serverpool) error {
@@ -33,9 +33,9 @@ func PrintServerpool(sp Serverpool) error {
 	fmt.Println("MaxVm: ", sp.MaxVM)
 	fmt.Println("PendingJobs: ", sp.PendingJobs)
 	fmt.Println("ConfigID: ", sp.ConfigID)
-	for _, s := range sp.ListServ {
-		PrintServer(s)
-	}
+	// for _, s := range sp.ListServ {
+	// 	PrintServer(s)
+	// }
 
 	return nil
 }
