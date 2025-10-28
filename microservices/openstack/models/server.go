@@ -2,6 +2,7 @@ package models
 
 import (
 	"PoolManagerVM/backend/websockethandler"
+	"encoding/json"
 	"fmt"
 
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
@@ -24,6 +25,37 @@ type Server struct {
 	Reattrib       bool `gorm:"default:false; not null"`
 	Progress       int  `gorm:"default:0; not null"`
 	ConfigID       int
+}
+
+func (s *Server) ToMap() map[string]string {
+	result := map[string]string{
+		"id":            s.ID,
+		"name":          s.Name,
+		"status":        s.Status,
+		"flavor_ref":    s.FlavorRef,
+		"image_ref":     s.ImageRef,
+		"serverpool_id": s.ServerpoolID,
+		"user_id":       s.UserID,
+		"attach_volume": s.AttachVolumeID,
+		"vol_pending":   fmt.Sprintf("%t", s.VolPending),
+		"reattrib":      fmt.Sprintf("%t", s.Reattrib),
+		"progress":      fmt.Sprintf("%d", s.Progress),
+		"config_id":     fmt.Sprintf("%d", s.ConfigID),
+	}
+
+	// Convertir les champs JSON custom (JSONStringSlice, JSONStringMap)
+	if s.Networks != nil {
+		if b, err := json.Marshal(s.Networks); err == nil {
+			result["networks"] = string(b)
+		}
+	}
+	if s.Metadata != nil {
+		if b, err := json.Marshal(s.Metadata); err == nil {
+			result["metadata"] = string(b)
+		}
+	}
+
+	return result
 }
 
 func FromGopherServer(s servers.Server) Server {

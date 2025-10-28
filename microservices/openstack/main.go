@@ -2,6 +2,7 @@ package main
 
 import (
 	"PoolManagerVM/backend/config"
+	ss "PoolManagerVM/backend/grpc"
 	"PoolManagerVM/backend/internal"
 	"PoolManagerVM/backend/internal/worker"
 	"PoolManagerVM/backend/models"
@@ -56,6 +57,7 @@ func main() {
 	go internal.Monitor(ctx)
 
 	//starting server gin in go routine
+	go ss.Start_grpc()
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r,

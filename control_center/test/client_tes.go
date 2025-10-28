@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// Connexion au serveur gRPC
-	conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("❌ Impossible de se connecter : %v", err)
 	}

@@ -1,0 +1,43 @@
+syntax = "proto3";
+package poolmanager;
+
+option go_package = "./pb";
+
+import "google/protobuf/empty.proto";
+
+enum Status {
+    STATUS_UNKNOWN = 0;
+    CREATE = 1;
+    UPDATE = 2;
+    DELETE = 3;
+}
+
+enum Type {
+    TYPE_UNKNOWN = 0;
+    SERVERPOOL = 1;
+    SERVER = 2;
+    CONFIG = 3;
+}
+
+message RessourceRequest {
+    string user = 1;
+    map<string, string> data = 2;
+}
+
+message UserRequest {
+    string user = 1;
+}
+
+message StreamRessourceResponse {
+    string user = 1;
+    Status status = 2;
+    Type type = 3;
+    map<string, string> data = 4;
+}
+
+service PoolManager {
+    rpc SendRessources( RessourceRequest ) returns ( google.protobuf.Empty );
+    rpc GetStreamRessources ( google.protobuf.Empty ) returns (stream StreamRessourceResponse);
+    rpc GetStreamRessourcesUser ( UserRequest ) returns (stream StreamRessourceResponse);
+}
+
