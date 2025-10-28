@@ -52,8 +52,8 @@ tasks:
     desc: delete binary file
     cmds:
     - 
-      rm -rf ./backend/bin
-      rm ./backend/PoolManagerVM.db
+      rm -rf ./microservices/openstack/bin
+      rm ./microservices/openstack/PoolManagerVM.db
 
   cli:
     desc: cli

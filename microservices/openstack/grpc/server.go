@@ -3,6 +3,7 @@ package grpc
 import (
 	"PoolManagerVM/backend/config"
 	"PoolManagerVM/backend/models"
+	"PoolManagerVM/backend/notifier"
 	"PoolManagerVM/backend/pb"
 	"context"
 	"log"
@@ -68,7 +69,41 @@ func (s *ServerMicroOpenstack) GetStreamRessources(req *emptypb.Empty, stream pb
 		}
 	}
 
-	return nil
+	for {
+		select {
+		case evt := <-notifier.GlobalChan:
+			server, ok := evt.Server.(models.Server)
+			if !ok {
+				continue
+			}
+			var status pb.Status
+			switch evt.Action {
+			case "created":
+				status = pb.Status_CREATE
+			case "updated":
+				status = pb.Status_UPDATE
+			case "deleted":
+				status = pb.Status_DELETE
+			default:
+				status = pb.Status_STATUS_UNKNOWN
+			}
+
+			err := stream.Send(&pb.StreamRessourceResponse{
+				User:   server.UserID,
+				Type:   pb.Type_SERVER,
+				Status: status,
+				Data:   server.ToMap(),
+			})
+			if err != nil {
+				log.Printf("Stream closed for client: %v", err)
+				return err
+			}
+
+		case <-stream.Context().Done():
+			log.Println("[GetStreamRessources] Client disconnected, end of stream")
+			return nil
+		}
+	}
 }
 
 func (s *ServerMicroOpenstack) GetStreamRessourcesUser(req *pb.UserRequest, stream grpc.ServerStreamingServer[pb.StreamRessourceResponse]) error {

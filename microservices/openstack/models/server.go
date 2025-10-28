@@ -1,6 +1,8 @@
 package models
 
 import (
+	"PoolManagerVM/backend/events"
+	"PoolManagerVM/backend/notifier"
 	"PoolManagerVM/backend/websockethandler"
 	"encoding/json"
 	"fmt"
@@ -114,6 +116,7 @@ func (s *Server) AfterCreate(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
 		websockethandler.SendMessageToUser(s.UserID, "created", s, "server")
 	}
+	notifier.GlobalChan <- events.RessourceEvent{Action: "created", Server: *s}
 	return nil
 }
 
@@ -121,6 +124,7 @@ func (s *Server) AfterUpdate(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
 		websockethandler.SendMessageToUser(s.UserID, "updated", s, "server")
 	}
+	notifier.GlobalChan <- events.RessourceEvent{Action: "updated", Server: *s}
 	return nil
 }
 
@@ -128,6 +132,7 @@ func (s *Server) AfterDelete(tx *gorm.DB) (err error) {
 	if s.UserID != "admin" {
 		websockethandler.SendMessageToUser(s.UserID, "deleted", s, "server")
 	}
+	notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Server: *s}
 	return nil
 }
 
