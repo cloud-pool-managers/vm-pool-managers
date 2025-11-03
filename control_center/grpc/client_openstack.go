@@ -81,10 +81,11 @@ func handleDBEvent(model any, status pb.Status) {
 		}
 
 	case pb.Status_UPDATE:
+		log.Printf("recived: %v", model)
 		if err := config.Database.Save(model).Error; err != nil {
 			log.Printf("Erreur UPDATE %T : %v", model, err)
 		} else {
-			log.Printf("UPDATE %T OK", model)
+			log.Printf("UPDATE %T OK ", model)
 		}
 
 	case pb.Status_DELETE:

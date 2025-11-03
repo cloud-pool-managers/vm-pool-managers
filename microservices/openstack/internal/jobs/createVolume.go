@@ -72,12 +72,15 @@ func CreateVolumeAndAttach(workerID int, job models.Job) error {
 		return err
 	}
 
-	result := config.Database.Model(&models.Server{}).
-		Where("id = ?", job.Data["server_id"]).
-		Update("attach_volume_id", newVolume.ID).Error
-	if result != nil {
+	var updatedserv models.Server
+	if err := config.Database.First(&updatedserv, "id = ? ", job.Data["server_id"]).Error; err != nil {
 		ChangePendingVol(job.Data["server_id"])
-		return result
+		return err
+	}
+	updatedserv.AttachVolumeID = newVolume.ID
+	if err := config.Database.Save(&updatedserv).Error; err != nil {
+		ChangePendingVol(job.Data["server_id"])
+		return err
 	}
 
 	ChangePendingVol(job.Data["server_id"])
