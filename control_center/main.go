@@ -27,13 +27,14 @@ func main() {
 
 	// Lancement des goroutines
 	go config.Sync_DB(ctx)
-	go cc.Start_grpc(ctx)
-	go cc.ConnectToMicroOpen(ctx)
 
 	// Remplissage initial de la base de données
 	cc.PopulateDBImageMicroOpen()
 	cc.PopulateDBFlavorMicroOpen()
 	cc.PopulateDBNetworkMicroOpen()
+
+	go cc.Start_grpc(ctx)
+	go cc.ConnectToMicroOpen(ctx)
 
 	// Attente du signal d’arrêt
 	<-ctx.Done()
