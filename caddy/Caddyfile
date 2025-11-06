@@ -1,0 +1,29 @@
+{
+	servers {
+		protocols h1 h2 h2c
+	}
+}
+
+# Si tu es en local : http://localhost
+localhost {
+	encode gzip
+
+	# Sert le build SvelteKit
+	root * ./frontend/build
+	file_server
+
+	# Traduit gRPC-Web → gRPC pour tes appels API
+	route /api/* {
+		grpc_web
+		reverse_proxy localhost:50051
+	}
+
+	header {
+		Access-Control-Allow-Origin *
+		Access-Control-Allow-Methods *
+		Access-Control-Allow-Headers *
+	}
+
+	# Redirige toutes les routes vers index.html pour ton SPA SvelteKit
+	try_files {path} /index.html
+}
