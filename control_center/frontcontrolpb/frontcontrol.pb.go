@@ -1162,6 +1162,7 @@ func (x *GetConfigRequest) GetKey() string {
 type GetConfigResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1199,6 +1200,13 @@ func (*GetConfigResponse) Descriptor() ([]byte, []int) {
 func (x *GetConfigResponse) GetValue() string {
 	if x != nil {
 		return x.Value
+	}
+	return ""
+}
+
+func (x *GetConfigResponse) GetKey() string {
+	if x != nil {
+		return x.Key
 	}
 	return ""
 }
@@ -2183,9 +2191,10 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"8\n" +
 	"\x10GetConfigRequest\x12\x12\n" +
 	"\x04user\x18\x01 \x01(\tR\x04user\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\")\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\";\n" +
 	"\x11GetConfigResponse\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05value\"\xc9\x01\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"\xc9\x01\n" +
 	"\x11CreatePoolRequest\x12\x12\n" +
 	"\x04user\x18\x01 \x01(\tR\x04user\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +

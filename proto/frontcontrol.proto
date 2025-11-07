@@ -117,6 +117,7 @@ message GetConfigRequest {
 
 message GetConfigResponse {
     string value = 1;
+    string key = 2;
 }
 
 message CreatePoolRequest {

@@ -5,7 +5,7 @@
 	import { authStore, tryLogin, logout , serverpoolStore } from '$lib/index'
 	import { Navbar, NavBrand, NavLi, NavUl, NavHamburger, Button} from 'flowbite-svelte';
 	import { Modal, Label, Input, Checkbox } from 'flowbite-svelte'
-
+	import { AuthenticateUser, CreateUser } from '$lib/login/AuthUser';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	
@@ -34,7 +34,7 @@
 		const password = data.get('password') as string;
 
 		loginError = "";
-		const result = await tryLogin(email, password);
+		const result = await AuthenticateUser(email, password);
 
 		if (!result.success) {
 			loginError = "Erreur lors du login";
@@ -61,34 +61,29 @@
 
 		createAccountError = "";
 		createAccountSuccess = false;
-		if (!(data.get("name") as string) || !(data.get("email") as string) || !(data.get("password") as string) || !(data.get("confirmpassword") as string)) {
-			createAccountError = "Champs non rempli";
-			return false;
-		}
 
-		const password = (data.get("password") as string);
-		const confirmpassword = (data.get("confirmpassword") as string);
+		const name = data.get("name") as string;
+		const email = data.get("email") as string;
+		const password = data.get("password") as string;
+		const confirmpassword = data.get("confirmpassword") as string;
+
+		if (!name || !email || !password || !confirmpassword) {
+			createAccountError = "Champs non rempli";
+			return;
+		}
 		if (password !== confirmpassword) {
 			createAccountError = "Les mots de passe ne correspondent pas";
-			return false;
+			return;
 		}
 
-		const jsonData = Object.fromEntries(data.entries());
-
 		try {
-			const response = await fetch('http://localhost:8080/users', {
-				method:	'POST',
-				headers:	{'Content-Type': 'application/json'},
-				body: JSON.stringify(jsonData)
-			});
-
-			if (!response.ok) {
-				createAccountError = "Erreur lors de la creation du compte";
-				return
+			const result = await CreateUser(name, email, password);
+			if (result.success) {
+				createAccountSuccess = true;
+			} else {
+				createAccountError = "Erreur lors de la création du compte";
+				return;
 			}
-
-			const result = await response.json();
-			createAccountSuccess = true;
 			
 		} catch (err) {
 			createAccountError = "Erreur backend";
