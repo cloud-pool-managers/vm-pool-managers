@@ -131,6 +131,8 @@ type RessourceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	User          string                 `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
 	Data          map[string]string      `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Status        Status                 `protobuf:"varint,3,opt,name=status,proto3,enum=poolmanager.Status" json:"status,omitempty"`
+	Type          Type                   `protobuf:"varint,4,opt,name=type,proto3,enum=poolmanager.Type" json:"type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -179,6 +181,64 @@ func (x *RessourceRequest) GetData() map[string]string {
 	return nil
 }
 
+func (x *RessourceRequest) GetStatus() Status {
+	if x != nil {
+		return x.Status
+	}
+	return Status_STATUS_UNKNOWN
+}
+
+func (x *RessourceRequest) GetType() Type {
+	if x != nil {
+		return x.Type
+	}
+	return Type_TYPE_UNKNOWN
+}
+
+type RessourceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RessourceResponse) Reset() {
+	*x = RessourceResponse{}
+	mi := &file_poolmanager_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RessourceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RessourceResponse) ProtoMessage() {}
+
+func (x *RessourceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_poolmanager_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RessourceResponse.ProtoReflect.Descriptor instead.
+func (*RessourceResponse) Descriptor() ([]byte, []int) {
+	return file_poolmanager_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RessourceResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 type UserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	User          string                 `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
@@ -188,7 +248,7 @@ type UserRequest struct {
 
 func (x *UserRequest) Reset() {
 	*x = UserRequest{}
-	mi := &file_poolmanager_proto_msgTypes[1]
+	mi := &file_poolmanager_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -200,7 +260,7 @@ func (x *UserRequest) String() string {
 func (*UserRequest) ProtoMessage() {}
 
 func (x *UserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_poolmanager_proto_msgTypes[1]
+	mi := &file_poolmanager_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -213,7 +273,7 @@ func (x *UserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserRequest.ProtoReflect.Descriptor instead.
 func (*UserRequest) Descriptor() ([]byte, []int) {
-	return file_poolmanager_proto_rawDescGZIP(), []int{1}
+	return file_poolmanager_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *UserRequest) GetUser() string {
@@ -235,7 +295,7 @@ type StreamRessourceResponse struct {
 
 func (x *StreamRessourceResponse) Reset() {
 	*x = StreamRessourceResponse{}
-	mi := &file_poolmanager_proto_msgTypes[2]
+	mi := &file_poolmanager_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -247,7 +307,7 @@ func (x *StreamRessourceResponse) String() string {
 func (*StreamRessourceResponse) ProtoMessage() {}
 
 func (x *StreamRessourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_poolmanager_proto_msgTypes[2]
+	mi := &file_poolmanager_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -260,7 +320,7 @@ func (x *StreamRessourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamRessourceResponse.ProtoReflect.Descriptor instead.
 func (*StreamRessourceResponse) Descriptor() ([]byte, []int) {
-	return file_poolmanager_proto_rawDescGZIP(), []int{2}
+	return file_poolmanager_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *StreamRessourceResponse) GetUser() string {
@@ -320,7 +380,7 @@ type Image struct {
 
 func (x *Image) Reset() {
 	*x = Image{}
-	mi := &file_poolmanager_proto_msgTypes[3]
+	mi := &file_poolmanager_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -332,7 +392,7 @@ func (x *Image) String() string {
 func (*Image) ProtoMessage() {}
 
 func (x *Image) ProtoReflect() protoreflect.Message {
-	mi := &file_poolmanager_proto_msgTypes[3]
+	mi := &file_poolmanager_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -345,7 +405,7 @@ func (x *Image) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Image.ProtoReflect.Descriptor instead.
 func (*Image) Descriptor() ([]byte, []int) {
-	return file_poolmanager_proto_rawDescGZIP(), []int{3}
+	return file_poolmanager_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Image) GetId() string {
@@ -514,7 +574,7 @@ type Flavor struct {
 
 func (x *Flavor) Reset() {
 	*x = Flavor{}
-	mi := &file_poolmanager_proto_msgTypes[4]
+	mi := &file_poolmanager_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -526,7 +586,7 @@ func (x *Flavor) String() string {
 func (*Flavor) ProtoMessage() {}
 
 func (x *Flavor) ProtoReflect() protoreflect.Message {
-	mi := &file_poolmanager_proto_msgTypes[4]
+	mi := &file_poolmanager_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -539,7 +599,7 @@ func (x *Flavor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flavor.ProtoReflect.Descriptor instead.
 func (*Flavor) Descriptor() ([]byte, []int) {
-	return file_poolmanager_proto_rawDescGZIP(), []int{4}
+	return file_poolmanager_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Flavor) GetId() string {
@@ -639,7 +699,7 @@ type Network struct {
 
 func (x *Network) Reset() {
 	*x = Network{}
-	mi := &file_poolmanager_proto_msgTypes[5]
+	mi := &file_poolmanager_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -651,7 +711,7 @@ func (x *Network) String() string {
 func (*Network) ProtoMessage() {}
 
 func (x *Network) ProtoReflect() protoreflect.Message {
-	mi := &file_poolmanager_proto_msgTypes[5]
+	mi := &file_poolmanager_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -664,7 +724,7 @@ func (x *Network) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Network.ProtoReflect.Descriptor instead.
 func (*Network) Descriptor() ([]byte, []int) {
-	return file_poolmanager_proto_rawDescGZIP(), []int{5}
+	return file_poolmanager_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Network) GetId() string {
@@ -755,13 +815,17 @@ var File_poolmanager_proto protoreflect.FileDescriptor
 
 const file_poolmanager_proto_rawDesc = "" +
 	"\n" +
-	"\x11poolmanager.proto\x12\vpoolmanager\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9c\x01\n" +
+	"\x11poolmanager.proto\x12\vpoolmanager\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf0\x01\n" +
 	"\x10RessourceRequest\x12\x12\n" +
 	"\x04user\x18\x01 \x01(\tR\x04user\x12;\n" +
-	"\x04data\x18\x02 \x03(\v2'.poolmanager.RessourceRequest.DataEntryR\x04data\x1a7\n" +
+	"\x04data\x18\x02 \x03(\v2'.poolmanager.RessourceRequest.DataEntryR\x04data\x12+\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x13.poolmanager.StatusR\x06status\x12%\n" +
+	"\x04type\x18\x04 \x01(\x0e2\x11.poolmanager.TypeR\x04type\x1a7\n" +
 	"\tDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"!\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"-\n" +
+	"\x11RessourceResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"!\n" +
 	"\vUserRequest\x12\x12\n" +
 	"\x04user\x18\x01 \x01(\tR\x04user\"\xfe\x01\n" +
 	"\x17StreamRessourceResponse\x12\x12\n" +
@@ -846,9 +910,9 @@ const file_poolmanager_proto_rawDesc = "" +
 	"\n" +
 	"\x06SERVER\x10\x02\x12\n" +
 	"\n" +
-	"\x06CONFIG\x10\x032\xca\x03\n" +
-	"\vPoolManager\x12G\n" +
-	"\x0eSendRessources\x12\x1d.poolmanager.RessourceRequest\x1a\x16.google.protobuf.Empty\x12U\n" +
+	"\x06CONFIG\x10\x032\xd2\x03\n" +
+	"\vPoolManager\x12O\n" +
+	"\x0eSendRessources\x12\x1d.poolmanager.RessourceRequest\x1a\x1e.poolmanager.RessourceResponse\x12U\n" +
 	"\x13GetStreamRessources\x12\x16.google.protobuf.Empty\x1a$.poolmanager.StreamRessourceResponse0\x01\x12[\n" +
 	"\x17GetStreamRessourcesUser\x12\x18.poolmanager.UserRequest\x1a$.poolmanager.StreamRessourceResponse0\x01\x12<\n" +
 	"\fGetAllImages\x12\x16.google.protobuf.Empty\x1a\x12.poolmanager.Image0\x01\x12>\n" +
@@ -868,45 +932,48 @@ func file_poolmanager_proto_rawDescGZIP() []byte {
 }
 
 var file_poolmanager_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_poolmanager_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_poolmanager_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_poolmanager_proto_goTypes = []any{
 	(Status)(0),                     // 0: poolmanager.Status
 	(Type)(0),                       // 1: poolmanager.Type
 	(*RessourceRequest)(nil),        // 2: poolmanager.RessourceRequest
-	(*UserRequest)(nil),             // 3: poolmanager.UserRequest
-	(*StreamRessourceResponse)(nil), // 4: poolmanager.StreamRessourceResponse
-	(*Image)(nil),                   // 5: poolmanager.Image
-	(*Flavor)(nil),                  // 6: poolmanager.Flavor
-	(*Network)(nil),                 // 7: poolmanager.Network
-	nil,                             // 8: poolmanager.RessourceRequest.DataEntry
-	nil,                             // 9: poolmanager.StreamRessourceResponse.DataEntry
-	(*timestamppb.Timestamp)(nil),   // 10: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),           // 11: google.protobuf.Empty
+	(*RessourceResponse)(nil),       // 3: poolmanager.RessourceResponse
+	(*UserRequest)(nil),             // 4: poolmanager.UserRequest
+	(*StreamRessourceResponse)(nil), // 5: poolmanager.StreamRessourceResponse
+	(*Image)(nil),                   // 6: poolmanager.Image
+	(*Flavor)(nil),                  // 7: poolmanager.Flavor
+	(*Network)(nil),                 // 8: poolmanager.Network
+	nil,                             // 9: poolmanager.RessourceRequest.DataEntry
+	nil,                             // 10: poolmanager.StreamRessourceResponse.DataEntry
+	(*timestamppb.Timestamp)(nil),   // 11: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),           // 12: google.protobuf.Empty
 }
 var file_poolmanager_proto_depIdxs = []int32{
-	8,  // 0: poolmanager.RessourceRequest.data:type_name -> poolmanager.RessourceRequest.DataEntry
-	0,  // 1: poolmanager.StreamRessourceResponse.status:type_name -> poolmanager.Status
-	1,  // 2: poolmanager.StreamRessourceResponse.type:type_name -> poolmanager.Type
-	9,  // 3: poolmanager.StreamRessourceResponse.data:type_name -> poolmanager.StreamRessourceResponse.DataEntry
-	10, // 4: poolmanager.Image.created_at:type_name -> google.protobuf.Timestamp
-	10, // 5: poolmanager.Image.updated_at:type_name -> google.protobuf.Timestamp
-	2,  // 6: poolmanager.PoolManager.SendRessources:input_type -> poolmanager.RessourceRequest
-	11, // 7: poolmanager.PoolManager.GetStreamRessources:input_type -> google.protobuf.Empty
-	3,  // 8: poolmanager.PoolManager.GetStreamRessourcesUser:input_type -> poolmanager.UserRequest
-	11, // 9: poolmanager.PoolManager.GetAllImages:input_type -> google.protobuf.Empty
-	11, // 10: poolmanager.PoolManager.GetAllFlavors:input_type -> google.protobuf.Empty
-	11, // 11: poolmanager.PoolManager.GetAllNetworks:input_type -> google.protobuf.Empty
-	11, // 12: poolmanager.PoolManager.SendRessources:output_type -> google.protobuf.Empty
-	4,  // 13: poolmanager.PoolManager.GetStreamRessources:output_type -> poolmanager.StreamRessourceResponse
-	4,  // 14: poolmanager.PoolManager.GetStreamRessourcesUser:output_type -> poolmanager.StreamRessourceResponse
-	5,  // 15: poolmanager.PoolManager.GetAllImages:output_type -> poolmanager.Image
-	6,  // 16: poolmanager.PoolManager.GetAllFlavors:output_type -> poolmanager.Flavor
-	7,  // 17: poolmanager.PoolManager.GetAllNetworks:output_type -> poolmanager.Network
-	12, // [12:18] is the sub-list for method output_type
-	6,  // [6:12] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	9,  // 0: poolmanager.RessourceRequest.data:type_name -> poolmanager.RessourceRequest.DataEntry
+	0,  // 1: poolmanager.RessourceRequest.status:type_name -> poolmanager.Status
+	1,  // 2: poolmanager.RessourceRequest.type:type_name -> poolmanager.Type
+	0,  // 3: poolmanager.StreamRessourceResponse.status:type_name -> poolmanager.Status
+	1,  // 4: poolmanager.StreamRessourceResponse.type:type_name -> poolmanager.Type
+	10, // 5: poolmanager.StreamRessourceResponse.data:type_name -> poolmanager.StreamRessourceResponse.DataEntry
+	11, // 6: poolmanager.Image.created_at:type_name -> google.protobuf.Timestamp
+	11, // 7: poolmanager.Image.updated_at:type_name -> google.protobuf.Timestamp
+	2,  // 8: poolmanager.PoolManager.SendRessources:input_type -> poolmanager.RessourceRequest
+	12, // 9: poolmanager.PoolManager.GetStreamRessources:input_type -> google.protobuf.Empty
+	4,  // 10: poolmanager.PoolManager.GetStreamRessourcesUser:input_type -> poolmanager.UserRequest
+	12, // 11: poolmanager.PoolManager.GetAllImages:input_type -> google.protobuf.Empty
+	12, // 12: poolmanager.PoolManager.GetAllFlavors:input_type -> google.protobuf.Empty
+	12, // 13: poolmanager.PoolManager.GetAllNetworks:input_type -> google.protobuf.Empty
+	3,  // 14: poolmanager.PoolManager.SendRessources:output_type -> poolmanager.RessourceResponse
+	5,  // 15: poolmanager.PoolManager.GetStreamRessources:output_type -> poolmanager.StreamRessourceResponse
+	5,  // 16: poolmanager.PoolManager.GetStreamRessourcesUser:output_type -> poolmanager.StreamRessourceResponse
+	6,  // 17: poolmanager.PoolManager.GetAllImages:output_type -> poolmanager.Image
+	7,  // 18: poolmanager.PoolManager.GetAllFlavors:output_type -> poolmanager.Flavor
+	8,  // 19: poolmanager.PoolManager.GetAllNetworks:output_type -> poolmanager.Network
+	14, // [14:20] is the sub-list for method output_type
+	8,  // [8:14] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_poolmanager_proto_init() }
@@ -920,7 +987,7 @@ func file_poolmanager_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_poolmanager_proto_rawDesc), len(file_poolmanager_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

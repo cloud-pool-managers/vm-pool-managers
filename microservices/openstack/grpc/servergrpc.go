@@ -34,10 +34,10 @@ func Start_grpc() {
 	}
 }
 
-func (s *ServerMicroOpenstack) SendRessources(ctx context.Context, req *pb.RessourceRequest) (*emptypb.Empty, error) {
+func (s *ServerMicroOpenstack) SendRessources(ctx context.Context, req *pb.RessourceRequest) (*pb.RessourceResponse, error) {
 	log.Printf("[SendRessources] User=%s Data=%v", req.GetUser(), req.GetData())
 	//create ressources here
-	return &emptypb.Empty{}, nil
+	return &pb.RessourceResponse{Success: true}, nil
 }
 
 func sendAllServer(s *ServerMicroOpenstack, stream pb.PoolManager_GetStreamRessourcesServer) error {

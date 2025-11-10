@@ -32,7 +32,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PoolManagerClient interface {
-	SendRessources(ctx context.Context, in *RessourceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SendRessources(ctx context.Context, in *RessourceRequest, opts ...grpc.CallOption) (*RessourceResponse, error)
 	GetStreamRessources(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamRessourceResponse], error)
 	GetStreamRessourcesUser(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamRessourceResponse], error)
 	GetAllImages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Image], error)
@@ -48,9 +48,9 @@ func NewPoolManagerClient(cc grpc.ClientConnInterface) PoolManagerClient {
 	return &poolManagerClient{cc}
 }
 
-func (c *poolManagerClient) SendRessources(ctx context.Context, in *RessourceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *poolManagerClient) SendRessources(ctx context.Context, in *RessourceRequest, opts ...grpc.CallOption) (*RessourceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(RessourceResponse)
 	err := c.cc.Invoke(ctx, PoolManager_SendRessources_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ type PoolManager_GetAllNetworksClient = grpc.ServerStreamingClient[Network]
 // All implementations must embed UnimplementedPoolManagerServer
 // for forward compatibility.
 type PoolManagerServer interface {
-	SendRessources(context.Context, *RessourceRequest) (*emptypb.Empty, error)
+	SendRessources(context.Context, *RessourceRequest) (*RessourceResponse, error)
 	GetStreamRessources(*emptypb.Empty, grpc.ServerStreamingServer[StreamRessourceResponse]) error
 	GetStreamRessourcesUser(*UserRequest, grpc.ServerStreamingServer[StreamRessourceResponse]) error
 	GetAllImages(*emptypb.Empty, grpc.ServerStreamingServer[Image]) error
@@ -173,7 +173,7 @@ type PoolManagerServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPoolManagerServer struct{}
 
-func (UnimplementedPoolManagerServer) SendRessources(context.Context, *RessourceRequest) (*emptypb.Empty, error) {
+func (UnimplementedPoolManagerServer) SendRessources(context.Context, *RessourceRequest) (*RessourceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendRessources not implemented")
 }
 func (UnimplementedPoolManagerServer) GetStreamRessources(*emptypb.Empty, grpc.ServerStreamingServer[StreamRessourceResponse]) error {

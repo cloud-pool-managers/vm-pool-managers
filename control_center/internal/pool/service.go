@@ -36,8 +36,10 @@ func (s *Service) CreatePool(ctx context.Context, req *frontcontrolpb.CreatePool
 	}
 
 	_, err := s.pm.SendRessources(context.Background(), &pb.RessourceRequest{
-		User: req.GetUser(),
-		Data: pool.ToMap(),
+		User:   req.GetUser(),
+		Data:   pool.ToMap(),
+		Status: pb.Status_CREATE,
+		Type:   pb.Type_SERVERPOOL,
 	})
 	if err != nil {
 		return &frontcontrolpb.CreatePoolResponse{Success: false}, err

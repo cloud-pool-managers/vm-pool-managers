@@ -23,6 +23,12 @@ enum Type {
 message RessourceRequest {
     string user = 1;
     map<string, string> data = 2;
+    Status status = 3;
+    Type type = 4;
+}
+
+message RessourceResponse {
+    bool success = 1;
 }
 
 message UserRequest {
@@ -90,7 +96,7 @@ message Network {
 }
 
 service PoolManager {
-    rpc SendRessources( RessourceRequest ) returns ( google.protobuf.Empty );
+    rpc SendRessources( RessourceRequest ) returns ( RessourceResponse );
     rpc GetStreamRessources ( google.protobuf.Empty ) returns (stream StreamRessourceResponse);
     rpc GetStreamRessourcesUser ( UserRequest ) returns (stream StreamRessourceResponse);
     rpc GetAllImages (google.protobuf.Empty ) returns (stream Image);
