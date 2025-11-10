@@ -241,7 +241,7 @@ service GatherDataService {
 service ConfigService {
     rpc CreateConfig (CreateConfigRequest) returns (CreateConfigResponse);
     rpc UpdateConfig (UpdateConfigRequest) returns (UpdateConfigResponse);
-    rpc DeleteConfig (DeleteConfigRequest) returns (google.protobuf.Empty);
+    rpc DeleteConfig (DeleteConfigRequest) returns (DeleteConfigResponse);
     rpc GetConfig (GetConfigRequest) returns (GetConfigResponse);
     rpc GetAllConfigs (GetConfigRequest) returns (stream GetConfigResponse);
 }

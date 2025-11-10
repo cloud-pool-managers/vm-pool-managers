@@ -27,7 +27,7 @@ type Server struct {
 	VolPending     bool `gorm:"default:false; not null"`
 	Reattrib       bool `gorm:"default:false; not null"`
 	Progress       int  `gorm:"default:0; not null"`
-	ConfigID       int
+	ConfigID       string
 }
 
 func (s *Server) ToMap() map[string]string {
@@ -43,7 +43,7 @@ func (s *Server) ToMap() map[string]string {
 		"vol_pending":   fmt.Sprintf("%t", s.VolPending),
 		"reattrib":      fmt.Sprintf("%t", s.Reattrib),
 		"progress":      fmt.Sprintf("%d", s.Progress),
-		"config_id":     fmt.Sprintf("%d", s.ConfigID),
+		"config_id":     s.ConfigID,
 	}
 
 	// Convertir les champs JSON custom (JSONStringSlice, JSONStringMap)
@@ -57,6 +57,8 @@ func (s *Server) ToMap() map[string]string {
 			result["metadata"] = string(b)
 		}
 	}
+
+	result["host"] = "OpenStack"
 
 	return result
 }

@@ -442,7 +442,7 @@ const (
 type ConfigServiceClient interface {
 	CreateConfig(ctx context.Context, in *CreateConfigRequest, opts ...grpc.CallOption) (*CreateConfigResponse, error)
 	UpdateConfig(ctx context.Context, in *UpdateConfigRequest, opts ...grpc.CallOption) (*UpdateConfigResponse, error)
-	DeleteConfig(ctx context.Context, in *DeleteConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteConfig(ctx context.Context, in *DeleteConfigRequest, opts ...grpc.CallOption) (*DeleteConfigResponse, error)
 	GetConfig(ctx context.Context, in *GetConfigRequest, opts ...grpc.CallOption) (*GetConfigResponse, error)
 	GetAllConfigs(ctx context.Context, in *GetConfigRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetConfigResponse], error)
 }
@@ -475,9 +475,9 @@ func (c *configServiceClient) UpdateConfig(ctx context.Context, in *UpdateConfig
 	return out, nil
 }
 
-func (c *configServiceClient) DeleteConfig(ctx context.Context, in *DeleteConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *configServiceClient) DeleteConfig(ctx context.Context, in *DeleteConfigRequest, opts ...grpc.CallOption) (*DeleteConfigResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(DeleteConfigResponse)
 	err := c.cc.Invoke(ctx, ConfigService_DeleteConfig_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -520,7 +520,7 @@ type ConfigService_GetAllConfigsClient = grpc.ServerStreamingClient[GetConfigRes
 type ConfigServiceServer interface {
 	CreateConfig(context.Context, *CreateConfigRequest) (*CreateConfigResponse, error)
 	UpdateConfig(context.Context, *UpdateConfigRequest) (*UpdateConfigResponse, error)
-	DeleteConfig(context.Context, *DeleteConfigRequest) (*emptypb.Empty, error)
+	DeleteConfig(context.Context, *DeleteConfigRequest) (*DeleteConfigResponse, error)
 	GetConfig(context.Context, *GetConfigRequest) (*GetConfigResponse, error)
 	GetAllConfigs(*GetConfigRequest, grpc.ServerStreamingServer[GetConfigResponse]) error
 	mustEmbedUnimplementedConfigServiceServer()
@@ -539,7 +539,7 @@ func (UnimplementedConfigServiceServer) CreateConfig(context.Context, *CreateCon
 func (UnimplementedConfigServiceServer) UpdateConfig(context.Context, *UpdateConfigRequest) (*UpdateConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateConfig not implemented")
 }
-func (UnimplementedConfigServiceServer) DeleteConfig(context.Context, *DeleteConfigRequest) (*emptypb.Empty, error) {
+func (UnimplementedConfigServiceServer) DeleteConfig(context.Context, *DeleteConfigRequest) (*DeleteConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteConfig not implemented")
 }
 func (UnimplementedConfigServiceServer) GetConfig(context.Context, *GetConfigRequest) (*GetConfigResponse, error) {

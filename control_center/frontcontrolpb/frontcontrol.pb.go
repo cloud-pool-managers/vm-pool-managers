@@ -2302,11 +2302,11 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\rGetAllFlavors\x12\x16.google.protobuf.Empty\x1a\x14.frontcontrol.Flavor0\x01\x12A\n" +
 	"\x0eGetAllNetworks\x12\x16.google.protobuf.Empty\x1a\x15.frontcontrol.Network0\x01\x12B\n" +
 	"\rGetAllServers\x12\x19.frontcontrol.UserRequest\x1a\x14.frontcontrol.Server0\x01\x12J\n" +
-	"\x11GetAllServerPools\x12\x19.frontcontrol.UserRequest\x1a\x18.frontcontrol.ServerPool0\x012\xaa\x03\n" +
+	"\x11GetAllServerPools\x12\x19.frontcontrol.UserRequest\x1a\x18.frontcontrol.ServerPool0\x012\xb6\x03\n" +
 	"\rConfigService\x12U\n" +
 	"\fCreateConfig\x12!.frontcontrol.CreateConfigRequest\x1a\".frontcontrol.CreateConfigResponse\x12U\n" +
-	"\fUpdateConfig\x12!.frontcontrol.UpdateConfigRequest\x1a\".frontcontrol.UpdateConfigResponse\x12I\n" +
-	"\fDeleteConfig\x12!.frontcontrol.DeleteConfigRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
+	"\fUpdateConfig\x12!.frontcontrol.UpdateConfigRequest\x1a\".frontcontrol.UpdateConfigResponse\x12U\n" +
+	"\fDeleteConfig\x12!.frontcontrol.DeleteConfigRequest\x1a\".frontcontrol.DeleteConfigResponse\x12L\n" +
 	"\tGetConfig\x12\x1e.frontcontrol.GetConfigRequest\x1a\x1f.frontcontrol.GetConfigResponse\x12R\n" +
 	"\rGetAllConfigs\x12\x1e.frontcontrol.GetConfigRequest\x1a\x1f.frontcontrol.GetConfigResponse0\x012\x9f\x03\n" +
 	"\vPoolService\x12O\n" +
@@ -2410,7 +2410,7 @@ var file_frontcontrol_proto_depIdxs = []int32{
 	29, // 34: frontcontrol.GatherDataService.GetAllServerPools:output_type -> frontcontrol.ServerPool
 	10, // 35: frontcontrol.ConfigService.CreateConfig:output_type -> frontcontrol.CreateConfigResponse
 	12, // 36: frontcontrol.ConfigService.UpdateConfig:output_type -> frontcontrol.UpdateConfigResponse
-	35, // 37: frontcontrol.ConfigService.DeleteConfig:output_type -> google.protobuf.Empty
+	14, // 37: frontcontrol.ConfigService.DeleteConfig:output_type -> frontcontrol.DeleteConfigResponse
 	16, // 38: frontcontrol.ConfigService.GetConfig:output_type -> frontcontrol.GetConfigResponse
 	16, // 39: frontcontrol.ConfigService.GetAllConfigs:output_type -> frontcontrol.GetConfigResponse
 	18, // 40: frontcontrol.PoolService.CreatePool:output_type -> frontcontrol.CreatePoolResponse

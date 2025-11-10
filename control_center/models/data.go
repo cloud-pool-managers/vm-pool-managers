@@ -1,6 +1,7 @@
 package models
 
 import (
+	"control_center/frontcontrolpb"
 	"control_center/pb"
 	"time"
 
@@ -88,6 +89,32 @@ func (i *Image) ToPb() *pb.Image {
 	}
 }
 
+func (i *Image) ToFrontControlPb() *frontcontrolpb.Image {
+	return &frontcontrolpb.Image{
+		Id:               i.ID,
+		Name:             i.Name,
+		Status:           i.Status,
+		Tags:             i.Tags,
+		ContainerFormat:  i.ContainerFormat,
+		DiskFormat:       i.DiskFormat,
+		MinDiskGigabytes: int32(i.MinDiskGigabytes),
+		MinRamMegabytes:  int32(i.MinRAMMegabytes),
+		Owner:            i.Owner,
+		Protected:        i.Protected,
+		Visibility:       i.Visibility,
+		Hidden:           i.Hidden,
+		Checksum:         i.Checksum,
+		SizeBytes:        i.SizeBytes,
+		CreatedAt:        timestamppb.New(i.CreatedAt),
+		UpdatedAt:        timestamppb.New(i.UpdatedAt),
+		File:             i.File,
+		Schema:           i.Schema,
+		VirtualSize:      i.VirtualSize,
+		ImportMethods:    i.ImportMethods,
+		StoreIds:         i.StoreIDs,
+	}
+}
+
 type Flavor struct {
 	ID          string  `gorm:"primaryKey" json:"id"`
 	Host        string  `json:"host"`
@@ -120,6 +147,21 @@ func (f *Flavor) FromPb(pbf *pb.Flavor, host string) {
 
 func (f *Flavor) ToPb() *pb.Flavor {
 	return &pb.Flavor{
+		Id:          f.ID,
+		Name:        f.Name,
+		Disk:        int32(f.Disk),
+		Vcpus:       int32(f.VCPUs),
+		RxtxFactor:  f.RxTxFactor,
+		Swap:        int32(f.Swap),
+		Ephemeral:   int32(f.Ephemeral),
+		IsPublic:    f.IsPublic,
+		Description: f.Description,
+		ExtraSpecs:  f.ExtraSpecs,
+	}
+}
+
+func (f *Flavor) ToFrontControlPb() *frontcontrolpb.Flavor {
+	return &frontcontrolpb.Flavor{
 		Id:          f.ID,
 		Name:        f.Name,
 		Disk:        int32(f.Disk),
@@ -167,6 +209,23 @@ func (n *Network) FromPb(pbn *pb.Network, host string) {
 
 func (n *Network) ToPb() *pb.Network {
 	return &pb.Network{
+		Id:                    n.ID,
+		Name:                  n.Name,
+		Description:           n.Description,
+		AdminStateUp:          n.AdminStateUp,
+		Status:                n.Status,
+		TenantId:              n.TenantID,
+		ProjectId:             n.ProjectID,
+		Shared:                n.Shared,
+		RevisionNumber:        int32(n.RevisionNumber),
+		Subnets:               n.Subnets,
+		AvailabilityZoneHints: n.AvailabilityZoneHints,
+		Tags:                  n.Tags,
+	}
+}
+
+func (n *Network) ToFrontControlPb() *frontcontrolpb.Network {
+	return &frontcontrolpb.Network{
 		Id:                    n.ID,
 		Name:                  n.Name,
 		Description:           n.Description,

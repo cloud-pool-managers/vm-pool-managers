@@ -24,6 +24,7 @@ func (c *ConfigPool) ToMap() map[string]string {
 		"name":    c.Name,
 		"data":    c.Data,
 	}
+	result["host"] = "OpenStack"
 	return result
 }
 

@@ -5,6 +5,8 @@ import (
 	"control_center/config"
 	"control_center/frontcontrolpb"
 	"control_center/internal/auth"
+	"control_center/internal/configpool"
+	"control_center/internal/gatherdata"
 	"log"
 	"net"
 
@@ -43,8 +45,8 @@ func Start_grpc(ctx context.Context) {
 	s := grpc.NewServer()
 
 	frontcontrolpb.RegisterAuthServiceServer(s, auth.New())
-	frontcontrolpb.RegisterGatherDataServiceServer(s, &GatherDataServer{DB: config.Database})
-	frontcontrolpb.RegisterConfigServiceServer(s, &ConfigServer{DB: config.Database})
+	frontcontrolpb.RegisterGatherDataServiceServer(s, gatherdata.New())
+	frontcontrolpb.RegisterConfigServiceServer(s, configpool.New())
 	frontcontrolpb.RegisterPoolServiceServer(s, &PoolServer{DB: config.Database})
 	frontcontrolpb.RegisterUserServiceServer(s, &UserServer{DB: config.Database})
 
@@ -65,69 +67,3 @@ func Start_grpc(ctx context.Context) {
 	s.GracefulStop()
 	log.Println("Serveur gRPC arrêté proprement ✅")
 }
-
-// func (s *ControlCenterServer) GetAllImages(req *emptypb.Empty, stream grpc.ServerStreamingServer[pb.Image]) error {
-// 	rows, err := s.DB.Model(&models.Image{}).Rows()
-// 	if err != nil {
-// 		log.Println("Error retrieving servers")
-// 		return err
-// 	}
-// 	defer rows.Close()
-
-// 	for rows.Next() {
-// 		var img models.Image
-// 		if err := s.DB.ScanRows(rows, &img); err != nil {
-// 			log.Println("Error rows server")
-// 			return err
-// 		}
-// 		if err := stream.Send(img.ToPb()); err != nil {
-// 			log.Println("error sending server")
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
-
-// func (s *ControlCenterServer) GetAllFlavors(req *emptypb.Empty, stream grpc.ServerStreamingServer[pb.Flavor]) error {
-// 	rows, err := s.DB.Model(&models.Flavor{}).Rows()
-// 	if err != nil {
-// 		log.Println("Error retrieving servers")
-// 		return err
-// 	}
-// 	defer rows.Close()
-
-// 	for rows.Next() {
-// 		var f models.Flavor
-// 		if err := s.DB.ScanRows(rows, &f); err != nil {
-// 			log.Println("Error rows server")
-// 			return err
-// 		}
-// 		if err := stream.Send(f.ToPb()); err != nil {
-// 			log.Println("error sending server")
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
-
-// func (s *ControlCenterServer) GetAllNetworks(req *emptypb.Empty, stream grpc.ServerStreamingServer[pb.Network]) error {
-// 	rows, err := s.DB.Model(&models.Network{}).Rows()
-// 	if err != nil {
-// 		log.Println("Error retrieving servers")
-// 		return err
-// 	}
-// 	defer rows.Close()
-
-// 	for rows.Next() {
-// 		var n models.Network
-// 		if err := s.DB.ScanRows(rows, &n); err != nil {
-// 			log.Println("Error rows server")
-// 			return err
-// 		}
-// 		if err := stream.Send(n.ToPb()); err != nil {
-// 			log.Println("error sending server")
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }

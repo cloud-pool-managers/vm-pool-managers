@@ -20,7 +20,7 @@ type Serverpool struct {
 	MinVM        int
 	MaxVM        int
 	PendingJobs  int
-	ConfigID     int
+	ConfigID     string
 }
 
 func (sp *Serverpool) FromPb(pbs *pb.StreamRessourceResponse) error {
@@ -65,13 +65,32 @@ func (sp *Serverpool) FromPb(pbs *pb.StreamRessourceResponse) error {
 			sp.PendingJobs = val
 		}
 	}
-	if v, ok := data["config_id"]; ok && v != "" {
-		if val, err := strconv.Atoi(v); err == nil {
-			sp.ConfigID = val
-		}
-	}
+	sp.ConfigID = data["config_id"]
 
 	return nil
+}
+
+func (sp *Serverpool) ToMap() map[string]string {
+	result := map[string]string{
+		"id":            fmt.Sprintf("%d", sp.ID),
+		"serverpool_id": sp.ServerpoolID,
+		"user_id":       sp.UserID,
+		"image_ref":     sp.ImageRef,
+		"flavor_ref":    sp.FlavorRef,
+		"min_vm":        fmt.Sprintf("%d", sp.MinVM),
+		"max_vm":        fmt.Sprintf("%d", sp.MaxVM),
+		"pending_jobs":  fmt.Sprintf("%d", sp.PendingJobs),
+		"config_id":     sp.ConfigID,
+	}
+
+	// Sérialiser les champs JSON custom
+	if sp.Networks != nil {
+		if b, err := json.Marshal(sp.Networks); err == nil {
+			result["networks"] = string(b)
+		}
+	}
+	result["host"] = "OpenStack"
+	return result
 }
 
 func PrintServerpool(sp Serverpool) error {

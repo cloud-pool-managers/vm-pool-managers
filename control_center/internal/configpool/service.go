@@ -1,6 +1,7 @@
-package config
+package configpool
 
 import (
+	"context"
 	"control_center/frontcontrolpb"
 	"control_center/models"
 
@@ -16,7 +17,7 @@ func New() *Service {
 	return &Service{}
 }
 
-func (s *Service) GetConfig(req *frontcontrolpb.GetConfigRequest) (*frontcontrolpb.GetConfigResponse, error) {
+func (s *Service) GetConfig(ctx context.Context, req *frontcontrolpb.GetConfigRequest) (*frontcontrolpb.GetConfigResponse, error) {
 	var conf models.ConfigPool
 	if err := s.DB.Where(" userid = ? && name = ? ", req.GetUser(), req.GetKey()).First(&conf).Error; err != nil {
 		return nil, err
@@ -27,7 +28,7 @@ func (s *Service) GetConfig(req *frontcontrolpb.GetConfigRequest) (*frontcontrol
 	}, nil
 }
 
-func (s *Service) CreateConfig(req *frontcontrolpb.CreateConfigRequest) (*frontcontrolpb.CreateConfigResponse, error) {
+func (s *Service) CreateConfig(ctx context.Context, req *frontcontrolpb.CreateConfigRequest) (*frontcontrolpb.CreateConfigResponse, error) {
 	conf := models.ConfigPool{
 		UserID: req.GetUser(),
 		Name:   req.GetKey(),
@@ -43,7 +44,7 @@ func (s *Service) CreateConfig(req *frontcontrolpb.CreateConfigRequest) (*frontc
 	}, nil
 }
 
-func (s *Service) UpdateConfig(req *frontcontrolpb.UpdateConfigRequest) (*frontcontrolpb.UpdateConfigResponse, error) {
+func (s *Service) UpdateConfig(ctx context.Context, req *frontcontrolpb.UpdateConfigRequest) (*frontcontrolpb.UpdateConfigResponse, error) {
 	var conf models.ConfigPool
 	if err := s.DB.Where(" userid = ? && name = ? ", req.GetUser(), req.GetKey()).First(&conf).Error; err != nil {
 		return &frontcontrolpb.UpdateConfigResponse{
@@ -61,7 +62,7 @@ func (s *Service) UpdateConfig(req *frontcontrolpb.UpdateConfigRequest) (*frontc
 	}, nil
 }
 
-func (s *Service) DeleteConfig(req *frontcontrolpb.DeleteConfigRequest) (*frontcontrolpb.DeleteConfigResponse, error) {
+func (s *Service) DeleteConfig(ctx context.Context, req *frontcontrolpb.DeleteConfigRequest) (*frontcontrolpb.DeleteConfigResponse, error) {
 	if err := s.DB.Where(" userid = ? && name = ? ", req.GetUser(), req.GetKey()).Delete(&models.ConfigPool{}).Error; err != nil {
 		return &frontcontrolpb.DeleteConfigResponse{
 			Success: false,

@@ -45,6 +45,7 @@ func (sp *Serverpool) ToMap() map[string]string {
 			result["networks"] = string(b)
 		}
 	}
+	result["host"] = "OpenStack"
 	return result
 }
 

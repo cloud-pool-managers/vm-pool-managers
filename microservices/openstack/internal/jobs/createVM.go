@@ -65,11 +65,11 @@ func CreateVM(workerID int, job models.Job) error {
 		ServerpoolID: job.Data["serverpool_id"],
 		Metadata:     metadata,
 		Networks:     networks,
-		ConfigID:     utils.ParseInt(job.Data["config_id"]),
+		ConfigID:     job.Data["config_id"],
 	}
 
 	var conf_file models.ConfigPool
-	conferr := config.Database.First(&conf_file, serv.ConfigID).Error
+	conferr := config.Database.Where("Name = ? && UserID = ?", serv.ConfigID, serv.UserID).First(&conf_file).Error
 	if conferr != nil {
 		log.Println("Error fetching config file:", conferr)
 		conf_file = models.ConfigPool{
