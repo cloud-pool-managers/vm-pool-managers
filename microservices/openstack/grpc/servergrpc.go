@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"PoolManagerVM/backend/config"
+	"PoolManagerVM/backend/events"
 	"PoolManagerVM/backend/internal/worker"
 	"PoolManagerVM/backend/models"
 	"PoolManagerVM/backend/notifier"
@@ -79,7 +80,7 @@ func (s *ServerMicroOpenstack) handleServerpool(db *gorm.DB, req *pb.RessourceRe
 	case pb.Status_UPDATE:
 		return db.Model(&models.Serverpool{}).
 			Where("serverpool_id = ? AND user_id = ?", data["serverpool_id"], req.GetUser()).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"image_ref":  data["image"],
 				"flavor_ref": data["flavor"],
 				"min_vm":     parseInt(data["min_vm"]),
@@ -113,12 +114,14 @@ func (s *ServerMicroOpenstack) handleServer(db *gorm.DB, req *pb.RessourceReques
 	data := req.GetData()
 	switch req.GetStatus() {
 	case pb.Status_CREATE:
+		//shoud check if not max server reached
 		server := models.Server{
 			ID:           data["server_id"],
 			Name:         data["name"],
 			Status:       data["status"],
-			FlavorRef:    data["flavor"],
-			ImageRef:     data["image"],
+			FlavorRef:    data["flavor_ref"],
+			ImageRef:     data["image_ref"],
+			Networks:     models.ParseJSONStringSlice(data["networks"]),
 			ServerpoolID: data["serverpool_id"],
 			UserID:       req.GetUser(),
 		}
@@ -126,7 +129,7 @@ func (s *ServerMicroOpenstack) handleServer(db *gorm.DB, req *pb.RessourceReques
 	case pb.Status_UPDATE:
 		return db.Model(&models.Server{}).
 			Where("id = ?", data["server_id"]).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"name":       data["name"],
 				"status":     data["status"],
 				"flavor_ref": data["flavor"],
@@ -150,12 +153,23 @@ func (s *ServerMicroOpenstack) handleConfig(db *gorm.DB, req *pb.RessourceReques
 		}
 		return db.Create(&cfg).Error
 	case pb.Status_UPDATE:
-		return db.Model(&models.ConfigPool{}).
-			Where("user_id = ? AND name = ?", req.GetUser(), data["name"]).
-			Update("data", data["data"]).Error
+		var cfg models.ConfigPool
+		if err := db.Where(" user_id = ? AND name = ? ", req.GetUser(), data["name"]).First(&cfg).Error; err != nil {
+			return err
+		}
+		cfg.Data = data["data"]
+		return db.Save(&cfg).Error
 	case pb.Status_DELETE:
-		return db.Where("user_id = ? AND name = ?", req.GetUser(), data["name"]).
+		var cfg models.ConfigPool
+		if err := db.Where(" user_id = ? AND name = ? ", req.GetUser(), data["name"]).First(&cfg).Error; err != nil {
+			return err
+		}
+		err := db.Where("user_id = ? AND name = ?", req.GetUser(), data["name"]).
 			Delete(&models.ConfigPool{}).Error
+		if err == nil {
+			notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_CONFIG, Ressource: cfg}
+		}
+		return err
 	default:
 		return fmt.Errorf("unknown status for CONFIG: %v", req.GetStatus())
 	}
@@ -163,7 +177,6 @@ func (s *ServerMicroOpenstack) handleConfig(db *gorm.DB, req *pb.RessourceReques
 
 func (s *ServerMicroOpenstack) SendRessources(ctx context.Context, req *pb.RessourceRequest) (*pb.RessourceResponse, error) {
 	log.Printf("[SendRessources] User=%s Data=%v Status=%v Type=%v", req.GetUser(), req.GetData(), req.GetStatus(), req.GetType())
-
 	err := s.DB.Transaction(func(db *gorm.DB) error {
 		switch req.GetType() {
 		case pb.Type_USER:
@@ -178,11 +191,9 @@ func (s *ServerMicroOpenstack) SendRessources(ctx context.Context, req *pb.Resso
 			return fmt.Errorf("Type unknown: %v", req.GetType())
 		}
 	})
-
 	if err != nil {
 		return &pb.RessourceResponse{Success: false}, err
 	}
-
 	return &pb.RessourceResponse{Success: true}, nil
 }
 
@@ -368,6 +379,7 @@ func (s *ServerMicroOpenstack) GetStreamRessources(req *emptypb.Empty, stream pb
 					status = pb.Status_STATUS_UNKNOWN
 				}
 				log.Println("Sending message now")
+				log.Printf("user = %s, Name = %s", config.UserID, config.Name)
 				err := stream.Send(&pb.StreamRessourceResponse{
 					User:   config.UserID,
 					Type:   pb.Type_CONFIG,

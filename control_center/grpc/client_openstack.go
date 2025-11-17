@@ -49,6 +49,9 @@ func ConnectToMicroOpen(ctx context.Context) {
 				log.Fatalf("Error listening stream: %v", err)
 			}
 			log.Printf("message recieved type : %s", resp.GetType().String())
+			if resp.Type == pb.Type_CONFIG {
+				log.Printf("user_id = %s, name = %s", resp.GetUser(), resp.GetData()["name"])
+			}
 			HandleStreamEvent(resp)
 		}
 	}
@@ -60,45 +63,115 @@ func HandleStreamEvent(resp *pb.StreamRessourceResponse) {
 	case pb.Type_SERVER:
 		var serv models.Server
 		serv.FromPb(resp)
-		handleDBEvent(&serv, resp.Status)
+		handleDBServerEvent(&serv, resp.Status)
 
 	case pb.Type_SERVERPOOL:
 		var pool models.Serverpool
 		pool.FromPb(resp)
-		handleDBEvent(&pool, resp.Status)
+		handleDBServerpoolEvent(&pool, resp.Status)
 
 	case pb.Type_CONFIG:
 		var conf models.ConfigPool
 		conf.FromPb(resp)
-		handleDBEvent(&conf, resp.Status)
+		log.Printf("user_id = %s, name = %s", conf.UserID, conf.Name)
+		handleDBConfigEvent(&conf, resp.Status)
 
 	default:
 		log.Printf("⚠️ Type inconnu reçu : %v", resp.Type)
 	}
 }
 
-func handleDBEvent(model any, status pb.Status) {
+func handleDBServerEvent(server *models.Server, status pb.Status) {
 	switch status {
 
 	case pb.Status_CREATE:
-		if err := config.Database.Clauses(clause.OnConflict{UpdateAll: true}).Create(model).Error; err != nil {
-			log.Printf("Erreur CREATE %T : %v", model, err)
+		if err := config.Database.Clauses(clause.OnConflict{UpdateAll: true}).Create(server).Error; err != nil {
+			log.Printf("Erreur CREATE %T : %v", server, err)
 		} else {
-			log.Printf("CREATE %T OK", model)
+			log.Printf("CREATE %T OK", server)
 		}
 
 	case pb.Status_UPDATE:
-		if err := config.Database.Save(model).Error; err != nil {
-			log.Printf("Erreur UPDATE %T : %v", model, err)
+		err := config.Database.Model(&models.Server{}).
+			Where("user_id = ? AND name = ?", server.UserID, server.Name).
+			Updates(server).Error
+		if err != nil {
+			log.Printf("Erreur UPDATE %T : %v", server, err)
 		} else {
-			log.Printf("UPDATE %T OK ", model)
+			log.Printf("UPDATE %T OK", server)
 		}
 
 	case pb.Status_DELETE:
-		if err := config.Database.Delete(model).Error; err != nil {
-			log.Printf("Erreur DELETE %T : %v", model, err)
+		if err := config.Database.Delete(server).Error; err != nil {
+			log.Printf("Erreur DELETE %T : %v", server, err)
 		} else {
-			log.Printf("DELETE %T OK", model)
+			log.Printf("DELETE %T OK", server)
+		}
+
+	default:
+		log.Printf("Status inconnu : %v", status)
+	}
+}
+
+func handleDBConfigEvent(configpool *models.ConfigPool, status pb.Status) {
+	switch status {
+
+	case pb.Status_CREATE:
+		if err := config.Database.Clauses(clause.OnConflict{UpdateAll: true}).Create(configpool).Error; err != nil {
+			log.Printf("Erreur CREATE %T : %v", configpool, err)
+		} else {
+			log.Printf("CREATE %T OK", configpool)
+		}
+
+	case pb.Status_UPDATE:
+		err := config.Database.Model(&models.ConfigPool{}).
+			Where("user_id = ? AND name = ?", configpool.UserID, configpool.Name).
+			Update("data", configpool.Data).Error
+		if err != nil {
+			log.Printf("Erreur UPDATE %T : %v", configpool, err)
+		} else {
+			log.Printf("user_id = %s, name = %s", configpool.UserID, configpool.Name)
+			log.Printf("UPDATE %T OK", configpool)
+		}
+
+	case pb.Status_DELETE:
+		if err := config.Database.
+			Where("user_id = ? AND name = ?", configpool.UserID, configpool.Name).
+			Delete(configpool).Error; err != nil {
+			log.Printf("Erreur DELETE %T : %v", configpool, err)
+		} else {
+			log.Printf("DELETE %T OK", configpool)
+		}
+	default:
+		log.Printf("Status inconnu : %v", status)
+	}
+}
+
+func handleDBServerpoolEvent(serverpool *models.Serverpool, status pb.Status) {
+	switch status {
+
+	case pb.Status_CREATE:
+		if err := config.Database.Clauses(clause.OnConflict{UpdateAll: true}).Create(serverpool).Error; err != nil {
+			log.Printf("Erreur CREATE %T : %v", serverpool, err)
+		} else {
+			log.Printf("CREATE %T OK", serverpool)
+		}
+
+	case pb.Status_UPDATE:
+		err := config.Database.Model(&models.Serverpool{}).
+			Where("user_id = ? AND serverpool_id = ?", serverpool.UserID, serverpool.ServerpoolID).
+			Updates(serverpool).Error
+		if err != nil {
+			log.Printf("Erreur UPDATE %T : %v", serverpool, err)
+		} else {
+			log.Printf("UPDATE %T OK", serverpool)
+		}
+
+	case pb.Status_DELETE:
+		if err := config.Database.Delete(serverpool).Error; err != nil {
+			log.Printf("Erreur DELETE %T : %v", serverpool, err)
+		} else {
+			log.Printf("DELETE %T OK", serverpool)
 		}
 
 	default:

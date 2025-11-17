@@ -24,7 +24,7 @@ func New(pm pb.PoolManagerClient, db *gorm.DB) *Service {
 
 func (s *Service) GetConfig(ctx context.Context, req *frontcontrolpb.GetConfigRequest) (*frontcontrolpb.GetConfigResponse, error) {
 	var conf models.ConfigPool
-	if err := s.DB.Where(" userid = ? && name = ? ", req.GetUser(), req.GetKey()).First(&conf).Error; err != nil {
+	if err := s.DB.Where(" user_id = ? AND name = ? ", req.GetUser(), req.GetKey()).First(&conf).Error; err != nil {
 		return nil, err
 	}
 	return &frontcontrolpb.GetConfigResponse{
@@ -58,7 +58,7 @@ func (s *Service) CreateConfig(ctx context.Context, req *frontcontrolpb.CreateCo
 
 func (s *Service) UpdateConfig(ctx context.Context, req *frontcontrolpb.UpdateConfigRequest) (*frontcontrolpb.UpdateConfigResponse, error) {
 	var conf models.ConfigPool
-	if err := s.DB.Where(" userid = ? && name = ? ", req.GetUser(), req.GetKey()).First(&conf).Error; err != nil {
+	if err := s.DB.Where(" user_id = ? AND name = ? ", req.GetUser(), req.GetKey()).First(&conf).Error; err != nil {
 		return &frontcontrolpb.UpdateConfigResponse{
 			Success: false,
 		}, err
@@ -82,7 +82,7 @@ func (s *Service) UpdateConfig(ctx context.Context, req *frontcontrolpb.UpdateCo
 
 func (s *Service) DeleteConfig(ctx context.Context, req *frontcontrolpb.DeleteConfigRequest) (*frontcontrolpb.DeleteConfigResponse, error) {
 	var conf models.ConfigPool
-	if err := s.DB.Where(" userid = ? && name = ? ", req.GetUser(), req.GetKey()).First(&conf).Error; err != nil {
+	if err := s.DB.Where(" user_id = ? AND name = ? ", req.GetUser(), req.GetKey()).First(&conf).Error; err != nil {
 		return &frontcontrolpb.DeleteConfigResponse{
 			Success: false,
 		}, err
