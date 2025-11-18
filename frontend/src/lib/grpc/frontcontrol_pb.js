@@ -4264,7 +4264,8 @@ flavor: jspb.Message.getFieldWithDefault(msg, 4, ""),
 network: jspb.Message.getFieldWithDefault(msg, 5, ""),
 config: jspb.Message.getFieldWithDefault(msg, 6, ""),
 minVm: jspb.Message.getFieldWithDefault(msg, 7, ""),
-maxVm: jspb.Message.getFieldWithDefault(msg, 8, "")
+maxVm: jspb.Message.getFieldWithDefault(msg, 8, ""),
+metadataMap: (f = msg.getMetadataMap()) ? f.toObject(includeInstance, undefined) : []
   };
 
   if (includeInstance) {
@@ -4332,6 +4333,12 @@ proto.frontcontrol.CreatePoolRequest.deserializeBinaryFromReader = function(msg,
     case 8:
       var value = /** @type {string} */ (reader.readString());
       msg.setMaxVm(value);
+      break;
+    case 9:
+      var value = msg.getMetadataMap();
+      reader.readMessage(value, function(message, reader) {
+        jspb.Map.deserializeBinary(message, reader, jspb.BinaryReader.prototype.readString, jspb.BinaryReader.prototype.readString, null, "", "");
+         });
       break;
     default:
       reader.skipField();
@@ -4417,6 +4424,10 @@ proto.frontcontrol.CreatePoolRequest.serializeBinaryToWriter = function(message,
       8,
       f
     );
+  }
+  f = message.getMetadataMap(true);
+  if (f && f.getLength() > 0) {
+    f.serializeBinary(9, writer, jspb.BinaryWriter.prototype.writeString, jspb.BinaryWriter.prototype.writeString);
   }
 };
 
@@ -4562,6 +4573,29 @@ proto.frontcontrol.CreatePoolRequest.prototype.getMaxVm = function() {
  */
 proto.frontcontrol.CreatePoolRequest.prototype.setMaxVm = function(value) {
   return jspb.Message.setProto3StringField(this, 8, value);
+};
+
+
+/**
+ * map<string, string> metadata = 9;
+ * @param {boolean=} opt_noLazyCreate Do not create the map if
+ * empty, instead returning `undefined`
+ * @return {!jspb.Map<string,string>}
+ */
+proto.frontcontrol.CreatePoolRequest.prototype.getMetadataMap = function(opt_noLazyCreate) {
+  return /** @type {!jspb.Map<string,string>} */ (
+      jspb.Message.getMapField(this, 9, opt_noLazyCreate,
+      null));
+};
+
+
+/**
+ * Clears values from the map. The map will be non-null.
+ * @return {!proto.frontcontrol.CreatePoolRequest} returns this
+ */
+proto.frontcontrol.CreatePoolRequest.prototype.clearMetadataMap = function() {
+  this.getMetadataMap().clear();
+  return this;
 };
 
 

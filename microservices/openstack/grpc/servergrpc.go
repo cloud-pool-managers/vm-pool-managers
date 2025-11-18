@@ -87,9 +87,13 @@ func (s *ServerMicroOpenstack) handleServerpool(db *gorm.DB, req *pb.RessourceRe
 				"max_vm":     parseInt(data["max_vm"]),
 			}).Error
 	case pb.Status_DELETE:
-		err := db.Where("serverpool_id = ? AND user_id = ?", data["serverpool_id"], req.GetUser()).Delete(&models.Serverpool{}).Error
-		if err != nil {
+		var pool models.Serverpool
+		if err := db.Where(" user_id = ? AND serverpool_id = ? ", req.GetUser(), data["serverpool_id"]).First(&pool).Error; err != nil {
 			return err
+		}
+		err := db.Where("user_id = ? AND serverpool_id = ?", req.GetUser(), data["serverpool_id"]).Delete(&models.Serverpool{}).Error
+		if err == nil {
+			notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_SERVERPOOL, Ressource: pool}
 		}
 		// Also delete all servers linked to this serverpool
 		ops, err := utils.GetAllServers()
@@ -136,6 +140,14 @@ func (s *ServerMicroOpenstack) handleServer(db *gorm.DB, req *pb.RessourceReques
 				"image_ref":  data["image"],
 			}).Error
 	case pb.Status_DELETE:
+		var serv models.Server
+		if err := db.Where(" user_id = ? AND name = ? ", req.GetUser(), data["name"]).First(&serv).Error; err != nil {
+			return err
+		}
+		err := db.Where("user_id = ? AND name = ?", req.GetUser(), data["name"]).Delete(&models.Server{}).Error
+		if err == nil {
+			notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_SERVER, Ressource: serv}
+		}
 		return db.Where("id = ?", data["server_id"]).Delete(&models.Server{}).Error
 	default:
 		return fmt.Errorf("unknown status for SERVER: %v", req.GetStatus())

@@ -515,6 +515,9 @@ export class CreatePoolRequest extends jspb.Message {
   getMaxVm(): string;
   setMaxVm(value: string): CreatePoolRequest;
 
+  getMetadataMap(): jspb.Map<string, string>;
+  clearMetadataMap(): CreatePoolRequest;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreatePoolRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreatePoolRequest): CreatePoolRequest.AsObject;
@@ -533,6 +536,7 @@ export namespace CreatePoolRequest {
     config: string;
     minVm: string;
     maxVm: string;
+    metadataMap: Array<[string, string]>;
   };
 }
 
