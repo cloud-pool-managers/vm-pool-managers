@@ -3,9 +3,7 @@ import { createGrpcWebTransport } from "@connectrpc/connect-web";
 import {
   AuthService,
   CreateUserRequestSchema,
-  CreateUserResponseSchema,
   AuthenticateUserRequestSchema,
-  AuthenticateUserResponseSchema,
 } from "../frontcontrol_pb";
 import type {
   CreateUserRequest,
