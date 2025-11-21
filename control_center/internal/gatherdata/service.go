@@ -83,3 +83,72 @@ func (s *Service) GetAllNetworks(req *emptypb.Empty, stream frontcontrolpb.Gathe
 	}
 	return nil
 }
+
+func (s *Service) GetAllServers(req *frontcontrolpb.UserRequest, stream frontcontrolpb.GatherDataService_GetAllServersServer) error {
+	rows, err := s.DB.Model(&models.Server{}).Rows()
+	if err != nil {
+		log.Println("Error retrieving servers: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var n models.Server
+		if err := s.DB.ScanRows(rows, &n); err != nil {
+			log.Println("Error scanning server row: ", err)
+			return err
+		}
+		if n.UserID == req.GetUser() {
+			if err := stream.Send(n.ToFrontControlPb()); err != nil {
+				log.Println("Error sending server: ", err)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Service) GetAllServerpools(req *frontcontrolpb.UserRequest, stream frontcontrolpb.GatherDataService_GetAllServerPoolsServer) error {
+	rows, err := s.DB.Model(&models.Serverpool{}).Rows()
+	if err != nil {
+		log.Println("Error retrieving servers: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var n models.Serverpool
+		if err := s.DB.ScanRows(rows, &n); err != nil {
+			log.Println("Error scanning server row: ", err)
+			return err
+		}
+		if n.UserID == req.GetUser() {
+			if err := stream.Send(n.ToFrontControlPb()); err != nil {
+				log.Println("Error sending server: ", err)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Service) GetAllConfigs(req *frontcontrolpb.UserRequest, stream frontcontrolpb.GatherDataService_GetAllConfigsServer) error {
+	rows, err := s.DB.Model(&models.ConfigPool{}).Rows()
+	if err != nil {
+		log.Println("Error retrieving servers: ", err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var n models.ConfigPool
+		if err := s.DB.ScanRows(rows, &n); err != nil {
+			log.Println("Error scanning server row: ", err)
+			return err
+		}
+		if n.UserID == req.GetUser() {
+			if err := stream.Send(n.ToFrontControlPb()); err != nil {
+				log.Println("Error sending server: ", err)
+			}
+		}
+	}
+	return nil
+}

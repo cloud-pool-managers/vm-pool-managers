@@ -6,6 +6,7 @@ import {
     getAllNetworks,
     getAllServers,
     getAllServerPools,
+    getAllConfigs,
 } from "$lib/index";
 
 import type {
@@ -14,6 +15,7 @@ import type {
     Network,
     Server,
     ServerPool,
+    Config,
 } from "../grpc/frontcontrol_pb";
 
 
@@ -25,6 +27,7 @@ export const flavors = writable<Flavor[]>([]);
 export const networks = writable<Network[]>([]);
 export const servers = writable<Server[]>([]);
 export const serverPools = writable<ServerPool[]>([]);
+export const configs = writable<Config[]>([]);
 
 
 // ==========================================================================
@@ -56,6 +59,11 @@ export async function loadServerPools(user: string) {
     serverPools.set(data);
 }
 
+export async function loadConfigs(user: string) {
+    const data = await getAllConfigs(user);
+    configs.set(data);
+}
+
 
 // ==========================================================================
 // Helper pour tout charger d'un coup (infrastructure générale)
@@ -67,5 +75,6 @@ export async function loadAll(user: string) {
         loadNetworks(),
         loadServers(user),
         loadServerPools(user),
+        loadConfigs(user),
     ]);
 }

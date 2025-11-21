@@ -39,7 +39,7 @@
 
     loginError = "";
     try {
-      const result = await authenticateUser(email, password); // ✅ nouvelle fonction
+      const result = await authenticateUser(email, password);
       if (!result.success) {
         loginError = "Erreur lors du login";
         return;
@@ -89,7 +89,7 @@
     }
 
     try {
-      const result = await createUser(name, email, password); // ✅ nouvelle fonction
+      const result = await createUser(name, email, password);
       if (result.success) {
         createAccountSuccess = true;
       } else {

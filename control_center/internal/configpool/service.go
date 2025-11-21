@@ -102,25 +102,3 @@ func (s *Service) DeleteConfig(ctx context.Context, req *frontcontrolpb.DeleteCo
 		Success: true,
 	}, nil
 }
-
-func (s *Service) GetAllConfigs(req *frontcontrolpb.GetConfigRequest, stream frontcontrolpb.ConfigService_GetAllConfigsServer) error {
-	rows, err := s.DB.Model(&models.ConfigPool{}).Rows()
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var cp models.ConfigPool
-		if err := s.DB.ScanRows(rows, &cp); err != nil {
-			return err
-		}
-		if err := stream.Send(&frontcontrolpb.GetConfigResponse{
-			Key:   cp.Name,
-			Value: cp.Data,
-		}); err != nil {
-			return err
-		}
-	}
-	return nil
-}

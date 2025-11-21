@@ -4,20 +4,15 @@ import { EmptySchema } from "@bufbuild/protobuf/wkt";
 import { create } from "@bufbuild/protobuf";
 import {
     GatherDataService,
-    ImageSchema,
-    FlavorSchema,
-    NetworkSchema,
-    ServerSchema,
-    ServerPoolSchema,
     UserRequestSchema,
 } from "../frontcontrol_pb"
 import type {
-    UserRequest,
     Image,
     Flavor,
     Network,
     Server,
     ServerPool,
+    Config,
 } from "../frontcontrol_pb"
 
 const empty = create(EmptySchema);
@@ -75,6 +70,16 @@ export async function getAllServerPools(user : string): Promise<ServerPool[]> {
     const stream = gatherClient.getAllServerPools(req);
     for await (const pool of stream) {
         results.push(pool);
+    }
+    return results;
+}
+
+export async function getAllConfigs(user: string): Promise<Config[]> {
+    const results: Config[] = [];
+    const req = create(UserRequestSchema, {user});
+    const stream = gatherClient.getAllConfigs(req);
+    for await (const conf of stream) {
+        results.push(conf);
     }
     return results;
 }

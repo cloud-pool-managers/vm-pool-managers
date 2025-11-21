@@ -1,6 +1,7 @@
 package models
 
 import (
+	"control_center/frontcontrolpb"
 	"control_center/pb"
 	"fmt"
 	"strconv"
@@ -42,6 +43,14 @@ func (c *ConfigPool) ToMap() map[string]string {
 	}
 	result["host"] = "OpenStack"
 	return result
+}
+
+func (c *ConfigPool) ToFrontControlPb() *frontcontrolpb.Config {
+	return &frontcontrolpb.Config{
+		UserId: c.UserID,
+		Name:   c.Name,
+		Data:   c.Data,
+	}
 }
 
 func (c *ConfigPool) AfterCreate(tx *gorm.DB) (err error) {

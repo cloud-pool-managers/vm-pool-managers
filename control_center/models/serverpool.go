@@ -1,6 +1,7 @@
 package models
 
 import (
+	"control_center/frontcontrolpb"
 	"control_center/pb"
 	"encoding/json"
 	"fmt"
@@ -91,6 +92,29 @@ func (sp *Serverpool) ToMap() map[string]string {
 	}
 	result["host"] = "OpenStack"
 	return result
+}
+
+func (sp *Serverpool) ToFrontControlPb() *frontcontrolpb.ServerPool {
+	// network: ton proto attend une STRING, alors que ton modèle contient un slice
+	// par défaut on prend le premier réseau s’il existe
+	var network string
+	if len(sp.Networks) > 0 {
+		network = sp.Networks[0]
+	}
+
+	return &frontcontrolpb.ServerPool{
+		Id:      strconv.FormatUint(uint64(sp.ID), 10), // uint → string
+		Name:    sp.ServerpoolID,                       // choix par défaut
+		Image:   sp.ImageRef,
+		Flavor:  sp.FlavorRef,
+		Network: network,
+		Config:  sp.ConfigID,
+		MinVm:   int32(sp.MinVM),
+		MaxVm:   int32(sp.MaxVM),
+
+		// pas de metadata dans ton modèle → map vide
+		Metadata: map[string]string{},
+	}
 }
 
 func PrintServerpool(sp Serverpool) error {

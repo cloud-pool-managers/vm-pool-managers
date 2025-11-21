@@ -165,6 +165,7 @@ const (
 	GatherDataService_GetAllNetworks_FullMethodName    = "/frontcontrol.GatherDataService/GetAllNetworks"
 	GatherDataService_GetAllServers_FullMethodName     = "/frontcontrol.GatherDataService/GetAllServers"
 	GatherDataService_GetAllServerPools_FullMethodName = "/frontcontrol.GatherDataService/GetAllServerPools"
+	GatherDataService_GetAllConfigs_FullMethodName     = "/frontcontrol.GatherDataService/GetAllConfigs"
 )
 
 // GatherDataServiceClient is the client API for GatherDataService service.
@@ -176,6 +177,7 @@ type GatherDataServiceClient interface {
 	GetAllNetworks(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Network], error)
 	GetAllServers(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Server], error)
 	GetAllServerPools(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ServerPool], error)
+	GetAllConfigs(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Config], error)
 }
 
 type gatherDataServiceClient struct {
@@ -281,6 +283,25 @@ func (c *gatherDataServiceClient) GetAllServerPools(ctx context.Context, in *Use
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type GatherDataService_GetAllServerPoolsClient = grpc.ServerStreamingClient[ServerPool]
 
+func (c *gatherDataServiceClient) GetAllConfigs(ctx context.Context, in *UserRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Config], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &GatherDataService_ServiceDesc.Streams[5], GatherDataService_GetAllConfigs_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[UserRequest, Config]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type GatherDataService_GetAllConfigsClient = grpc.ServerStreamingClient[Config]
+
 // GatherDataServiceServer is the server API for GatherDataService service.
 // All implementations must embed UnimplementedGatherDataServiceServer
 // for forward compatibility.
@@ -290,6 +311,7 @@ type GatherDataServiceServer interface {
 	GetAllNetworks(*emptypb.Empty, grpc.ServerStreamingServer[Network]) error
 	GetAllServers(*UserRequest, grpc.ServerStreamingServer[Server]) error
 	GetAllServerPools(*UserRequest, grpc.ServerStreamingServer[ServerPool]) error
+	GetAllConfigs(*UserRequest, grpc.ServerStreamingServer[Config]) error
 	mustEmbedUnimplementedGatherDataServiceServer()
 }
 
@@ -314,6 +336,9 @@ func (UnimplementedGatherDataServiceServer) GetAllServers(*UserRequest, grpc.Ser
 }
 func (UnimplementedGatherDataServiceServer) GetAllServerPools(*UserRequest, grpc.ServerStreamingServer[ServerPool]) error {
 	return status.Errorf(codes.Unimplemented, "method GetAllServerPools not implemented")
+}
+func (UnimplementedGatherDataServiceServer) GetAllConfigs(*UserRequest, grpc.ServerStreamingServer[Config]) error {
+	return status.Errorf(codes.Unimplemented, "method GetAllConfigs not implemented")
 }
 func (UnimplementedGatherDataServiceServer) mustEmbedUnimplementedGatherDataServiceServer() {}
 func (UnimplementedGatherDataServiceServer) testEmbeddedByValue()                           {}
@@ -391,6 +416,17 @@ func _GatherDataService_GetAllServerPools_Handler(srv interface{}, stream grpc.S
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type GatherDataService_GetAllServerPoolsServer = grpc.ServerStreamingServer[ServerPool]
 
+func _GatherDataService_GetAllConfigs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(UserRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(GatherDataServiceServer).GetAllConfigs(m, &grpc.GenericServerStream[UserRequest, Config]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type GatherDataService_GetAllConfigsServer = grpc.ServerStreamingServer[Config]
+
 // GatherDataService_ServiceDesc is the grpc.ServiceDesc for GatherDataService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -424,16 +460,20 @@ var GatherDataService_ServiceDesc = grpc.ServiceDesc{
 			Handler:       _GatherDataService_GetAllServerPools_Handler,
 			ServerStreams: true,
 		},
+		{
+			StreamName:    "GetAllConfigs",
+			Handler:       _GatherDataService_GetAllConfigs_Handler,
+			ServerStreams: true,
+		},
 	},
 	Metadata: "frontcontrol.proto",
 }
 
 const (
-	ConfigService_CreateConfig_FullMethodName  = "/frontcontrol.ConfigService/CreateConfig"
-	ConfigService_UpdateConfig_FullMethodName  = "/frontcontrol.ConfigService/UpdateConfig"
-	ConfigService_DeleteConfig_FullMethodName  = "/frontcontrol.ConfigService/DeleteConfig"
-	ConfigService_GetConfig_FullMethodName     = "/frontcontrol.ConfigService/GetConfig"
-	ConfigService_GetAllConfigs_FullMethodName = "/frontcontrol.ConfigService/GetAllConfigs"
+	ConfigService_CreateConfig_FullMethodName = "/frontcontrol.ConfigService/CreateConfig"
+	ConfigService_UpdateConfig_FullMethodName = "/frontcontrol.ConfigService/UpdateConfig"
+	ConfigService_DeleteConfig_FullMethodName = "/frontcontrol.ConfigService/DeleteConfig"
+	ConfigService_GetConfig_FullMethodName    = "/frontcontrol.ConfigService/GetConfig"
 )
 
 // ConfigServiceClient is the client API for ConfigService service.
@@ -444,7 +484,6 @@ type ConfigServiceClient interface {
 	UpdateConfig(ctx context.Context, in *UpdateConfigRequest, opts ...grpc.CallOption) (*UpdateConfigResponse, error)
 	DeleteConfig(ctx context.Context, in *DeleteConfigRequest, opts ...grpc.CallOption) (*DeleteConfigResponse, error)
 	GetConfig(ctx context.Context, in *GetConfigRequest, opts ...grpc.CallOption) (*GetConfigResponse, error)
-	GetAllConfigs(ctx context.Context, in *GetConfigRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetConfigResponse], error)
 }
 
 type configServiceClient struct {
@@ -495,25 +534,6 @@ func (c *configServiceClient) GetConfig(ctx context.Context, in *GetConfigReques
 	return out, nil
 }
 
-func (c *configServiceClient) GetAllConfigs(ctx context.Context, in *GetConfigRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetConfigResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &ConfigService_ServiceDesc.Streams[0], ConfigService_GetAllConfigs_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[GetConfigRequest, GetConfigResponse]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ConfigService_GetAllConfigsClient = grpc.ServerStreamingClient[GetConfigResponse]
-
 // ConfigServiceServer is the server API for ConfigService service.
 // All implementations must embed UnimplementedConfigServiceServer
 // for forward compatibility.
@@ -522,7 +542,6 @@ type ConfigServiceServer interface {
 	UpdateConfig(context.Context, *UpdateConfigRequest) (*UpdateConfigResponse, error)
 	DeleteConfig(context.Context, *DeleteConfigRequest) (*DeleteConfigResponse, error)
 	GetConfig(context.Context, *GetConfigRequest) (*GetConfigResponse, error)
-	GetAllConfigs(*GetConfigRequest, grpc.ServerStreamingServer[GetConfigResponse]) error
 	mustEmbedUnimplementedConfigServiceServer()
 }
 
@@ -544,9 +563,6 @@ func (UnimplementedConfigServiceServer) DeleteConfig(context.Context, *DeleteCon
 }
 func (UnimplementedConfigServiceServer) GetConfig(context.Context, *GetConfigRequest) (*GetConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConfig not implemented")
-}
-func (UnimplementedConfigServiceServer) GetAllConfigs(*GetConfigRequest, grpc.ServerStreamingServer[GetConfigResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method GetAllConfigs not implemented")
 }
 func (UnimplementedConfigServiceServer) mustEmbedUnimplementedConfigServiceServer() {}
 func (UnimplementedConfigServiceServer) testEmbeddedByValue()                       {}
@@ -641,17 +657,6 @@ func _ConfigService_GetConfig_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ConfigService_GetAllConfigs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(GetConfigRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ConfigServiceServer).GetAllConfigs(m, &grpc.GenericServerStream[GetConfigRequest, GetConfigResponse]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ConfigService_GetAllConfigsServer = grpc.ServerStreamingServer[GetConfigResponse]
-
 // ConfigService_ServiceDesc is the grpc.ServiceDesc for ConfigService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -676,13 +681,7 @@ var ConfigService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ConfigService_GetConfig_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "GetAllConfigs",
-			Handler:       _ConfigService_GetAllConfigs_Handler,
-			ServerStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "frontcontrol.proto",
 }
 

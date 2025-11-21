@@ -226,6 +226,12 @@ message ServerPool {
     map<string, string> metadata = 9;
 }
 
+message Config {
+    string user_id = 1;
+    string name = 2;
+    string data = 3;
+}
+
 service AuthService {
     rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
     rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthenticateUserResponse);
@@ -237,6 +243,8 @@ service GatherDataService {
     rpc GetAllNetworks (google.protobuf.Empty) returns (stream Network);
     rpc GetAllServers ( UserRequest ) returns (stream Server);
     rpc GetAllServerPools ( UserRequest ) returns (stream ServerPool);
+    rpc GetAllConfigs ( UserRequest ) returns (stream Config);
+
 }
 
 service ConfigService {
@@ -244,7 +252,6 @@ service ConfigService {
     rpc UpdateConfig (UpdateConfigRequest) returns (UpdateConfigResponse);
     rpc DeleteConfig (DeleteConfigRequest) returns (DeleteConfigResponse);
     rpc GetConfig (GetConfigRequest) returns (GetConfigResponse);
-    rpc GetAllConfigs (GetConfigRequest) returns (stream GetConfigResponse);
 }
 
 service PoolService {

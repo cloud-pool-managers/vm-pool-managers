@@ -1,6 +1,7 @@
 package models
 
 import (
+	"control_center/frontcontrolpb"
 	"control_center/pb"
 	"encoding/json"
 	"fmt"
@@ -94,6 +95,25 @@ func (s *Server) FromPb(pbs *pb.StreamRessourceResponse) {
 		if err := json.Unmarshal([]byte(v), &m); err == nil {
 			s.Metadata = m
 		}
+	}
+}
+
+func (s *Server) ToFrontControlPb() *frontcontrolpb.Server {
+	metadata := make(map[string]string, len(s.Metadata))
+	for k, v := range s.Metadata {
+		metadata[k] = v
+	}
+	return &frontcontrolpb.Server{
+		Id:        s.ID,
+		Name:      s.Name,
+		Status:    s.Status,
+		Image:     s.ImageRef,
+		Flavor:    s.FlavorRef,
+		Network:   "", // à mapper selon ta logique
+		IpAddress: "", // idem
+		CreatedAt: nil,
+		UpdatedAt: nil,
+		Metadata:  metadata,
 	}
 }
 

@@ -2095,6 +2095,66 @@ func (x *ServerPool) GetMetadata() map[string]string {
 	return nil
 }
 
+type Config struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Data          string                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Config) Reset() {
+	*x = Config{}
+	mi := &file_frontcontrol_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Config) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Config) ProtoMessage() {}
+
+func (x *Config) ProtoReflect() protoreflect.Message {
+	mi := &file_frontcontrol_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Config.ProtoReflect.Descriptor instead.
+func (*Config) Descriptor() ([]byte, []int) {
+	return file_frontcontrol_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *Config) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Config) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Config) GetData() string {
+	if x != nil {
+		return x.Data
+	}
+	return ""
+}
+
 var File_frontcontrol_proto protoreflect.FileDescriptor
 
 const file_frontcontrol_proto_rawDesc = "" +
@@ -2276,7 +2336,11 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\bmetadata\x18\t \x03(\v2&.frontcontrol.ServerPool.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*@\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"I\n" +
+	"\x06Config\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\tR\x04data*@\n" +
 	"\x06Status\x12\x12\n" +
 	"\x0eSTATUS_UNKNOWN\x10\x00\x12\n" +
 	"\n" +
@@ -2296,19 +2360,19 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\vAuthService\x12O\n" +
 	"\n" +
 	"CreateUser\x12\x1f.frontcontrol.CreateUserRequest\x1a .frontcontrol.CreateUserResponse\x12a\n" +
-	"\x10AuthenticateUser\x12%.frontcontrol.AuthenticateUserRequest\x1a&.frontcontrol.AuthenticateUserResponse2\xe6\x02\n" +
+	"\x10AuthenticateUser\x12%.frontcontrol.AuthenticateUserRequest\x1a&.frontcontrol.AuthenticateUserResponse2\xaa\x03\n" +
 	"\x11GatherDataService\x12=\n" +
 	"\fGetAllImages\x12\x16.google.protobuf.Empty\x1a\x13.frontcontrol.Image0\x01\x12?\n" +
 	"\rGetAllFlavors\x12\x16.google.protobuf.Empty\x1a\x14.frontcontrol.Flavor0\x01\x12A\n" +
 	"\x0eGetAllNetworks\x12\x16.google.protobuf.Empty\x1a\x15.frontcontrol.Network0\x01\x12B\n" +
 	"\rGetAllServers\x12\x19.frontcontrol.UserRequest\x1a\x14.frontcontrol.Server0\x01\x12J\n" +
-	"\x11GetAllServerPools\x12\x19.frontcontrol.UserRequest\x1a\x18.frontcontrol.ServerPool0\x012\xb6\x03\n" +
+	"\x11GetAllServerPools\x12\x19.frontcontrol.UserRequest\x1a\x18.frontcontrol.ServerPool0\x01\x12B\n" +
+	"\rGetAllConfigs\x12\x19.frontcontrol.UserRequest\x1a\x14.frontcontrol.Config0\x012\xe2\x02\n" +
 	"\rConfigService\x12U\n" +
 	"\fCreateConfig\x12!.frontcontrol.CreateConfigRequest\x1a\".frontcontrol.CreateConfigResponse\x12U\n" +
 	"\fUpdateConfig\x12!.frontcontrol.UpdateConfigRequest\x1a\".frontcontrol.UpdateConfigResponse\x12U\n" +
 	"\fDeleteConfig\x12!.frontcontrol.DeleteConfigRequest\x1a\".frontcontrol.DeleteConfigResponse\x12L\n" +
-	"\tGetConfig\x12\x1e.frontcontrol.GetConfigRequest\x1a\x1f.frontcontrol.GetConfigResponse\x12R\n" +
-	"\rGetAllConfigs\x12\x1e.frontcontrol.GetConfigRequest\x1a\x1f.frontcontrol.GetConfigResponse0\x012\x9f\x03\n" +
+	"\tGetConfig\x12\x1e.frontcontrol.GetConfigRequest\x1a\x1f.frontcontrol.GetConfigResponse2\x9f\x03\n" +
 	"\vPoolService\x12O\n" +
 	"\n" +
 	"CreatePool\x12\x1f.frontcontrol.CreatePoolRequest\x1a .frontcontrol.CreatePoolResponse\x12F\n" +
@@ -2333,7 +2397,7 @@ func file_frontcontrol_proto_rawDescGZIP() []byte {
 }
 
 var file_frontcontrol_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_frontcontrol_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_frontcontrol_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_frontcontrol_proto_goTypes = []any{
 	(Status)(0),                      // 0: frontcontrol.Status
 	(Type)(0),                        // 1: frontcontrol.Type
@@ -2365,36 +2429,37 @@ var file_frontcontrol_proto_goTypes = []any{
 	(*UserRequest)(nil),              // 27: frontcontrol.UserRequest
 	(*Server)(nil),                   // 28: frontcontrol.Server
 	(*ServerPool)(nil),               // 29: frontcontrol.ServerPool
-	nil,                              // 30: frontcontrol.CreatePoolRequest.MetadataEntry
-	nil,                              // 31: frontcontrol.UpdateDataUserResponse.DataEntry
-	nil,                              // 32: frontcontrol.Server.MetadataEntry
-	nil,                              // 33: frontcontrol.ServerPool.MetadataEntry
-	(*timestamppb.Timestamp)(nil),    // 34: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),            // 35: google.protobuf.Empty
+	(*Config)(nil),                   // 30: frontcontrol.Config
+	nil,                              // 31: frontcontrol.CreatePoolRequest.MetadataEntry
+	nil,                              // 32: frontcontrol.UpdateDataUserResponse.DataEntry
+	nil,                              // 33: frontcontrol.Server.MetadataEntry
+	nil,                              // 34: frontcontrol.ServerPool.MetadataEntry
+	(*timestamppb.Timestamp)(nil),    // 35: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),            // 36: google.protobuf.Empty
 }
 var file_frontcontrol_proto_depIdxs = []int32{
-	34, // 0: frontcontrol.Image.created_at:type_name -> google.protobuf.Timestamp
-	34, // 1: frontcontrol.Image.updated_at:type_name -> google.protobuf.Timestamp
-	30, // 2: frontcontrol.CreatePoolRequest.metadata:type_name -> frontcontrol.CreatePoolRequest.MetadataEntry
+	35, // 0: frontcontrol.Image.created_at:type_name -> google.protobuf.Timestamp
+	35, // 1: frontcontrol.Image.updated_at:type_name -> google.protobuf.Timestamp
+	31, // 2: frontcontrol.CreatePoolRequest.metadata:type_name -> frontcontrol.CreatePoolRequest.MetadataEntry
 	0,  // 3: frontcontrol.UpdateDataUserResponse.status:type_name -> frontcontrol.Status
 	1,  // 4: frontcontrol.UpdateDataUserResponse.type:type_name -> frontcontrol.Type
-	31, // 5: frontcontrol.UpdateDataUserResponse.data:type_name -> frontcontrol.UpdateDataUserResponse.DataEntry
-	34, // 6: frontcontrol.Server.created_at:type_name -> google.protobuf.Timestamp
-	34, // 7: frontcontrol.Server.updated_at:type_name -> google.protobuf.Timestamp
-	32, // 8: frontcontrol.Server.metadata:type_name -> frontcontrol.Server.MetadataEntry
-	33, // 9: frontcontrol.ServerPool.metadata:type_name -> frontcontrol.ServerPool.MetadataEntry
+	32, // 5: frontcontrol.UpdateDataUserResponse.data:type_name -> frontcontrol.UpdateDataUserResponse.DataEntry
+	35, // 6: frontcontrol.Server.created_at:type_name -> google.protobuf.Timestamp
+	35, // 7: frontcontrol.Server.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 8: frontcontrol.Server.metadata:type_name -> frontcontrol.Server.MetadataEntry
+	34, // 9: frontcontrol.ServerPool.metadata:type_name -> frontcontrol.ServerPool.MetadataEntry
 	2,  // 10: frontcontrol.AuthService.CreateUser:input_type -> frontcontrol.CreateUserRequest
 	4,  // 11: frontcontrol.AuthService.AuthenticateUser:input_type -> frontcontrol.AuthenticateUserRequest
-	35, // 12: frontcontrol.GatherDataService.GetAllImages:input_type -> google.protobuf.Empty
-	35, // 13: frontcontrol.GatherDataService.GetAllFlavors:input_type -> google.protobuf.Empty
-	35, // 14: frontcontrol.GatherDataService.GetAllNetworks:input_type -> google.protobuf.Empty
+	36, // 12: frontcontrol.GatherDataService.GetAllImages:input_type -> google.protobuf.Empty
+	36, // 13: frontcontrol.GatherDataService.GetAllFlavors:input_type -> google.protobuf.Empty
+	36, // 14: frontcontrol.GatherDataService.GetAllNetworks:input_type -> google.protobuf.Empty
 	27, // 15: frontcontrol.GatherDataService.GetAllServers:input_type -> frontcontrol.UserRequest
 	27, // 16: frontcontrol.GatherDataService.GetAllServerPools:input_type -> frontcontrol.UserRequest
-	9,  // 17: frontcontrol.ConfigService.CreateConfig:input_type -> frontcontrol.CreateConfigRequest
-	11, // 18: frontcontrol.ConfigService.UpdateConfig:input_type -> frontcontrol.UpdateConfigRequest
-	13, // 19: frontcontrol.ConfigService.DeleteConfig:input_type -> frontcontrol.DeleteConfigRequest
-	15, // 20: frontcontrol.ConfigService.GetConfig:input_type -> frontcontrol.GetConfigRequest
-	15, // 21: frontcontrol.ConfigService.GetAllConfigs:input_type -> frontcontrol.GetConfigRequest
+	27, // 17: frontcontrol.GatherDataService.GetAllConfigs:input_type -> frontcontrol.UserRequest
+	9,  // 18: frontcontrol.ConfigService.CreateConfig:input_type -> frontcontrol.CreateConfigRequest
+	11, // 19: frontcontrol.ConfigService.UpdateConfig:input_type -> frontcontrol.UpdateConfigRequest
+	13, // 20: frontcontrol.ConfigService.DeleteConfig:input_type -> frontcontrol.DeleteConfigRequest
+	15, // 21: frontcontrol.ConfigService.GetConfig:input_type -> frontcontrol.GetConfigRequest
 	17, // 22: frontcontrol.PoolService.CreatePool:input_type -> frontcontrol.CreatePoolRequest
 	21, // 23: frontcontrol.PoolService.GetPool:input_type -> frontcontrol.GetPoolRequest
 	21, // 24: frontcontrol.PoolService.GetAllPools:input_type -> frontcontrol.GetPoolRequest
@@ -2408,11 +2473,11 @@ var file_frontcontrol_proto_depIdxs = []int32{
 	8,  // 32: frontcontrol.GatherDataService.GetAllNetworks:output_type -> frontcontrol.Network
 	28, // 33: frontcontrol.GatherDataService.GetAllServers:output_type -> frontcontrol.Server
 	29, // 34: frontcontrol.GatherDataService.GetAllServerPools:output_type -> frontcontrol.ServerPool
-	10, // 35: frontcontrol.ConfigService.CreateConfig:output_type -> frontcontrol.CreateConfigResponse
-	12, // 36: frontcontrol.ConfigService.UpdateConfig:output_type -> frontcontrol.UpdateConfigResponse
-	14, // 37: frontcontrol.ConfigService.DeleteConfig:output_type -> frontcontrol.DeleteConfigResponse
-	16, // 38: frontcontrol.ConfigService.GetConfig:output_type -> frontcontrol.GetConfigResponse
-	16, // 39: frontcontrol.ConfigService.GetAllConfigs:output_type -> frontcontrol.GetConfigResponse
+	30, // 35: frontcontrol.GatherDataService.GetAllConfigs:output_type -> frontcontrol.Config
+	10, // 36: frontcontrol.ConfigService.CreateConfig:output_type -> frontcontrol.CreateConfigResponse
+	12, // 37: frontcontrol.ConfigService.UpdateConfig:output_type -> frontcontrol.UpdateConfigResponse
+	14, // 38: frontcontrol.ConfigService.DeleteConfig:output_type -> frontcontrol.DeleteConfigResponse
+	16, // 39: frontcontrol.ConfigService.GetConfig:output_type -> frontcontrol.GetConfigResponse
 	18, // 40: frontcontrol.PoolService.CreatePool:output_type -> frontcontrol.CreatePoolResponse
 	22, // 41: frontcontrol.PoolService.GetPool:output_type -> frontcontrol.GetPoolResponse
 	22, // 42: frontcontrol.PoolService.GetAllPools:output_type -> frontcontrol.GetPoolResponse
@@ -2437,7 +2502,7 @@ func file_frontcontrol_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_frontcontrol_proto_rawDesc), len(file_frontcontrol_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   32,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   5,
 		},
