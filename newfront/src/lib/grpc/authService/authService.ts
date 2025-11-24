@@ -11,15 +11,15 @@ import type {
   AuthenticateUserRequest,
   AuthenticateUserResponse,
 } from "../frontcontrol_pb";
-import { create } from "@bufbuild/protobuf"; // fonction utilitaire de protoc-gen-es
+import { create } from "@bufbuild/protobuf";
 
 
 const transport = createGrpcWebTransport({
-  baseUrl: "http://localhost:80", // l'URL de ton proxy gRPC-Web
-  useBinaryFormat: true,             // recommandé pour gRPC-Web
-  interceptors: [],                  // tu peux ajouter des middlewares si besoin
-  fetch: globalThis.fetch,           // le fetch du navigateur
-  jsonOptions: {},                   // options pour JSON, si tu veux
+  baseUrl: "http://localhost:80",
+  useBinaryFormat: true,
+  interceptors: [],
+  fetch: globalThis.fetch,
+  jsonOptions: {},
 });
 
 /**
