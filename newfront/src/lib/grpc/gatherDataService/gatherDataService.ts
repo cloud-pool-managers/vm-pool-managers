@@ -30,6 +30,7 @@ export async function getAllImages(user: string): Promise<Image[]>{
     const req = create(UserRequestSchema, { user });
     const stream = gatherClient.getAllImages(req);
     for await (const img of stream) {
+        if (!img.name) continue;
         results.push(img);
     }
     return results;
@@ -40,6 +41,7 @@ export async function getAllFlavors(user: string): Promise<Flavor[]> {
     const req = create(UserRequestSchema, { user });
     const stream = gatherClient.getAllFlavors(req);
     for await (const flav of stream) {
+        if (!flav.name) continue;
         results.push(flav);
     }
     return results;
@@ -50,6 +52,7 @@ export async function getAllNetworks(user: string): Promise<Network[]> {
     const req = create(UserRequestSchema, { user });
     const stream = gatherClient.getAllNetworks(req);
     for await (const net of stream) {
+        if (!net.name) continue;
         results.push(net);
     }
     return results;
@@ -60,6 +63,7 @@ export async function getAllServers(user: string): Promise<Server[]> {
     const req = create(UserRequestSchema, { user });
     const stream = gatherClient.getAllServers(req);
     for await (const srv of stream) {
+        if (!srv.name) continue;
         results.push(srv);
     }
     return results;
@@ -70,6 +74,7 @@ export async function getAllServerPools(user : string): Promise<ServerPool[]> {
     const req = create(UserRequestSchema, { user });
     const stream = gatherClient.getAllServerPools(req);
     for await (const pool of stream) {
+        if (!pool.name) continue;
         results.push(pool);
     }
     return results;
@@ -80,6 +85,7 @@ export async function getAllConfigs(user: string): Promise<Config[]> {
     const req = create(UserRequestSchema, {user});
     const stream = gatherClient.getAllConfigs(req);
     for await (const conf of stream) {
+        if (!conf.name) continue;
         results.push(conf);
     }
     return results;
