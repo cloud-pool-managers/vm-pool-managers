@@ -67,6 +67,7 @@ export async function getAllServers(user: string): Promise<Server[]> {
     for await (const srv of stream) {
         if (!srv.name) continue;
         results.push(srv);
+        console.log("Received server:", srv);
     }
     return results;
 }
@@ -77,6 +78,7 @@ export async function getAllServerPools(user : string): Promise<ServerPool[]> {
     const stream = gatherClient.getAllServerPools(req);
     for await (const pool of stream) {
         if (!pool.name) continue;
+        console.log("Received server pool:", pool);
         results.push(pool);
     }
     return results;
@@ -89,6 +91,7 @@ export async function getAllConfigs(user: string): Promise<Config[]> {
     for await (const conf of stream) {
         if (!conf.name) continue;
         results.push(conf);
+        console.log("Received config:", conf);
     }
     return results;
 }

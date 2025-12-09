@@ -1882,6 +1882,7 @@ type Server struct {
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Metadata      map[string]string      `protobuf:"bytes,10,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	UserId        string                 `protobuf:"bytes,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1986,6 +1987,13 @@ func (x *Server) GetMetadata() map[string]string {
 	return nil
 }
 
+func (x *Server) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
 type ServerPool struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1997,6 +2005,7 @@ type ServerPool struct {
 	MinVm         int32                  `protobuf:"varint,7,opt,name=min_vm,json=minVm,proto3" json:"min_vm,omitempty"`
 	MaxVm         int32                  `protobuf:"varint,8,opt,name=max_vm,json=maxVm,proto3" json:"max_vm,omitempty"`
 	Metadata      map[string]string      `protobuf:"bytes,9,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	UserId        string                 `protobuf:"bytes,10,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2092,6 +2101,13 @@ func (x *ServerPool) GetMetadata() map[string]string {
 		return x.Metadata
 	}
 	return nil
+}
+
+func (x *ServerPool) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
 }
 
 type Config struct {
@@ -2347,7 +2363,7 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\x15RebuildServerResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"!\n" +
 	"\vUserRequest\x12\x12\n" +
-	"\x04user\x18\x01 \x01(\tR\x04user\"\x9e\x03\n" +
+	"\x04user\x18\x01 \x01(\tR\x04user\"\xb7\x03\n" +
 	"\x06Server\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -2362,10 +2378,11 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
 	"\bmetadata\x18\n" +
-	" \x03(\v2\".frontcontrol.Server.MetadataEntryR\bmetadata\x1a;\n" +
+	" \x03(\v2\".frontcontrol.Server.MetadataEntryR\bmetadata\x12\x17\n" +
+	"\auser_id\x18\v \x01(\tR\x06userId\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xbf\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd8\x02\n" +
 	"\n" +
 	"ServerPool\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -2376,7 +2393,9 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\x06config\x18\x06 \x01(\tR\x06config\x12\x15\n" +
 	"\x06min_vm\x18\a \x01(\x05R\x05minVm\x12\x15\n" +
 	"\x06max_vm\x18\b \x01(\x05R\x05maxVm\x12B\n" +
-	"\bmetadata\x18\t \x03(\v2&.frontcontrol.ServerPool.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\t \x03(\v2&.frontcontrol.ServerPool.MetadataEntryR\bmetadata\x12\x17\n" +
+	"\auser_id\x18\n" +
+	" \x01(\tR\x06userId\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"I\n" +

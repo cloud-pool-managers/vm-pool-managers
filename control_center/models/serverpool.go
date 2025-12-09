@@ -106,6 +106,7 @@ func (sp *Serverpool) ToFrontControlPb() *frontcontrolpb.ServerPool {
 		MinVm:    int32(sp.MinVM),
 		MaxVm:    int32(sp.MaxVM),
 		Metadata: map[string]string{},
+		UserId:   sp.UserID,
 	}
 }
 

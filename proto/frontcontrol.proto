@@ -211,6 +211,7 @@ message Server {
     google.protobuf.Timestamp created_at = 8;
     google.protobuf.Timestamp updated_at = 9;
     map<string, string> metadata = 10;
+    string user_id = 11;
 }
 
 message ServerPool {
@@ -223,6 +224,7 @@ message ServerPool {
     int32 min_vm = 7;
     int32 max_vm = 8;
     map<string, string> metadata = 9;
+    string user_id = 10;
 }
 
 message Config {

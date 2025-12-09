@@ -1,16 +1,9 @@
 import { createClient } from "@connectrpc/connect";
 import { createGrpcWebTransport } from "@connectrpc/connect-web";
 import { create } from "@bufbuild/protobuf";
-
 import {
     UserService,
     UpdateDataUserRequestSchema,
-    UpdateDataUserResponseSchema,
-} from "../frontcontrol_pb"
-
-import type { 
-    UpdateDataUserRequest,
-    UpdateDataUserResponse,
 } from "../frontcontrol_pb"
 import { handleUserUpdate } from "$lib/utils/updateHandlers";
 
@@ -24,7 +17,6 @@ const transport = createGrpcWebTransport({
 });
 
 const userclient = createClient(UserService, transport);
-
 
 export async function subscribeUserUpdate(user: string, signal?: AbortSignal) {
     const req = create(UpdateDataUserRequestSchema, {user});

@@ -11,12 +11,25 @@ import { get, type Writable } from "svelte/store";
 // Type → Store mapping
 // ======================================================================
 
-const storeMap: Record<Type, Writable<any[]> | undefined> = {
-    [Type.TYPE_UNKNOWN]: undefined,
-    [Type.SERVERPOOL]: serverPools,
-    [Type.SERVER]: servers,
-    [Type.CONFIG]: configs,
-};
+// const storeMap: Record<Type, Writable<any[]> | undefined> = {
+//     [Type.TYPE_UNKNOWN]: undefined,
+//     [Type.SERVERPOOL]: serverPools,
+//     [Type.SERVER]: servers,
+//     [Type.CONFIG]: configs,
+// };
+
+let storeMap: Record<Type, Writable<any[]> | undefined>;
+function getStoreMap() {
+    if (!storeMap) {
+        storeMap = {
+            [Type.TYPE_UNKNOWN]: undefined,
+            [Type.SERVERPOOL]: serverPools,
+            [Type.SERVER]: servers,
+            [Type.CONFIG]: configs,
+        };
+    }
+    return storeMap;
+}
 
 // ======================================================================
 // map<string,string> → object JS
@@ -43,6 +56,9 @@ function hasRequiredKey(obj: any) {
 // ======================================================================
 
 function isSameKey(a: any, b: any) {
+    console.log("Comparing keys:", { user_id_a: a.user_id, name_a: a.name }, { user_id_b: b.user_id, name_b: b.name });
+    console.log("objet a:", a);
+    console.log("objet b:", b);
     return a.user_id === b.user_id && a.name === b.name;
 }
 
@@ -57,6 +73,7 @@ function applyStoreMutation(store: Writable<any[]>, status: Status, obj: any) {
         if (!Array.isArray(items)) items = [];
 
         const idx = items.findIndex(i => isSameKey(i, obj));
+        console.log("key composite recherchée :", { user_id: obj.user_id, name: obj.name }, "-> index trouvée :", idx);
 
         switch (status) {
             case Status.CREATE:
@@ -101,6 +118,7 @@ function normalize(obj: any) {
 // ======================================================================
 
 export function handleUserUpdate(update: UpdateDataUserResponse) {
+    const storeMap = getStoreMap();
     console.log("📩 Update reçu :", update);
 
     const store = storeMap[update.type];

@@ -144,6 +144,7 @@ func (s *Server) ToFrontControlPb() *frontcontrolpb.Server {
 		CreatedAt: nil,
 		UpdatedAt: nil,
 		Metadata:  metadata,
+		UserId:    s.UserID,
 	}
 }
 
