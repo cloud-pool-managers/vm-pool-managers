@@ -11,13 +11,6 @@ import { get, type Writable } from "svelte/store";
 // Type → Store mapping
 // ======================================================================
 
-// const storeMap: Record<Type, Writable<any[]> | undefined> = {
-//     [Type.TYPE_UNKNOWN]: undefined,
-//     [Type.SERVERPOOL]: serverPools,
-//     [Type.SERVER]: servers,
-//     [Type.CONFIG]: configs,
-// };
-
 let storeMap: Record<Type, Writable<any[]> | undefined>;
 function getStoreMap() {
     if (!storeMap) {
@@ -43,8 +36,14 @@ function mapToObject(map: Record<string, string>) {
 // Vérifie si un objet possède la clé composite (user_id + name)
 // ======================================================================
 
+function getUserKey(obj: any): string | undefined {
+    return obj?.user_id ?? obj?.userId ?? obj?.userid ?? obj?.userID;
+}
+
+
 function hasRequiredKey(obj: any) {
-    const ok = obj && obj.user_id && obj.name;
+    const userKey = getUserKey(obj);
+    const ok = obj && userKey && obj.name;
     if (!ok) {
         console.warn("❌ Objet ignoré (clé composite absente) :", obj);
     }
@@ -56,10 +55,15 @@ function hasRequiredKey(obj: any) {
 // ======================================================================
 
 function isSameKey(a: any, b: any) {
-    console.log("Comparing keys:", { user_id_a: a.user_id, name_a: a.name }, { user_id_b: b.user_id, name_b: b.name });
-    console.log("objet a:", a);
-    console.log("objet b:", b);
-    return a.user_id === b.user_id && a.name === b.name;
+    const userA = getUserKey(a);
+    const userB = getUserKey(b);
+
+    console.log("Comparing keys:", 
+        { user_a: userA, name_a: a?.name },
+        { user_b: userB, name_b: b?.name }
+    );
+
+    return userA === userB && a?.name === b?.name;
 }
 
 // ======================================================================
@@ -105,13 +109,30 @@ function applyStoreMutation(store: Writable<any[]>, status: Status, obj: any) {
     });
 }
 
-function normalize(obj: any) {
-    if (!obj.name && obj.serverpool_id) {
-        obj.name = obj.serverpool_id;
-        delete obj.serverpool_id;
+function normalizeKeys(obj: any) {
+    if (!obj) return obj;
+
+    const normalized = { ...obj };
+
+    // Normalisation user_id
+    for (const key of ["user_id", "userId", "userid", "userID"]) {
+        if (normalized[key] !== undefined) {
+            normalized.user_id = normalized[key];
+            if (key !== "user_id") delete normalized[key];
+        }
     }
-    return obj;
+
+    // Normalisation name → ne remplace PAS si déjà défini
+    for (const key of ["serverpool_id"]) {
+        if (!normalized.name && normalized[key] !== undefined) {
+            normalized.name = normalized[key];
+        }
+        if (key !== "name") delete normalized[key];
+    }
+
+    return normalized;
 }
+
 
 // ======================================================================
 // Handler principal
@@ -127,7 +148,7 @@ export function handleUserUpdate(update: UpdateDataUserResponse) {
         return;
     }
 
-    const obj = normalize(mapToObject(update.data));
+    const obj = normalizeKeys(mapToObject(update.data));
     applyStoreMutation(store, update.status, obj);
 
     console.log("📦 Store mis à jour :", get(store));
