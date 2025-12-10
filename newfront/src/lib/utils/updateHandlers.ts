@@ -109,7 +109,7 @@ function applyStoreMutation(store: Writable<any[]>, status: Status, obj: any) {
     });
 }
 
-function normalizeKeys(obj: any) {
+function normalizeKeys(obj: any, type: Type) {
     if (!obj) return obj;
 
     const normalized = { ...obj };
@@ -119,6 +119,62 @@ function normalizeKeys(obj: any) {
         if (normalized[key] !== undefined) {
             normalized.user_id = normalized[key];
             if (key !== "user_id") delete normalized[key];
+        }
+    }
+
+    if (normalized.image_ref !== undefined) {
+        normalized.image = normalized.image_ref;
+        delete normalized.image_ref;
+    }
+
+    if (normalized.flavor_ref !== undefined) {
+        normalized.flavor = normalized.flavor_ref;
+        delete normalized.flavor_ref;
+    }
+
+    if (type === Type.SERVER) {
+        if (normalized.networks !== undefined) {
+            try {
+                const arr = JSON.parse(normalized.networks);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    const entry = arr[0]; // Suppose qu’il y a un seul réseau
+                    if (typeof entry === "string") {
+                        const [net, ip] = entry.split(":");
+                    
+                        if (net) normalized.network = net;
+                        if (ip) normalized.ipAddress = ip;
+                    }
+                }
+            } catch (e) {
+                console.warn("❌ Erreur parsing networks:", normalized.networks, e);
+            }
+            delete normalized.networks;
+        }
+    }
+
+    if (type === Type.SERVERPOOL) {
+        if (normalized.networks !== undefined) {
+            try {
+                let raw = normalized.networks;
+                // Parse JSON si string
+                if (typeof raw === "string") {
+                    const arr = JSON.parse(raw);
+                    if (Array.isArray(arr) && arr.length > 0) {
+                        raw = arr[0];
+                    }
+                }
+                if (typeof raw === "string") {
+                    // Si "network:ip" → ne garder que network
+                    if (raw.includes(":")) {
+                        raw = raw.split(":")[0];
+                    }
+                    normalized.network = raw;
+                }
+            } catch (e) {
+                console.warn("❌ Erreur parsing networks:", normalized.networks, e);
+                normalized.network = normalized.networks; // fallback
+            }
+            delete normalized.networks;
         }
     }
 
@@ -148,7 +204,7 @@ export function handleUserUpdate(update: UpdateDataUserResponse) {
         return;
     }
 
-    const obj = normalizeKeys(mapToObject(update.data));
+    const obj = normalizeKeys(mapToObject(update.data), update.type);
     applyStoreMutation(store, update.status, obj);
 
     console.log("📦 Store mis à jour :", get(store));

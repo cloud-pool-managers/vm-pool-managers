@@ -47,7 +47,6 @@ $: token = $authStore?.token ?? null;
 $: selectedPool = $serverPools.find(p => p.name === selectedsp);
 $: serversp = selectedPool
   ? $servers.filter(server => {
-      // metadata pourrait être un JSON string → on le parse si besoin
       let metadata = server.metadata;
       if (typeof metadata === "string") {
         try {
@@ -73,17 +72,6 @@ $: networkOptions = $networks.map(net => ({
   a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
 );
 
-function getFlavorNameById(id: string): string {
-	const flavor = $flavors.find(f => f.id === id);
-	return flavor ? flavor.name : id;
-}
-
-
-function getImageNameById(id: string): string {
-	const img = $images.find(i => i.id === id);
-	return img ? img.name : id;
-}
-
 async function handleRebuildServer(serv: Server) {
 	if (!confirm(`Voulez-vous rebuild le serveur ${serv.name} ?`)) {
 		return;
@@ -108,7 +96,7 @@ async function handleDeleteServerpool(sp: ServerPool) {
 	const req: DeletePoolRequest = create(DeletePoolRequestSchema, {user: $authStore?.email, poolId: sp.name})
 	try {
 		const res: DeletePoolResponse = await deletePool(req);
-		if (!res.success) {
+		if (res.success) {
       selectedsp = "Choisissez le serverpool";
 		}
 	} catch (err) {
@@ -202,8 +190,9 @@ async function handleCreateServerpool(event: Event) {
   <Table hoverable={true} striped={false} class="mt-4 w-full text-tertiary-50">
   <caption class="text-left mb-2">
 	{selectedsp}
-	<p class="text-sm font-normal">Flavor: {getFlavorNameById($servers[0].flavor)}</p>
-	<p class="text-sm font-normal">Image: {getImageNameById($servers[0].image)}</p>
+	<p class="text-sm font-normal">Flavor: {$flavors.find(img => img.id === selectedPool?.flavor)?.name ?? selectedPool?.flavor}</p>
+	<p class="text-sm font-normal">Image: {$images.find(img => img.id === selectedPool?.image)?.name ?? selectedPool?.image}</p>
+  <p class="text-sm font-normal">Network: {$networks.find(img => img.id === selectedPool?.network)?.name ?? selectedPool?.network}</p>
   </caption>
 
   <TableHead class="bg-tertiary-500 text-white">
@@ -223,15 +212,7 @@ async function handleCreateServerpool(event: Event) {
 			{/if}
 			{s.status}
 		</TableBodyCell>
-		<TableBodyCell>
-      {#if s.network}
-        {#each s.network.split(',') as net}
-          <div class="flex items-center justify-between w-full">
-            {net}
-          </div>
-        {/each}
-      {/if}
-    </TableBodyCell>
+		<TableBodyCell>{s.ipAddress}</TableBodyCell>
 		<TableBodyCell>
 		  {#if s.status === 'BUILD' || s.status === 'REBUILD'}
 			<Button disabled size="sm" class="bg-option-500" onclick={() => handleRebuildServer(s)}>Rebuild</Button>
