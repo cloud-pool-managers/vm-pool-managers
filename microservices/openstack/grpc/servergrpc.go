@@ -12,8 +12,11 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strconv"
 
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
+	"github.com/gophercloud/utils/v2/openstack/clientconfig"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"gorm.io/gorm"
@@ -131,14 +134,22 @@ func (s *ServerMicroOpenstack) handleServer(db *gorm.DB, req *pb.RessourceReques
 		}
 		return db.Create(&server).Error
 	case pb.Status_UPDATE:
-		return db.Model(&models.Server{}).
-			Where("id = ?", data["server_id"]).
-			Updates(map[string]any{
-				"name":       data["name"],
-				"status":     data["status"],
-				"flavor_ref": data["flavor"],
-				"image_ref":  data["image"],
-			}).Error
+		opts := &clientconfig.ClientOpts{
+			Cloud: os.Getenv("OPTS_CLOUD"),
+		}
+		client, err := clientconfig.NewServiceClient(context.Background(), "compute", opts)
+		if err != nil {
+			return err
+		}
+		rebuildOpts := servers.RebuildOpts{
+			ImageRef: req.GetData()["image_ref"],
+			Name:     req.GetData()["name"],
+		}
+		_, err = servers.Rebuild(context.Background(), client, req.GetData()["id"], rebuildOpts).Extract()
+		if err != nil {
+			return err
+		}
+		return nil
 	case pb.Status_DELETE:
 		var serv models.Server
 		if err := db.Where(" user_id = ? AND name = ? ", req.GetUser(), data["name"]).First(&serv).Error; err != nil {
