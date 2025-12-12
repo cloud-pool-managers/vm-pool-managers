@@ -37,7 +37,8 @@ func GetAllImages(ctx context.Context) []images.Image {
 
 func GetallFlavors(ctx context.Context) []flavors.Flavor {
 
-	allPages, err := flavors.ListDetail(models.ComputeClient, flavors.ListOpts{}).AllPages(ctx)
+	allPages, err := flavors.ListDetail(models.ComputeClient,
+		flavors.ListOpts{}).AllPages(ctx)
 	if err != nil {
 		return nil
 	}
@@ -73,7 +74,8 @@ func GetAllNetworks(ctx context.Context) []networks.Network {
 }
 
 func GetAllVolumes(ctx context.Context) []volumes.Volume {
-	allPages, err := volumes.List(models.BlockstorageClient, volumes.ListOpts{}).AllPages(ctx)
+	allPages, err := volumes.List(models.BlockstorageClient,
+		volumes.ListOpts{}).AllPages(ctx)
 	if err != nil {
 		return nil
 	}

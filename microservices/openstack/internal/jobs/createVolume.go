@@ -29,7 +29,9 @@ func CreateVolumeAndAttach(workerID int, job models.Job) error {
 
 	volumeSchedulerHintOpts := volumes.SchedulerHintOpts{}
 
-	newVolume, err := volumes.Create(context.Background(), models.BlockstorageClient, volumeOpts, volumeSchedulerHintOpts).Extract()
+	newVolume, err := volumes.Create(context.Background(),
+		models.BlockstorageClient, volumeOpts, volumeSchedulerHintOpts).
+		Extract()
 	if err != nil {
 		log.Println("Failed to create volume:", err)
 		log.Println(volumeOpts)
@@ -38,7 +40,8 @@ func CreateVolumeAndAttach(workerID int, job models.Job) error {
 	}
 
 	for {
-		current, errGet := volumes.Get(context.Background(), models.BlockstorageClient, newVolume.ID).Extract()
+		current, errGet := volumes.Get(context.Background(),
+			models.BlockstorageClient, newVolume.ID).Extract()
 		if errGet != nil {
 			log.Println("Erreur lors de la récupération du volume :", errGet)
 			ChangePendingVol(job.Data["server_id"])
@@ -64,7 +67,8 @@ func CreateVolumeAndAttach(workerID int, job models.Job) error {
 		VolumeID: newVolume.ID,
 	}
 
-	_, err = volumeattach.Create(context.TODO(), models.ComputeClient, job.Data["server_id"], createopts).Extract()
+	_, err = volumeattach.Create(context.TODO(), models.ComputeClient,
+		job.Data["server_id"], createopts).Extract()
 	if err != nil {
 		log.Println("error :", err)
 		ChangePendingVol(job.Data["server_id"])
@@ -73,7 +77,8 @@ func CreateVolumeAndAttach(workerID int, job models.Job) error {
 	}
 
 	var updatedserv models.Server
-	if err := config.Database.First(&updatedserv, "id = ? ", job.Data["server_id"]).Error; err != nil {
+	if err := config.Database.First(&updatedserv, "id = ? ",
+		job.Data["server_id"]).Error; err != nil {
 		ChangePendingVol(job.Data["server_id"])
 		return err
 	}
@@ -82,10 +87,7 @@ func CreateVolumeAndAttach(workerID int, job models.Job) error {
 		ChangePendingVol(job.Data["server_id"])
 		return err
 	}
-
 	ChangePendingVol(job.Data["server_id"])
-	log.Printf("Worker %d completed the job of creating and attaching a volume\n", workerID)
-
 	return nil
 
 }

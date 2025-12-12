@@ -44,8 +44,6 @@ func (s *Server) ToMap() map[string]string {
 		"progress":      fmt.Sprintf("%d", s.Progress),
 		"config_id":     s.ConfigID,
 	}
-
-	// Convertir les champs JSON custom (JSONStringSlice, JSONStringMap)
 	if s.Networks != nil {
 		if b, err := json.Marshal(s.Networks); err == nil {
 			result["networks"] = string(b)
@@ -56,9 +54,7 @@ func (s *Server) ToMap() map[string]string {
 			result["metadata"] = string(b)
 		}
 	}
-
 	result["host"] = "OpenStack"
-
 	return result
 }
 
@@ -73,12 +69,10 @@ func FromGopherServer(s servers.Server) Server {
 			}
 		}
 	}
-
 	metadata := make(map[string]string)
 	for k, v := range s.Metadata {
 		metadata[k] = v
 	}
-
 	return Server{
 		ID:           s.ID,
 		Name:         s.Name,
@@ -93,8 +87,6 @@ func FromGopherServer(s servers.Server) Server {
 }
 
 func PrintServer(server Server) error {
-
-	// Afficher les infos du Server
 	fmt.Println("=== Server Data ===")
 	fmt.Printf("ID: %s\n", server.ID)
 	fmt.Printf("Name: %s\n", server.Name)
@@ -106,7 +98,6 @@ func PrintServer(server Server) error {
 	fmt.Printf("ServerpoolID: %s\n", server.ServerpoolID)
 	fmt.Printf("UserID: %s\n", server.UserID)
 
-	// Si la relation ServerPool est chargée
 	if server.ServerPool != nil {
 		PrintServerpool(*server.ServerPool)
 	}
@@ -115,17 +106,26 @@ func PrintServer(server Server) error {
 }
 
 func (s *Server) AfterCreate(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "created", Type: pb.Type_SERVER, Ressource: *s}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "created",
+		Type:      pb.Type_SERVER,
+		Ressource: *s}
 	return nil
 }
 
 func (s *Server) AfterUpdate(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "updated", Type: pb.Type_SERVER, Ressource: *s}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "updated",
+		Type:      pb.Type_SERVER,
+		Ressource: *s}
 	return nil
 }
 
 func (s *Server) AfterDelete(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_SERVER, Ressource: *s}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "deleted",
+		Type:      pb.Type_SERVER,
+		Ressource: *s}
 	return nil
 }
 

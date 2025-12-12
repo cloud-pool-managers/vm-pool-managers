@@ -25,7 +25,8 @@ func CreateParams() error {
 		panic(err)
 	}
 
-	ProviderClient, err := config.NewProviderClient(context.Background(), AuthOptions, config.WithTLSConfig(TlsConfig))
+	ProviderClient, err := config.NewProviderClient(context.Background(),
+		AuthOptions, config.WithTLSConfig(TlsConfig))
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +36,8 @@ func CreateParams() error {
 		panic(err)
 	}
 
-	BlockstorageClient, err = openstack.NewBlockStorageV3(ProviderClient, EndpointOpts)
+	BlockstorageClient, err = openstack.NewBlockStorageV3(ProviderClient,
+		EndpointOpts)
 	if err != nil {
 		panic(err)
 	}

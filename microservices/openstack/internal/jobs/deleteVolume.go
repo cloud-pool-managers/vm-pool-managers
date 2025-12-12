@@ -12,7 +12,8 @@ func DeleteVolume(instanceID string) error {
 
 	deleteopts := volumes.DeleteOpts{}
 
-	err := volumes.Delete(context.Background(), models.BlockstorageClient, instanceID, deleteopts).ExtractErr()
+	err := volumes.Delete(context.Background(),
+		models.BlockstorageClient, instanceID, deleteopts).ExtractErr()
 	if err != nil {
 		return fmt.Errorf("failed to delete Volume %s: %w", instanceID, err)
 	}

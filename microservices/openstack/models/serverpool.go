@@ -76,16 +76,25 @@ func PrintMapServerpool(m []Serverpool) error {
 }
 
 func (s *Serverpool) AfterCreate(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "created", Type: pb.Type_SERVERPOOL, Ressource: *s}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "created",
+		Type:      pb.Type_SERVERPOOL,
+		Ressource: *s}
 	return nil
 }
 
 func (s *Serverpool) AfterUpdate(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "updated", Type: pb.Type_SERVERPOOL, Ressource: *s}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "updated",
+		Type:      pb.Type_SERVERPOOL,
+		Ressource: *s}
 	return nil
 }
 
 func (s *Serverpool) AfterDelete(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_SERVERPOOL, Ressource: *s}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "deleted",
+		Type:      pb.Type_SERVERPOOL,
+		Ressource: *s}
 	return nil
 }

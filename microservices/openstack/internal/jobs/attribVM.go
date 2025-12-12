@@ -37,8 +37,9 @@ func AttribVM(workerID int, job models.Job) error {
 	config.DBmu.Lock()
 	for i := range allServers {
 		srv := &allServers[i]
-		log.Printf("Checking server ID: %s, Metadata: %v\n", srv.ID, srv.Metadata)
-		if srv.Metadata["user_id"] == "admin" && srv.Metadata["serverpool_id"] == "pool_vms" && !checkReattrib(*srv) {
+		if srv.Metadata["user_id"] == "admin" &&
+			srv.Metadata["serverpool_id"] == "pool_vms" &&
+			!checkReattrib(*srv) {
 			target = srv
 			updateReattrib(models.FromGopherServer(*target))
 			break
@@ -62,16 +63,19 @@ func AttribVM(workerID int, job models.Job) error {
 	}
 
 	newUpdateOpts := servers.UpdateOpts{
-		Name: fmt.Sprintf(`%s-%s`, job.Data["serverpool_id"], uuid.New().String()),
+		Name: fmt.Sprintf(`%s-%s`,
+			job.Data["serverpool_id"], uuid.New().String()),
 	}
-	_, err = servers.Update(context.Background(), models.ComputeClient, target.ID, newUpdateOpts).Extract()
+	_, err = servers.Update(context.Background(),
+		models.ComputeClient, target.ID, newUpdateOpts).Extract()
 	if err != nil {
 		log.Println("Failed to update server name:", err)
 		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 		return fmt.Errorf("erreur mise à jour nom serveur: %w", err)
 	}
 
-	_, err = servers.UpdateMetadata(context.Background(), models.ComputeClient, target.ID, newMetadata).Extract()
+	_, err = servers.UpdateMetadata(context.Background(),
+		models.ComputeClient, target.ID, newMetadata).Extract()
 	if err != nil {
 		log.Println("Failed to update server metadata:", err)
 		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))

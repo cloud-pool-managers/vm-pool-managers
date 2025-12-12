@@ -31,7 +31,14 @@ func Start_DB() {
 		panic("failed to connect database")
 	}
 
-	Database.AutoMigrate(&models.User{}, &models.Serverpool{}, &models.Server{}, &models.Image{}, &models.Flavor{}, &models.Network{}, &models.VolumeDB{}, &models.ConfigPool{})
+	Database.AutoMigrate(&models.User{},
+		&models.Serverpool{},
+		&models.Server{},
+		&models.Image{},
+		&models.Flavor{},
+		&models.Network{},
+		&models.VolumeDB{},
+		&models.ConfigPool{})
 }
 
 func SyncImage(ctx context.Context) {
@@ -41,8 +48,8 @@ func SyncImage(ctx context.Context) {
 		imageRecord := models.Image{
 			ID:               img.ID,
 			Name:             img.Name,
-			Status:           string(img.Status),     // si c’est un type custom
-			Visibility:       string(img.Visibility), // idem
+			Status:           string(img.Status),     
+			Visibility:       string(img.Visibility),
 			CreatedAt:        img.CreatedAt,
 			UpdatedAt:        img.UpdatedAt,
 			Owner:            img.Owner,
@@ -58,8 +65,9 @@ func SyncImage(ctx context.Context) {
 			SizeBytes:        img.SizeBytes,
 			VirtualSize:      img.VirtualSize,
 			Tags:             strings.Join(img.Tags, ","),
-			ImportMethods:    strings.Join(img.OpenStackImageImportMethods, ","),
-			StoreIDs:         strings.Join(img.OpenStackImageStoreIDs, ","),
+			ImportMethods: strings.Join(img.OpenStackImageImportMethods,
+				","),
+			StoreIDs: strings.Join(img.OpenStackImageStoreIDs, ","),
 		}
 
 		Database.Clauses(clause.OnConflict{
@@ -190,7 +198,6 @@ func Sync_DB(ctx context.Context) {
 	}
 }
 
-// check if server in the database still exist on Openstack, update the database if not
 func delete_serv() {
 	allserv, err := utils.GetAllServers()
 	if err != nil {
@@ -264,7 +271,6 @@ func delete_volumes() {
 
 var first = true
 
-// synchronize the database to Openstack, creating entries if news instances are made on Openstack
 // create pools only if it is the first occurence of the routine
 func do_sync() {
 	log.Println("Resync !")
@@ -277,7 +283,9 @@ func do_sync() {
 	for _, p := range allpool {
 		if first {
 			var existed models.Serverpool
-			if err := Database.First(&existed, "serverpool_id = ? AND user_id = ?", p.ServerpoolID, p.UserID).Error; err != nil {
+			if err := Database.First(&existed,
+				"serverpool_id = ? AND user_id = ?",
+				p.ServerpoolID, p.UserID).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					Database.Create(&p)
 				} else {
@@ -287,7 +295,8 @@ func do_sync() {
 		}
 		for _, s := range p.ListServ {
 			var existeds models.Server
-			if err := Database.First(&existeds, "id = ?", s.ID).Error; err != nil {
+			err := Database.First(&existeds, "id = ?", s.ID).Error
+			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					Database.Create(&s)
 				} else {

@@ -28,16 +28,25 @@ func (c *ConfigPool) ToMap() map[string]string {
 }
 
 func (c *ConfigPool) AfterCreate(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "created", Type: pb.Type_CONFIG, Ressource: *c}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "created",
+		Type:      pb.Type_CONFIG,
+		Ressource: *c}
 	return nil
 }
 
 func (c *ConfigPool) AfterUpdate(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "updated", Type: pb.Type_CONFIG, Ressource: *c}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "updated",
+		Type:      pb.Type_CONFIG,
+		Ressource: *c}
 	return nil
 }
 
 func (c *ConfigPool) AfterDelete(tx *gorm.DB) (err error) {
-	notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_CONFIG, Ressource: *c}
+	notifier.GlobalChan <- events.RessourceEvent{
+		Action:    "deleted",
+		Type:      pb.Type_CONFIG,
+		Ressource: *c}
 	return nil
 }

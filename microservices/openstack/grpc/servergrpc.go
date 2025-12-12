@@ -36,13 +36,17 @@ func Start_grpc() {
 
 	grpcServer := grpc.NewServer()
 
-	pb.RegisterPoolManagerServer(grpcServer, &ServerMicroOpenstack{DB: config.Database})
+	pb.RegisterPoolManagerServer(grpcServer, &ServerMicroOpenstack{
+		DB: config.Database,
+	})
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Erreur serveur gRPC: %v", err)
 	}
 }
 
-func (s *ServerMicroOpenstack) handleUser(db *gorm.DB, req *pb.RessourceRequest) error {
+func (s *ServerMicroOpenstack) handleUser(
+	db *gorm.DB,
+	req *pb.RessourceRequest) error {
 	data := req.GetData()
 	switch req.GetStatus() {
 	case pb.Status_CREATE:
@@ -66,7 +70,9 @@ func (s *ServerMicroOpenstack) handleUser(db *gorm.DB, req *pb.RessourceRequest)
 	}
 }
 
-func (s *ServerMicroOpenstack) handleServerpool(db *gorm.DB, req *pb.RessourceRequest) error {
+func (s *ServerMicroOpenstack) handleServerpool(
+	db *gorm.DB,
+	req *pb.RessourceRequest) error {
 	data := req.GetData()
 	switch req.GetStatus() {
 	case pb.Status_CREATE:
@@ -82,33 +88,41 @@ func (s *ServerMicroOpenstack) handleServerpool(db *gorm.DB, req *pb.RessourceRe
 		return db.Create(&pool).Error
 	case pb.Status_UPDATE:
 		return db.Model(&models.Serverpool{}).
-			Where("serverpool_id = ? AND user_id = ?", data["serverpool_id"], req.GetUser()).
+			Where("serverpool_id = ? AND user_id = ?", data["serverpool_id"],
+				req.GetUser()).
 			Updates(map[string]any{
-				"image_ref":  data["image"],
-				"flavor_ref": data["flavor"],
+				"image_ref":  data["image_ref"],
+				"flavor_ref": data["flavor_ref"],
 				"min_vm":     parseInt(data["min_vm"]),
 				"max_vm":     parseInt(data["max_vm"]),
 			}).Error
 	case pb.Status_DELETE:
 		var pool models.Serverpool
-		if err := db.Where(" user_id = ? AND serverpool_id = ? ", req.GetUser(), data["serverpool_id"]).First(&pool).Error; err != nil {
+		if err := db.Where(" user_id = ? AND serverpool_id = ? ",
+			req.GetUser(), data["serverpool_id"]).
+			First(&pool).Error; err != nil {
 			return err
 		}
-		err := db.Where("user_id = ? AND serverpool_id = ?", req.GetUser(), data["serverpool_id"]).Delete(&models.Serverpool{}).Error
+		err := db.Where("user_id = ? AND serverpool_id = ?", req.GetUser(),
+			data["serverpool_id"]).Delete(&models.Serverpool{}).Error
 		if err == nil {
-			notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_SERVERPOOL, Ressource: pool}
+			notifier.GlobalChan <- events.RessourceEvent{
+				Action:    "deleted",
+				Type:      pb.Type_SERVERPOOL,
+				Ressource: pool}
 		}
-		// Also delete all servers linked to this serverpool
 		ops, err := utils.GetAllServers()
 		if err != nil {
 			return err
 		}
 		for _, serv := range ops {
-			if serv.Metadata["serverpool_id"] == data["serverpool_id"] && serv.Metadata["user_id"] == req.GetUser() {
+			if serv.Metadata["serverpool_id"] == data["serverpool_id"] &&
+				serv.Metadata["user_id"] == req.GetUser() {
 				var args []string
 				args = append(args, "instance_id")
 				args = append(args, serv.ID)
-				worker.AddJob(*worker.CreateJob(models.DeleteVM, utils.BuildDataMap(args)), true)
+				worker.AddJob(*worker.CreateJob(models.DeleteVM,
+					utils.BuildDataMap(args)), true)
 			}
 		}
 		return nil
@@ -117,21 +131,27 @@ func (s *ServerMicroOpenstack) handleServerpool(db *gorm.DB, req *pb.RessourceRe
 	}
 }
 
-func (s *ServerMicroOpenstack) handleServer(db *gorm.DB, req *pb.RessourceRequest) error {
+func (s *ServerMicroOpenstack) handleServer(
+	db *gorm.DB,
+	req *pb.RessourceRequest) error {
 	data := req.GetData()
 	switch req.GetStatus() {
 	case pb.Status_CREATE:
 		var pool models.Serverpool
-		if err := db.Where(" user_id = ? AND serverpool_id = ? ", req.GetUser(), data["serverpool_id"]).First(&pool).Error; err != nil {
+		if err := db.Where(" user_id = ? AND serverpool_id = ? ",
+			req.GetUser(), data["serverpool_id"]).
+			First(&pool).Error; err != nil {
 			return err
 		}
-		worker.AddJob(*worker.CreateJob(models.CreateVM, utils.BuildDataMap(utils.FlatstringSP(pool))), true)
+		worker.AddJob(*worker.CreateJob(models.CreateVM,
+			utils.BuildDataMap(utils.FlatstringSP(pool))), true)
 		return nil
 	case pb.Status_UPDATE:
 		opts := &clientconfig.ClientOpts{
 			Cloud: os.Getenv("OPTS_CLOUD"),
 		}
-		client, err := clientconfig.NewServiceClient(context.Background(), "compute", opts)
+		client, err := clientconfig.NewServiceClient(context.Background(),
+			"compute", opts)
 		if err != nil {
 			return err
 		}
@@ -139,27 +159,36 @@ func (s *ServerMicroOpenstack) handleServer(db *gorm.DB, req *pb.RessourceReques
 			ImageRef: req.GetData()["image_ref"],
 			Name:     req.GetData()["name"],
 		}
-		_, err = servers.Rebuild(context.Background(), client, req.GetData()["id"], rebuildOpts).Extract()
+		_, err = servers.Rebuild(context.Background(), client,
+			req.GetData()["id"], rebuildOpts).Extract()
 		if err != nil {
 			return err
 		}
 		return nil
 	case pb.Status_DELETE:
 		var serv models.Server
-		if err := db.Where(" user_id = ? AND name = ? ", req.GetUser(), data["name"]).First(&serv).Error; err != nil {
+		if err := db.Where(" user_id = ? AND name = ? ",
+			req.GetUser(), data["name"]).First(&serv).Error; err != nil {
 			return err
 		}
-		err := db.Where("user_id = ? AND name = ?", req.GetUser(), data["name"]).Delete(&models.Server{}).Error
+		err := db.Where("user_id = ? AND name = ?",
+			req.GetUser(), data["name"]).Delete(&models.Server{}).Error
 		if err == nil {
-			notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_SERVER, Ressource: serv}
+			notifier.GlobalChan <- events.RessourceEvent{
+				Action:    "deleted",
+				Type:      pb.Type_SERVER,
+				Ressource: serv}
 		}
-		return db.Where("id = ?", data["server_id"]).Delete(&models.Server{}).Error
+		return db.Where("id = ?", data["server_id"]).
+			Delete(&models.Server{}).Error
 	default:
 		return fmt.Errorf("unknown status for SERVER: %v", req.GetStatus())
 	}
 }
 
-func (s *ServerMicroOpenstack) handleConfig(db *gorm.DB, req *pb.RessourceRequest) error {
+func (s *ServerMicroOpenstack) handleConfig(
+	db *gorm.DB,
+	req *pb.RessourceRequest) error {
 	data := req.GetData()
 	switch req.GetStatus() {
 	case pb.Status_CREATE:
@@ -171,20 +200,25 @@ func (s *ServerMicroOpenstack) handleConfig(db *gorm.DB, req *pb.RessourceReques
 		return db.Create(&cfg).Error
 	case pb.Status_UPDATE:
 		var cfg models.ConfigPool
-		if err := db.Where(" user_id = ? AND name = ? ", req.GetUser(), data["name"]).First(&cfg).Error; err != nil {
+		if err := db.Where(" user_id = ? AND name = ? ",
+			req.GetUser(), data["name"]).First(&cfg).Error; err != nil {
 			return err
 		}
 		cfg.Data = data["data"]
 		return db.Save(&cfg).Error
 	case pb.Status_DELETE:
 		var cfg models.ConfigPool
-		if err := db.Where(" user_id = ? AND name = ? ", req.GetUser(), data["name"]).First(&cfg).Error; err != nil {
+		if err := db.Where(" user_id = ? AND name = ? ",
+			req.GetUser(), data["name"]).First(&cfg).Error; err != nil {
 			return err
 		}
-		err := db.Where("user_id = ? AND name = ?", req.GetUser(), data["name"]).
-			Delete(&models.ConfigPool{}).Error
+		err := db.Where("user_id = ? AND name = ?", req.GetUser(),
+			data["name"]).Delete(&models.ConfigPool{}).Error
 		if err == nil {
-			notifier.GlobalChan <- events.RessourceEvent{Action: "deleted", Type: pb.Type_CONFIG, Ressource: cfg}
+			notifier.GlobalChan <- events.RessourceEvent{
+				Action:    "deleted",
+				Type:      pb.Type_CONFIG,
+				Ressource: cfg}
 		}
 		return err
 	default:
@@ -192,8 +226,11 @@ func (s *ServerMicroOpenstack) handleConfig(db *gorm.DB, req *pb.RessourceReques
 	}
 }
 
-func (s *ServerMicroOpenstack) SendRessources(ctx context.Context, req *pb.RessourceRequest) (*pb.RessourceResponse, error) {
-	log.Printf("[SendRessources] User=%s Data=%v Status=%v Type=%v", req.GetUser(), req.GetData(), req.GetStatus(), req.GetType())
+func (s *ServerMicroOpenstack) SendRessources(
+	ctx context.Context,
+	req *pb.RessourceRequest) (*pb.RessourceResponse, error) {
+	log.Printf("[SendRessources] User=%s Data=%v Status=%v Type=%v",
+		req.GetUser(), req.GetData(), req.GetStatus(), req.GetType())
 	err := s.DB.Transaction(func(db *gorm.DB) error {
 		switch req.GetType() {
 		case pb.Type_USER:
@@ -214,7 +251,9 @@ func (s *ServerMicroOpenstack) SendRessources(ctx context.Context, req *pb.Resso
 	return &pb.RessourceResponse{Success: true}, nil
 }
 
-func sendAllServer(s *ServerMicroOpenstack, stream pb.PoolManager_GetStreamRessourcesServer) error {
+func sendAllServer(
+	s *ServerMicroOpenstack,
+	stream pb.PoolManager_GetStreamRessourcesServer) error {
 	rows, err := s.DB.Model(&models.Server{}).Rows()
 	if err != nil {
 		log.Println("Error retrieving servers")
@@ -243,7 +282,9 @@ func sendAllServer(s *ServerMicroOpenstack, stream pb.PoolManager_GetStreamResso
 	return nil
 }
 
-func sendAllPool(s *ServerMicroOpenstack, stream pb.PoolManager_GetStreamRessourcesServer) error {
+func sendAllPool(
+	s *ServerMicroOpenstack,
+	stream pb.PoolManager_GetStreamRessourcesServer) error {
 	rows, err := s.DB.Model(&models.Serverpool{}).Rows()
 	if err != nil {
 		log.Println("Error retrieving servers")
@@ -272,7 +313,9 @@ func sendAllPool(s *ServerMicroOpenstack, stream pb.PoolManager_GetStreamRessour
 	return nil
 }
 
-func sendAllConfig(s *ServerMicroOpenstack, stream pb.PoolManager_GetStreamRessourcesServer) error {
+func sendAllConfig(
+	s *ServerMicroOpenstack,
+	stream pb.PoolManager_GetStreamRessourcesServer) error {
 	rows, err := s.DB.Model(&models.ConfigPool{}).Rows()
 	if err != nil {
 		log.Println("Error retrieving servers")
@@ -301,7 +344,9 @@ func sendAllConfig(s *ServerMicroOpenstack, stream pb.PoolManager_GetStreamResso
 	return nil
 }
 
-func (s *ServerMicroOpenstack) GetStreamRessources(req *emptypb.Empty, stream pb.PoolManager_GetStreamRessourcesServer) error {
+func (s *ServerMicroOpenstack) GetStreamRessources(
+	req *emptypb.Empty,
+	stream pb.PoolManager_GetStreamRessourcesServer) error {
 	log.Println("[GetStreamRessources] Stream global started")
 
 	// Send all ressources at first connection to ensure synchronize
@@ -410,19 +455,23 @@ func (s *ServerMicroOpenstack) GetStreamRessources(req *emptypb.Empty, stream pb
 			}
 
 		case <-stream.Context().Done():
-			log.Println("[GetStreamRessources] Client disconnected, end of stream")
+			log.Println("Client disconnected, end of stream")
 			return nil
 		}
 	}
 }
 
-func (s *ServerMicroOpenstack) GetStreamRessourcesUser(req *pb.UserRequest, stream grpc.ServerStreamingServer[pb.StreamRessourceResponse]) error {
+func (s *ServerMicroOpenstack) GetStreamRessourcesUser(
+	req *pb.UserRequest,
+	stream grpc.ServerStreamingServer[pb.StreamRessourceResponse]) error {
 	log.Println("[GetStreamRessourcesUser] Stream User started")
 	// stream user-specific ressources
 	return nil
 }
 
-func (s *ServerMicroOpenstack) GetAllImages(req *emptypb.Empty, stream grpc.ServerStreamingServer[pb.Image]) error {
+func (s *ServerMicroOpenstack) GetAllImages(
+	req *emptypb.Empty,
+	stream grpc.ServerStreamingServer[pb.Image]) error {
 	rows, err := s.DB.Model(&models.Image{}).Rows()
 	if err != nil {
 		log.Println("Error retrieving servers")
@@ -444,7 +493,9 @@ func (s *ServerMicroOpenstack) GetAllImages(req *emptypb.Empty, stream grpc.Serv
 	return nil
 }
 
-func (s *ServerMicroOpenstack) GetAllFlavors(req *emptypb.Empty, stream grpc.ServerStreamingServer[pb.Flavor]) error {
+func (s *ServerMicroOpenstack) GetAllFlavors(
+	req *emptypb.Empty,
+	stream grpc.ServerStreamingServer[pb.Flavor]) error {
 	rows, err := s.DB.Model(&models.Flavor{}).Rows()
 	if err != nil {
 		log.Println("Error retrieving servers")
@@ -466,7 +517,9 @@ func (s *ServerMicroOpenstack) GetAllFlavors(req *emptypb.Empty, stream grpc.Ser
 	return nil
 }
 
-func (s *ServerMicroOpenstack) GetAllNetworks(req *emptypb.Empty, stream grpc.ServerStreamingServer[pb.Network]) error {
+func (s *ServerMicroOpenstack) GetAllNetworks(
+	req *emptypb.Empty,
+	stream grpc.ServerStreamingServer[pb.Network]) error {
 	rows, err := s.DB.Model(&models.Network{}).Rows()
 	if err != nil {
 		log.Println("Error retrieving servers")
@@ -488,7 +541,6 @@ func (s *ServerMicroOpenstack) GetAllNetworks(req *emptypb.Empty, stream grpc.Se
 	return nil
 }
 
-// parseInt helper
 func parseInt(s string) int {
 	i, _ := strconv.Atoi(s)
 	return i
