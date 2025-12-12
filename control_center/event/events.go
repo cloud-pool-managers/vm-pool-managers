@@ -63,7 +63,6 @@ func ListenPostgres(
 	if err != nil {
 		return fmt.Errorf("failed to connect to Postgres: %w", err)
 	}
-
 	for _, table := range tables {
 		channel := table + "_events"
 		_, err := conn.Exec(ctx, "LISTEN "+channel)
@@ -74,10 +73,8 @@ func ListenPostgres(
 		}
 		log.Printf("Listening on Postgres channel: %s", channel)
 	}
-
 	go func() {
 		defer conn.Close(ctx)
-
 		for {
 			notification, err := conn.WaitForNotification(ctx)
 			if err != nil {
@@ -92,15 +89,14 @@ func ListenPostgres(
 					continue
 				}
 			}
-
 			var event TableEvent
-			if err := json.Unmarshal([]byte(notification.Payload), &event); err != nil {
+			err = json.Unmarshal([]byte(notification.Payload), &event)
+			if err != nil {
 				log.Printf(
 					"Failed to unmarshal notification payload: %v", err,
 				)
 				continue
 			}
-
 			broker.Publish(notification.Payload)
 		}
 	}()

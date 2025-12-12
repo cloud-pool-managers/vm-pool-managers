@@ -34,20 +34,17 @@ func (s *Service) CreateUser(
 			UserId:  "",
 		}, fmt.Errorf("missing required fields")
 	}
-
 	u := models.User{
 		Name:     req.Username,
 		Email:    req.Email,
 		Password: req.Password,
 	}
-
 	if err := s.DB.Create(&u).Error; err != nil {
 		return &frontcontrolpb.CreateUserResponse{
 			Success: false,
 			UserId:  "",
 		}, fmt.Errorf("failed to create user: %v", err)
 	}
-
 	rep, err := s.pm.SendRessources(
 		context.Background(),
 		&pb.RessourceRequest{
@@ -61,14 +58,12 @@ func (s *Service) CreateUser(
 			Type:   pb.Type_USER,
 		},
 	)
-
 	if err != nil || rep.GetSuccess() == false {
 		return &frontcontrolpb.CreateUserResponse{
 			Success: false,
 			UserId:  "",
 		}, fmt.Errorf("failed to notify PoolManager: %v", err)
 	}
-
 	return &frontcontrolpb.CreateUserResponse{
 		Success: true,
 		UserId:  fmt.Sprintf("%d", u.ID),
@@ -80,7 +75,8 @@ func (s *Service) AuthenticateUser(
 	req *frontcontrolpb.AuthenticateUserRequest,
 ) (*frontcontrolpb.AuthenticateUserResponse, error) {
 	var user models.User
-	if err := s.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+	err := s.DB.Where("email = ?", req.Email).First(&user).Error
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return &frontcontrolpb.AuthenticateUserResponse{
 				Success: false,
@@ -92,16 +88,13 @@ func (s *Service) AuthenticateUser(
 			Token:   "",
 		}, fmt.Errorf("database error: %v", err)
 	}
-
 	if user.Password != req.Password {
 		return &frontcontrolpb.AuthenticateUserResponse{
 			Success: false,
 			Token:   "",
 		}, fmt.Errorf("invalid password")
 	}
-
 	token := "dummy-token-for-user-" + fmt.Sprintf("%d", user.ID)
-
 	return &frontcontrolpb.AuthenticateUserResponse{
 		Success: true,
 		Token:   token,

@@ -49,9 +49,8 @@ func Start_grpc(ctx context.Context) {
 
 	s := grpc.NewServer()
 
-	conn, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(
-		insecure.NewCredentials(),
-	))
+	conn, err := grpc.NewClient("localhost:50052",
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Erreur de connexion: %v", err)
 	}
@@ -59,11 +58,16 @@ func Start_grpc(ctx context.Context) {
 
 	client := pb.NewPoolManagerClient(conn)
 
-	frontcontrolpb.RegisterAuthServiceServer(s, auth.New(config.Database, client))
-	frontcontrolpb.RegisterGatherDataServiceServer(s, gatherdata.New(client, config.Database))
-	frontcontrolpb.RegisterConfigServiceServer(s, configpool.New(client, config.Database))
-	frontcontrolpb.RegisterPoolServiceServer(s, pool.New(config.Database, client))
-	frontcontrolpb.RegisterUserServiceServer(s, user.New(config.Database, config.Broker))
+	frontcontrolpb.RegisterAuthServiceServer(s,
+		auth.New(config.Database, client))
+	frontcontrolpb.RegisterGatherDataServiceServer(s,
+		gatherdata.New(client, config.Database))
+	frontcontrolpb.RegisterConfigServiceServer(s,
+		configpool.New(client, config.Database))
+	frontcontrolpb.RegisterPoolServiceServer(s,
+		pool.New(config.Database, client))
+	frontcontrolpb.RegisterUserServiceServer(s,
+		user.New(config.Database, config.Broker))
 
 	reflection.Register(s)
 

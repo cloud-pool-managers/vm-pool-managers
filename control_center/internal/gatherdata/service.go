@@ -170,7 +170,8 @@ func (s *Service) ExistServer(
 	var serv models.Server
 	log.Println("coucou server")
 
-	if err := s.DB.Where("user_id = ?", req.GetUser()).First(&serv).Error; err != nil {
+	err := s.DB.Where("user_id = ?", req.GetUser()).First(&serv).Error
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &frontcontrolpb.ExistData{Exist: false}, nil
 		}
@@ -186,7 +187,8 @@ func (s *Service) ExistServerPools(
 	var pool models.Serverpool
 	log.Println("coucou serverpool")
 
-	if err := s.DB.Where("user_id = ?", req.GetUser()).First(&pool).Error; err != nil {
+	err := s.DB.Where("user_id = ?", req.GetUser()).First(&pool).Error
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &frontcontrolpb.ExistData{Exist: false}, nil
 		}
@@ -202,7 +204,8 @@ func (s *Service) ExistConfigs(
 	var conf models.ConfigPool
 	log.Println("coucou config")
 
-	if err := s.DB.Where("user_id = ?", req.GetUser()).First(&conf).Error; err != nil {
+	err := s.DB.Where("user_id = ?", req.GetUser()).First(&conf).Error
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &frontcontrolpb.ExistData{Exist: false}, nil
 		}

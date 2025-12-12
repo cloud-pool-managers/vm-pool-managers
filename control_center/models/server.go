@@ -34,7 +34,8 @@ func FromGopherServer(s servers.Server) Server {
 		for _, addr := range netAddrs.([]any) {
 			if addrMap, ok := addr.(map[string]any); ok {
 				if ip, ok := addrMap["addr"].(string); ok {
-					networks = append(networks, fmt.Sprintf("%s:%s", netName, ip))
+					networks = append(networks, fmt.Sprintf("%s:%s",
+						netName, ip))
 				}
 			}
 		}

@@ -22,7 +22,8 @@ func main() {
 	config.Start_DB(context.Background())
 
 	// Création d’un contexte annulé sur SIGINT ou SIGTERM
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(),
+		os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	// Lancement des goroutines
@@ -38,7 +39,6 @@ func main() {
 
 	// Attente du signal d’arrêt
 	<-ctx.Done()
-	log.Println("Signal reçu, arrêt du streaming, du serveur et des tâches en cours...")
 
 	// Annule explicitement le contexte (au cas où)
 	stop()
