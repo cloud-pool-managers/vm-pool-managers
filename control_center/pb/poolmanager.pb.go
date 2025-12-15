@@ -914,14 +914,15 @@ const file_poolmanager_proto_rawDesc = "" +
 	"\x06SERVER\x10\x02\x12\n" +
 	"\n" +
 	"\x06CONFIG\x10\x03\x12\b\n" +
-	"\x04USER\x10\x042\xd2\x03\n" +
+	"\x04USER\x10\x042\xa4\x04\n" +
 	"\vPoolManager\x12O\n" +
 	"\x0eSendRessources\x12\x1d.poolmanager.RessourceRequest\x1a\x1e.poolmanager.RessourceResponse\x12U\n" +
 	"\x13GetStreamRessources\x12\x16.google.protobuf.Empty\x1a$.poolmanager.StreamRessourceResponse0\x01\x12[\n" +
 	"\x17GetStreamRessourcesUser\x12\x18.poolmanager.UserRequest\x1a$.poolmanager.StreamRessourceResponse0\x01\x12<\n" +
 	"\fGetAllImages\x12\x16.google.protobuf.Empty\x1a\x12.poolmanager.Image0\x01\x12>\n" +
 	"\rGetAllFlavors\x12\x16.google.protobuf.Empty\x1a\x13.poolmanager.Flavor0\x01\x12@\n" +
-	"\x0eGetAllNetworks\x12\x16.google.protobuf.Empty\x1a\x14.poolmanager.Network0\x01B\x06Z\x04./pbb\x06proto3"
+	"\x0eGetAllNetworks\x12\x16.google.protobuf.Empty\x1a\x14.poolmanager.Network0\x01\x12P\n" +
+	"\x0eSyncRessources\x12\x16.google.protobuf.Empty\x1a$.poolmanager.StreamRessourceResponse0\x01B\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_poolmanager_proto_rawDescOnce sync.Once
@@ -967,14 +968,16 @@ var file_poolmanager_proto_depIdxs = []int32{
 	12, // 11: poolmanager.PoolManager.GetAllImages:input_type -> google.protobuf.Empty
 	12, // 12: poolmanager.PoolManager.GetAllFlavors:input_type -> google.protobuf.Empty
 	12, // 13: poolmanager.PoolManager.GetAllNetworks:input_type -> google.protobuf.Empty
-	3,  // 14: poolmanager.PoolManager.SendRessources:output_type -> poolmanager.RessourceResponse
-	5,  // 15: poolmanager.PoolManager.GetStreamRessources:output_type -> poolmanager.StreamRessourceResponse
-	5,  // 16: poolmanager.PoolManager.GetStreamRessourcesUser:output_type -> poolmanager.StreamRessourceResponse
-	6,  // 17: poolmanager.PoolManager.GetAllImages:output_type -> poolmanager.Image
-	7,  // 18: poolmanager.PoolManager.GetAllFlavors:output_type -> poolmanager.Flavor
-	8,  // 19: poolmanager.PoolManager.GetAllNetworks:output_type -> poolmanager.Network
-	14, // [14:20] is the sub-list for method output_type
-	8,  // [8:14] is the sub-list for method input_type
+	12, // 14: poolmanager.PoolManager.SyncRessources:input_type -> google.protobuf.Empty
+	3,  // 15: poolmanager.PoolManager.SendRessources:output_type -> poolmanager.RessourceResponse
+	5,  // 16: poolmanager.PoolManager.GetStreamRessources:output_type -> poolmanager.StreamRessourceResponse
+	5,  // 17: poolmanager.PoolManager.GetStreamRessourcesUser:output_type -> poolmanager.StreamRessourceResponse
+	6,  // 18: poolmanager.PoolManager.GetAllImages:output_type -> poolmanager.Image
+	7,  // 19: poolmanager.PoolManager.GetAllFlavors:output_type -> poolmanager.Flavor
+	8,  // 20: poolmanager.PoolManager.GetAllNetworks:output_type -> poolmanager.Network
+	5,  // 21: poolmanager.PoolManager.SyncRessources:output_type -> poolmanager.StreamRessourceResponse
+	15, // [15:22] is the sub-list for method output_type
+	8,  // [8:15] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
 	8,  // [8:8] is the sub-list for extension extendee
 	0,  // [0:8] is the sub-list for field type_name

@@ -6,6 +6,7 @@ import (
 	"PoolManagerVM/backend/pb"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"gorm.io/gorm"
@@ -118,6 +119,7 @@ func (s *Server) AfterUpdate(tx *gorm.DB) (err error) {
 		Action:    "updated",
 		Type:      pb.Type_SERVER,
 		Ressource: *s}
+	log.Println("update server : ", s)
 	return nil
 }
 

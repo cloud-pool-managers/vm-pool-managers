@@ -71,6 +71,7 @@ func CheckAndCreate() {
 		}
 		missing := p.MinVM - (count + p.PendingJobs)
 		for i := 0; i < missing; i++ {
+			log.Println("missing : ", missing, "and countadmin : ", countadmin)
 			if p.ImageRef == os.Getenv("SERVER_IMAGE_REF") &&
 				p.FlavorRef == os.Getenv("SERVER_FLAVOR_REF") &&
 				len(p.Networks) == 1 &&

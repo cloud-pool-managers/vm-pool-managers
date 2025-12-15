@@ -545,3 +545,24 @@ func parseInt(s string) int {
 	i, _ := strconv.Atoi(s)
 	return i
 }
+
+func (s *ServerMicroOpenstack) SyncRessources(
+	req *emptypb.Empty,
+	stream pb.PoolManager_GetStreamRessourcesServer) error {
+	log.Println("[SyncRessources] Stream global started")
+
+	// Send all ressources at first connection to ensure synchronize
+	if err := sendAllServer(s, stream); err != nil {
+		log.Printf("Error Server: %v", err)
+		return err
+	}
+	if err := sendAllPool(s, stream); err != nil {
+		log.Printf("Error Serverpool: %v", err)
+		return err
+	}
+	if err := sendAllConfig(s, stream); err != nil {
+		log.Printf("Error Serverpool: %v", err)
+		return err
+	}
+	return nil
+}

@@ -36,6 +36,7 @@ func main() {
 
 	go cc.Start_grpc(ctx)
 	go cc.ConnectToMicroOpen(ctx)
+	// go cc.StartPeriodicSync(ctx)
 
 	// Attente du signal d’arrêt
 	<-ctx.Done()

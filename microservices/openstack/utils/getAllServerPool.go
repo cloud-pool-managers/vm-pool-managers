@@ -30,8 +30,9 @@ func GetAllServerPool() ([]models.Serverpool, error) {
 				FlavorRef:    s.FlavorRef,
 				MinVM:        ParseInt(s.Metadata["min_vm"]),
 				MaxVM:        ParseInt(s.Metadata["max_vm"]),
-				Networks:     s.Networks,
-				ListServ:     []models.Server{s},
+				// Networks:     s.Networks,
+				Networks: []string{s.Metadata["network_uuid"]},
+				ListServ: []models.Server{s},
 			}
 		} else {
 			poolMap[key].ListServ = append(poolMap[key].ListServ, s)

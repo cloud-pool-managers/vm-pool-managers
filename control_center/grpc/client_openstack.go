@@ -206,3 +206,65 @@ func PopulateDBNetworkMicroOpen() {
 			Create(&network).Error
 	}
 }
+
+// test implementation of periodic sync
+
+// func StartPeriodicSync(ctx context.Context) {
+// 	ticker := time.NewTicker(3 * time.Second)
+// 	defer ticker.Stop()
+
+// 	for {
+// 		select {
+// 		case <-ctx.Done():
+// 			log.Println("Arrêt du sync périodique MicroOpen")
+// 			return
+
+// 		case <-ticker.C:
+// 			log.Println("Lancement sync MicroOpen")
+
+// 			func() {
+// 				// ctx court pour éviter un blocage infini
+// 				syncCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+// 				defer cancel()
+
+// 				SyncMicroOpen(syncCtx)
+// 			}()
+// 		}
+// 	}
+// }
+
+// func SyncMicroOpen(ctx context.Context) {
+// 	conn, err := grpc.NewClient("localhost:50052",
+// 		grpc.WithTransportCredentials(insecure.NewCredentials()))
+// 	if err != nil {
+// 		log.Fatalf("Erreur de connexion: %v", err)
+// 	}
+// 	defer conn.Close()
+
+// 	client := pb.NewPoolManagerClient(conn)
+// 	stream, err := client.SyncRessources(ctx, &emptypb.Empty{})
+// 	if err != nil {
+// 		log.Fatalf("Erreur stream: %v", err)
+// 	}
+// 	for {
+// 		select {
+// 		case <-ctx.Done():
+// 			log.Println("Arrêt du streaming ConnectToMicroOpen")
+// 			_ = stream.CloseSend()
+// 			return
+// 		default:
+// 			resp, err := stream.Recv()
+// 			if err == io.EOF {
+// 				return
+// 			}
+// 			if err != nil {
+// 				if ctx.Err() != nil {
+// 					log.Println("Stream ended due to context")
+// 					return
+// 				}
+// 				log.Fatalf("Error listening stream: %v", err)
+// 			}
+// 			HandleStreamEvent(resp)
+// 		}
+// 	}
+// }

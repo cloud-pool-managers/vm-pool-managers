@@ -81,6 +81,7 @@ func AttribVM(workerID int, job models.Job) error {
 		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 		return fmt.Errorf("erreur mise à jour serveur: %w", err)
 	}
+	config.Database.First(&target).Delete(&target)
 	DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 
 	return nil

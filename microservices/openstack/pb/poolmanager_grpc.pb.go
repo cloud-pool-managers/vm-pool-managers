@@ -26,6 +26,7 @@ const (
 	PoolManager_GetAllImages_FullMethodName            = "/poolmanager.PoolManager/GetAllImages"
 	PoolManager_GetAllFlavors_FullMethodName           = "/poolmanager.PoolManager/GetAllFlavors"
 	PoolManager_GetAllNetworks_FullMethodName          = "/poolmanager.PoolManager/GetAllNetworks"
+	PoolManager_SyncRessources_FullMethodName          = "/poolmanager.PoolManager/SyncRessources"
 )
 
 // PoolManagerClient is the client API for PoolManager service.
@@ -38,6 +39,7 @@ type PoolManagerClient interface {
 	GetAllImages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Image], error)
 	GetAllFlavors(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Flavor], error)
 	GetAllNetworks(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Network], error)
+	SyncRessources(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamRessourceResponse], error)
 }
 
 type poolManagerClient struct {
@@ -153,6 +155,25 @@ func (c *poolManagerClient) GetAllNetworks(ctx context.Context, in *emptypb.Empt
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type PoolManager_GetAllNetworksClient = grpc.ServerStreamingClient[Network]
 
+func (c *poolManagerClient) SyncRessources(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamRessourceResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &PoolManager_ServiceDesc.Streams[5], PoolManager_SyncRessources_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[emptypb.Empty, StreamRessourceResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type PoolManager_SyncRessourcesClient = grpc.ServerStreamingClient[StreamRessourceResponse]
+
 // PoolManagerServer is the server API for PoolManager service.
 // All implementations must embed UnimplementedPoolManagerServer
 // for forward compatibility.
@@ -163,6 +184,7 @@ type PoolManagerServer interface {
 	GetAllImages(*emptypb.Empty, grpc.ServerStreamingServer[Image]) error
 	GetAllFlavors(*emptypb.Empty, grpc.ServerStreamingServer[Flavor]) error
 	GetAllNetworks(*emptypb.Empty, grpc.ServerStreamingServer[Network]) error
+	SyncRessources(*emptypb.Empty, grpc.ServerStreamingServer[StreamRessourceResponse]) error
 	mustEmbedUnimplementedPoolManagerServer()
 }
 
@@ -190,6 +212,9 @@ func (UnimplementedPoolManagerServer) GetAllFlavors(*emptypb.Empty, grpc.ServerS
 }
 func (UnimplementedPoolManagerServer) GetAllNetworks(*emptypb.Empty, grpc.ServerStreamingServer[Network]) error {
 	return status.Errorf(codes.Unimplemented, "method GetAllNetworks not implemented")
+}
+func (UnimplementedPoolManagerServer) SyncRessources(*emptypb.Empty, grpc.ServerStreamingServer[StreamRessourceResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method SyncRessources not implemented")
 }
 func (UnimplementedPoolManagerServer) mustEmbedUnimplementedPoolManagerServer() {}
 func (UnimplementedPoolManagerServer) testEmbeddedByValue()                     {}
@@ -285,6 +310,17 @@ func _PoolManager_GetAllNetworks_Handler(srv interface{}, stream grpc.ServerStre
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type PoolManager_GetAllNetworksServer = grpc.ServerStreamingServer[Network]
 
+func _PoolManager_SyncRessources_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(PoolManagerServer).SyncRessources(m, &grpc.GenericServerStream[emptypb.Empty, StreamRessourceResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type PoolManager_SyncRessourcesServer = grpc.ServerStreamingServer[StreamRessourceResponse]
+
 // PoolManager_ServiceDesc is the grpc.ServiceDesc for PoolManager service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -321,6 +357,11 @@ var PoolManager_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "GetAllNetworks",
 			Handler:       _PoolManager_GetAllNetworks_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "SyncRessources",
+			Handler:       _PoolManager_SyncRessources_Handler,
 			ServerStreams: true,
 		},
 	},

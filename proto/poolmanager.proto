@@ -64,7 +64,7 @@ message Image {
     string schema = 18;
     int64 virtual_size = 19;
     string import_methods = 20; // CSV format
-    string store_ids = 21;      // CSV format
+    string store_ids = 21; // CSV format
 }
 
 message Flavor {
@@ -91,9 +91,9 @@ message Network {
     string project_id = 7;
     bool shared = 8;
     int32 revision_number = 9;
-    string subnets = 10;                  // CSV
-    string availability_zone_hints = 11;  // CSV
-    string tags = 12;                     // CSV
+    string subnets = 10; // CSV
+    string availability_zone_hints = 11; // CSV
+    string tags = 12; // CSV
 }
 
 service PoolManager {
@@ -103,5 +103,6 @@ service PoolManager {
     rpc GetAllImages (google.protobuf.Empty ) returns (stream Image);
     rpc GetAllFlavors (google.protobuf.Empty ) returns (stream Flavor);
     rpc GetAllNetworks (google.protobuf.Empty ) returns (stream Network);
+    rpc SyncRessources (google.protobuf.Empty) returns (stream StreamRessourceResponse);
 }
 

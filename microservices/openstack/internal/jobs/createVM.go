@@ -28,6 +28,7 @@ func CreateVM(workerID int, job models.Job) error {
 	metadata["serverpool_id"] = job.Data["serverpool_id"]
 	metadata["min_vm"] = job.Data["min_vm"]
 	metadata["max_vm"] = job.Data["max_vm"]
+	metadata["network_uuid"] = job.Data["networks"]
 
 	var networks models.JSONStringSlice
 	if err := networks.Scan(job.Data["networks"]); err != nil {
