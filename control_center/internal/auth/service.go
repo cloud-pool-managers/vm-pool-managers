@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"control_center/frontcontrolpb"
 	"control_center/models"
@@ -26,7 +25,6 @@ func (s *Service) CreateUser(
 	ctx context.Context,
 	req *frontcontrolpb.CreateUserRequest,
 ) (*frontcontrolpb.CreateUserResponse, error) {
-	log.Println("Message reçu")
 
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		return &frontcontrolpb.CreateUserResponse{

@@ -3,7 +3,6 @@ package gatherdata
 import (
 	"context"
 	"errors"
-	"log"
 
 	"control_center/frontcontrolpb"
 	"control_center/models"
@@ -168,7 +167,6 @@ func (s *Service) ExistServer(
 	req *frontcontrolpb.UserRequest,
 ) (*frontcontrolpb.ExistData, error) {
 	var serv models.Server
-	log.Println("coucou server")
 
 	err := s.DB.Where("user_id = ?", req.GetUser()).First(&serv).Error
 	if err != nil {
@@ -185,7 +183,6 @@ func (s *Service) ExistServerPools(
 	req *frontcontrolpb.UserRequest,
 ) (*frontcontrolpb.ExistData, error) {
 	var pool models.Serverpool
-	log.Println("coucou serverpool")
 
 	err := s.DB.Where("user_id = ?", req.GetUser()).First(&pool).Error
 	if err != nil {
@@ -202,7 +199,6 @@ func (s *Service) ExistConfigs(
 	req *frontcontrolpb.UserRequest,
 ) (*frontcontrolpb.ExistData, error) {
 	var conf models.ConfigPool
-	log.Println("coucou config")
 
 	err := s.DB.Where("user_id = ?", req.GetUser()).First(&conf).Error
 	if err != nil {

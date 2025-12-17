@@ -66,7 +66,7 @@ func HandleStreamEvent(resp *pb.StreamRessourceResponse) {
 		conf.FromPb(resp)
 		handleDBConfigEvent(&conf, resp.Status)
 	default:
-		log.Printf("⚠️ Type inconnu reçu : %v", resp.Type)
+		log.Printf("Type inconnu reçu : %v", resp.Type)
 	}
 }
 

@@ -48,7 +48,7 @@ func SyncImage(ctx context.Context) {
 		imageRecord := models.Image{
 			ID:               img.ID,
 			Name:             img.Name,
-			Status:           string(img.Status),     
+			Status:           string(img.Status),
 			Visibility:       string(img.Visibility),
 			CreatedAt:        img.CreatedAt,
 			UpdatedAt:        img.UpdatedAt,
@@ -262,8 +262,6 @@ func delete_volumes() {
 			res := Database.Delete(&v)
 			if res.Error != nil {
 				log.Println("Error: can't delete volume: ", res.Error)
-			} else {
-				log.Println("Volume supprimee")
 			}
 		}
 	}
@@ -273,7 +271,6 @@ var first = true
 
 // create pools only if it is the first occurence of the routine
 func do_sync() {
-	log.Println("Resync !")
 	allpool, err := utils.GetAllServerPool()
 	if err != nil {
 		log.Println("Failed to connect to OpenStack, will retry:", err)

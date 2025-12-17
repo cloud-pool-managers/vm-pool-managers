@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
@@ -50,7 +49,6 @@ func AttribVM(workerID int, job models.Job) error {
 	config.DBmu.Unlock()
 
 	if target == nil {
-		log.Println("No suitable server found for attribution")
 		DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
 		return fmt.Errorf("aucun serveur cible trouvé")
 	}
@@ -84,16 +82,20 @@ func AttribVM(workerID int, job models.Job) error {
 		return fmt.Errorf("erreur mise à jour serveur: %w", err)
 	}
 	DecrementPending(uint(utils.ParseInt(job.Data["ID"])))
-	//dire a la DB que le serveur a ete modifie
 	config.DBmu.Lock()
-	config.Database.Model(&models.Server{}).Where("id = ?", target.ID).
-		Update("serverpool_id", job.Data["serverpool_id"])
-	config.Database.Model(&models.Server{}).Where("id = ?", target.ID).
-		Update("user_id", job.Data["user_id"])
-	time.Sleep(5 * time.Second)
+	err = config.Database.Model(&models.Server{}).Where("id = ?", target.ID).
+		Update("serverpool_id", job.Data["serverpool_id"]).Error
+	if err != nil {
+		log.Println("Failed to update serverpool_id in DB:", err)
+		config.DBmu.Unlock()
+	}
+	err = config.Database.Model(&models.Server{}).Where("id = ?", target.ID).
+		Update("user_id", job.Data["user_id"]).Error
+	if err != nil {
+		log.Println("Failed to update user_id in DB:", err)
+		config.DBmu.Unlock()
+	}
 	config.DBmu.Unlock()
-
-	log.Println("Successfully attributed VM", target.ID)
 
 	return nil
 }

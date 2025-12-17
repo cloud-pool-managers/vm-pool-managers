@@ -82,8 +82,6 @@ func CreateVM(workerID int, job models.Job) error {
 		return fmt.Errorf("failed to create VM: %w", err)
 	}
 
-	log.Println("[VM] Creating server ID=", server.ID, " , Name=", server.Name)
-
 	for {
 		current, err := servers.Get(context.Background(),
 			models.ComputeClient, server.ID).Extract()

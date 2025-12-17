@@ -34,7 +34,6 @@ func CreateVolumeAndAttach(workerID int, job models.Job) error {
 		Extract()
 	if err != nil {
 		log.Println("Failed to create volume:", err)
-		log.Println(volumeOpts)
 		ChangePendingVol(job.Data["server_id"])
 		return err
 	}

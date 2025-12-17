@@ -229,8 +229,6 @@ func (s *ServerMicroOpenstack) handleConfig(
 func (s *ServerMicroOpenstack) SendRessources(
 	ctx context.Context,
 	req *pb.RessourceRequest) (*pb.RessourceResponse, error) {
-	log.Printf("[SendRessources] User=%s Data=%v Status=%v Type=%v",
-		req.GetUser(), req.GetData(), req.GetStatus(), req.GetType())
 	err := s.DB.Transaction(func(db *gorm.DB) error {
 		switch req.GetType() {
 		case pb.Type_USER:
@@ -347,7 +345,6 @@ func sendAllConfig(
 func (s *ServerMicroOpenstack) GetStreamRessources(
 	req *emptypb.Empty,
 	stream pb.PoolManager_GetStreamRessourcesServer) error {
-	log.Println("[GetStreamRessources] Stream global started")
 
 	// Send all ressources at first connection to ensure synchronize
 	if err := sendAllServer(s, stream); err != nil {
@@ -384,7 +381,6 @@ func (s *ServerMicroOpenstack) GetStreamRessources(
 				default:
 					status = pb.Status_STATUS_UNKNOWN
 				}
-				log.Println("Sending message now")
 				err := stream.Send(&pb.StreamRessourceResponse{
 					User:   server.UserID,
 					Type:   pb.Type_SERVER,
@@ -412,7 +408,6 @@ func (s *ServerMicroOpenstack) GetStreamRessources(
 				default:
 					status = pb.Status_STATUS_UNKNOWN
 				}
-				log.Println("Sending message now")
 				err := stream.Send(&pb.StreamRessourceResponse{
 					User:   pool.UserID,
 					Type:   pb.Type_SERVERPOOL,
@@ -440,8 +435,6 @@ func (s *ServerMicroOpenstack) GetStreamRessources(
 				default:
 					status = pb.Status_STATUS_UNKNOWN
 				}
-				log.Println("Sending message now")
-				log.Printf("user = %s, Name = %s", config.UserID, config.Name)
 				err := stream.Send(&pb.StreamRessourceResponse{
 					User:   config.UserID,
 					Type:   pb.Type_CONFIG,
@@ -464,7 +457,6 @@ func (s *ServerMicroOpenstack) GetStreamRessources(
 func (s *ServerMicroOpenstack) GetStreamRessourcesUser(
 	req *pb.UserRequest,
 	stream grpc.ServerStreamingServer[pb.StreamRessourceResponse]) error {
-	log.Println("[GetStreamRessourcesUser] Stream User started")
 	// stream user-specific ressources
 	return nil
 }

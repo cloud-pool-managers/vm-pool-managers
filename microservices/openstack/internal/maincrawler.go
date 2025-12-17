@@ -29,7 +29,6 @@ func Monitor(c context.Context) {
 			return
 
 		case <-ticker.C:
-			log.Println("Checking serverpools...")
 			CheckAndCreate()
 			attachVolume()
 			volnotattached()
@@ -82,7 +81,6 @@ func CheckAndCreate() {
 				p.Networks[0] == os.Getenv("NETWORK_ID") &&
 				countadmin > 0 && p.UserID != "admin" &&
 				p.PendingJobs < missing {
-				log.Println("Attributing VM for pool: ", p.ServerpoolID, "with pending jobs:", p.PendingJobs)
 				jobs.IncrementPending(p.ID)
 				worker.AddJob((*worker.CreateJob(models.AttribVM,
 					map[string]string{
@@ -95,7 +93,6 @@ func CheckAndCreate() {
 					})), true)
 				countadmin--
 			} else {
-				log.Println("Creating VM for pool:", p)
 				jobs.IncrementPending(p.ID)
 				worker.AddJob(*worker.CreateJob(models.CreateVM,
 					utils.BuildDataMap(utils.FlatstringSP(p))), false)
@@ -130,7 +127,6 @@ func CheckAndCreate() {
 			jobs.IncrementPending(base_p.ID)
 		}
 	}
-	log.Println("CheckAndCreate completed")
 	config.DBmu.Unlock()
 }
 
@@ -173,7 +169,6 @@ func CreateServerpoolFromEnv() (models.Serverpool, error) {
 		PendingJobs:  0,
 		NetworkUuid:  os.Getenv("NETWORK_ID"),
 	}
-	log.Println(pool.Networks)
 
 	return pool, nil
 }
@@ -198,7 +193,6 @@ func attachVolume() {
 				config.Database) &&
 			serv.Status == "ACTIVE" &&
 			!server.VolPending {
-			log.Printf("Attaching volume to server %s\n", serv.ID)
 			jobs.ChangePendingVol(serv.ID)
 			worker.AddJob(*worker.CreateJob(models.CreateVolumeAndAttach,
 				map[string]string{
