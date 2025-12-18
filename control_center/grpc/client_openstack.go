@@ -104,7 +104,17 @@ func handleDBServerpoolEvent(serverpool *models.Serverpool, status pb.Status) {
 				serverpool.UserID, serverpool.ServerpoolID).
 			Updates(serverpool).Error
 	case pb.Status_DELETE:
-		_ = config.Database.Delete(serverpool).Error
+		if serverpool.Status != "deleting" && serverpool.Status != "deleted" {
+			_ = config.Database.Delete(serverpool).Error
+		} else {
+			err := config.Database.Model(&serverpool).
+				Where("user_id = ? AND serverpool_id = ?",
+					serverpool.UserID, serverpool.ServerpoolID).
+				Update("status", "scheduled").Error
+			if err != nil {
+				log.Printf("Erreur DELETE %T : %v", serverpool, err)
+			}
+		}
 	}
 }
 

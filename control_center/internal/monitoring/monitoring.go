@@ -43,14 +43,21 @@ func checkallpools(poolService *pool.Service) {
 }
 
 func checkpool(pool *models.Serverpool, poolService *pool.Service) {
-	if pool.Status != "scheduled" {
-		return
-	}
 	now := time.Now().UTC()
-	if !shouldStartPool(pool, now) {
-		return
-	}
 
+	switch pool.Status {
+	case "scheduled":
+		if shouldStartPool(pool, now) {
+			startPool(pool, poolService)
+		}
+	case "running":
+		if shouldDeletePool(pool, now) {
+			deletePool(pool, poolService)
+		}
+	}
+}
+
+func startPool(pool *models.Serverpool, poolService *pool.Service) {
 	log.Printf("Starting pool ID %s as per schedule", pool.ServerpoolID)
 	err := config.Database.Model(pool).
 		Where("status = ?", "scheduled").
@@ -60,6 +67,28 @@ func checkpool(pool *models.Serverpool, poolService *pool.Service) {
 		return
 	}
 	go launchCreatePool(pool, poolService)
+}
+
+func shouldDeletePool(pool *models.Serverpool, now time.Time) bool {
+	if pool.TimeStart == nil || pool.Timewindow == nil {
+		return false
+	}
+
+	endTime := pool.TimeStart.Add(*pool.Timewindow)
+	return now.After(endTime)
+}
+
+func deletePool(pool *models.Serverpool, poolService *pool.Service) {
+	log.Printf("Deleting pool ID %s as per schedule", pool.ServerpoolID)
+	err := config.Database.Model(pool).
+		Where("status = ?", "running").
+		Update("status", "deleting").Error
+	if err != nil {
+		log.Println("Failed to change pool status:", err)
+		return
+	}
+
+	go launchDeletePool(pool, poolService)
 }
 
 func shouldStartPool(pool *models.Serverpool, now time.Time) bool {
@@ -103,5 +132,34 @@ func launchCreatePool(p *models.Serverpool, poolService *pool.Service) {
 		Update("status", "running").Error
 	if err != nil {
 		log.Println("Failed to update pool status to running:", err)
+	}
+}
+
+func launchDeletePool(p *models.Serverpool, poolService *pool.Service) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	req := &frontcontrolpb.DeletePoolRequest{
+		User:   p.UserID,
+		PoolId: p.ServerpoolID,
+	}
+	resp, err := poolService.DeletePool(ctx, req)
+	if err != nil || !resp.GetSuccess() {
+		log.Printf("Failed to delete pool ID %s: %v", p.ServerpoolID, err)
+		err := config.Database.Model(p).
+			Where("status = ?", "deleting").
+			Update("status", "running").Error
+		if err != nil {
+			log.Println("Failed to update pool status to error:", err)
+		}
+		return
+	}
+
+	log.Printf("Pool ID %s deleted successfully", p.ServerpoolID)
+	err = config.Database.Model(p).
+		Where("status = ?", "deleting").
+		Update("status", "deleted").Error
+	if err != nil {
+		log.Println("Failed to update pool status to deleted:", err)
 	}
 }
