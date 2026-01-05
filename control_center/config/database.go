@@ -63,6 +63,8 @@ func Start_DB(ctx context.Context) {
 		&models.Network{},
 	)
 
+	syncSequences(Database)
+
 	createNotifyTriggers()
 	Broker = event.NewEventBroker()
 
@@ -151,4 +153,27 @@ END$$;
 	}
 
 	log.Println("Triggers PostgreSQL créés pour Server, Serverpool et ConfigPool")
+}
+
+func syncSequences(db *gorm.DB) {
+	tables := []string{
+		"users",
+		"serverpools",
+		"config_pools",
+	}
+
+	for _, table := range tables {
+		err := db.Exec(fmt.Sprintf(`
+			SELECT setval(
+				pg_get_serial_sequence('%s', 'id'),
+				COALESCE((SELECT MAX(id) FROM %s), 1)
+			);
+		`, table, table)).Error
+
+		if err != nil {
+			log.Printf("⚠️ Impossible de synchroniser la séquence de %s: %v", table, err)
+		} else {
+			log.Printf("✅ Séquence synchronisée pour %s", table)
+		}
+	}
 }

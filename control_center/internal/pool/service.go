@@ -65,13 +65,18 @@ func (s *Service) CreatePool(
 	// 	return &frontcontrolpb.CreatePoolResponse{Success: false}, err
 	// }
 
-	// return &frontcontrolpb.CreatePoolResponse{Success: true}, nil
+	// log.Println("coucou: ,", pool)
+	// err := config.Database.FirstOrCreate(&pool).Error
+	res := config.Database.Create(&pool)
 
-	err := config.Database.Create(&pool).Error
-	if err != nil {
-		return &frontcontrolpb.CreatePoolResponse{Success: false}, err
+	// log.Println("RowsAffected:", res.RowsAffected)
+	// log.Println("Error:", res.Error)
+	// log.Println("ID after:", pool.ID)
+	if res.Error != nil {
+		return &frontcontrolpb.CreatePoolResponse{Success: false}, res.Error
 	}
 	return &frontcontrolpb.CreatePoolResponse{Success: true}, nil
+
 }
 
 func (s *Service) DeletePool(

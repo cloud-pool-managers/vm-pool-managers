@@ -100,6 +100,7 @@ func shouldStartPool(pool *models.Serverpool, now time.Time) bool {
 	return now.After(startWindow) && now.Before(*pool.TimeStart)
 }
 
+// erreur ici
 func launchCreatePool(p *models.Serverpool, poolService *pool.Service) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()

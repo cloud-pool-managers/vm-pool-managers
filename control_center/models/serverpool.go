@@ -11,8 +11,8 @@ import (
 
 type Serverpool struct {
 	ID           uint   `gorm:"primaryKey;autoIncrement"`
-	ServerpoolID string `gorm:"index:idx_pool_user,unique"`
-	UserID       string `gorm:"index:idx_pool_user,unique"`
+	ServerpoolID string `gorm:"uniqueIndex:idx_pool_user"`
+	UserID       string `gorm:"uniqueIndex:idx_pool_user"`
 	ImageRef     string
 	FlavorRef    string
 	Networks     JSONStringSlice `gorm:"type:text"`
