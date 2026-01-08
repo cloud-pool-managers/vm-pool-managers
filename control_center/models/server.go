@@ -26,6 +26,7 @@ type Server struct {
 	Reattrib       bool `gorm:"default:false; not null"`
 	Progress       int  `gorm:"default:0; not null"`
 	ConfigID       int
+	IP_Address     string
 }
 
 func FromGopherServer(s servers.Server) Server {
@@ -127,6 +128,9 @@ func (s *Server) FromPb(pbs *pb.StreamRessourceResponse) {
 		if err := json.Unmarshal([]byte(v), &m); err == nil {
 			s.Metadata = m
 		}
+	}
+	if v, ok := pbs.Data["ip_address"]; ok {
+		s.IP_Address = v
 	}
 }
 

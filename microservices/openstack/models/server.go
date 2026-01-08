@@ -18,7 +18,8 @@ type Server struct {
 	FlavorRef      string
 	ImageRef       string
 	Networks       JSONStringSlice `gorm:"type:text"`
-	Metadata       JSONStringMap   `gorm:"type:text"`
+	IP_Address     string
+	Metadata       JSONStringMap `gorm:"type:text"`
 	ServerpoolID   string
 	UserID         string
 	ServerPool     *Serverpool `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
@@ -43,6 +44,7 @@ func (s *Server) ToMap() map[string]string {
 		"reattrib":      fmt.Sprintf("%t", s.Reattrib),
 		"progress":      fmt.Sprintf("%d", s.Progress),
 		"config_id":     s.ConfigID,
+		"ip_address":    s.IP_Address,
 	}
 	if s.Networks != nil {
 		if b, err := json.Marshal(s.Networks); err == nil {
@@ -60,11 +62,13 @@ func (s *Server) ToMap() map[string]string {
 
 func FromGopherServer(s servers.Server) Server {
 	var networks []string
+	var ipaddr string
 	for netName, netAddrs := range s.Addresses {
 		for _, addr := range netAddrs.([]any) {
 			if addrMap, ok := addr.(map[string]any); ok {
 				if ip, ok := addrMap["addr"].(string); ok {
 					networks = append(networks, fmt.Sprintf("%s:%s", netName, ip))
+					ipaddr = ip
 				}
 			}
 		}
@@ -89,6 +93,7 @@ func FromGopherServer(s servers.Server) Server {
 		Metadata:     metadata,
 		ServerpoolID: s.Metadata["serverpool_id"],
 		UserID:       s.Metadata["user_id"],
+		IP_Address:   ipaddr,
 	}
 }
 
