@@ -214,6 +214,7 @@ message Server {
     google.protobuf.Timestamp updated_at = 9;
     map<string, string> metadata = 10;
     string user_id = 11;
+    string addressed_ip = 12;
 }
 
 message ServerPool {
@@ -237,6 +238,26 @@ message Config {
 
 message ExistData {
     bool exist = 1;
+}
+
+message ListSSHPublicKeysRequest {
+    string user_id = 1;
+    string serverpool_id = 2;
+    repeated string pubkeys = 3;
+}
+
+message ListSSHPublicKeysResponse {
+    bool success = 1;
+}
+
+message AttribVMinPoolRequest {
+    string serverpool_id = 1;
+    string pubkey = 2;
+}
+
+message AttribVMinPoolResponse {
+    bool success = 1;
+    string addressed_ip = 2;
 }
 
 // -------------------- Services --------------------

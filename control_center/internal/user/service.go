@@ -106,6 +106,8 @@ func (s *Service) UpdateDataUser(
 				Data:   stringData,
 			}
 
+			log.Println("data send : ", resp.GetData())
+
 			if err := stream.Send(resp); err != nil {
 				log.Printf("Stream send error: %v", err)
 				return err

@@ -16,6 +16,7 @@ import {
   MultiSelect,
   Spinner,
   Clipboard,
+  Textarea,
 } from 'flowbite-svelte';
 import { CheckOutline, ChevronDownOutline } from 'flowbite-svelte-icons';
 import {
@@ -61,6 +62,8 @@ let selectedNetwork: string = "";
 let selectedFlavor: string = "";
 let selectedConfigFile: string = "";
 let createspModal: boolean = false;
+let createsshModal: boolean = false;
+let sshkeys: string = "";
 let createError: string = "";
 let createSuccess = false;
 let scheduleDay: string = "";
@@ -284,6 +287,10 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
   return target;
 }
 
+async function handleSendSSHKeys() {
+  console.log("Sending SSH keys:", sshkeys);
+  createsshModal = false;
+}
 
 </script>
 
@@ -338,7 +345,11 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
 			{/if}
 			{s.status}
 		</TableBodyCell>
+    {#if s.ipAddress}
 		<TableBodyCell>{s.ipAddress}</TableBodyCell>
+    {:else}
+    <TableBodyCell>{s.addressedIp}</TableBodyCell>
+    {/if}
 		<TableBodyCell>
 		  {#if s.status === 'BUILD' || s.status === 'REBUILD'}
 			<Button
@@ -531,4 +542,30 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
       </div>
     </form>
   </Modal>
+{/if}
+
+{#if selectedPool}
+  <Button
+  size="md"
+  class="bg-option-500 mt-4"
+  onclick={() => createsshModal = true}>
+    Add SSH keys
+  </Button>
+
+  {#if createsshModal}
+  <Modal
+    bind:open={createsshModal}
+    class="bg-gray-500 bg-opacity-50"
+    focustrap>
+    <Textarea
+      placeholder="Copiez vos clés SSH ici (une par ligne)"
+      class="w-full h-full"
+      bind:value={sshkeys}/>
+    <Button
+    size="md"
+    onclick={handleSendSSHKeys}>
+      Envoyer les clés SSH
+    </Button>
+  </Modal>
+  {/if}
 {/if}

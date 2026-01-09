@@ -135,6 +135,10 @@ function normalizeKeys(obj: any, type: Type) {
             }
             delete normalized.networks;
         }
+        if (normalized.ip_address !== undefined) {
+        normalized.ipAddress = normalized.ip_address;
+        delete normalized.ip_address;
+        }
     }
     if (type === Type.SERVERPOOL) {
         if (normalized.networks !== undefined) {

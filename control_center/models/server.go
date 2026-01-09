@@ -27,6 +27,7 @@ type Server struct {
 	Progress       int  `gorm:"default:0; not null"`
 	ConfigID       int
 	IP_Address     string
+	Lock           bool `gorm:"-"`
 }
 
 func FromGopherServer(s servers.Server) Server {
@@ -141,14 +142,9 @@ func (s *Server) ToFrontControlPb() *frontcontrolpb.Server {
 	}
 
 	networkStr := ""
-	ipAddr := ""
 
 	if len(s.Networks) > 0 {
 		networkStr = s.Networks[0]
-		parts := strings.Split(networkStr, ":")
-		if len(parts) > 1 {
-			ipAddr = parts[1]
-		}
 
 		if len(s.Networks) > 1 {
 			networkStr = strings.Join(s.Networks, ",")
@@ -156,17 +152,18 @@ func (s *Server) ToFrontControlPb() *frontcontrolpb.Server {
 	}
 
 	return &frontcontrolpb.Server{
-		Id:        s.ID,
-		Name:      s.Name,
-		Status:    s.Status,
-		Image:     s.ImageRef,
-		Flavor:    s.FlavorRef,
-		Network:   networkStr,
-		IpAddress: ipAddr,
-		CreatedAt: nil,
-		UpdatedAt: nil,
-		Metadata:  metadata,
-		UserId:    s.UserID,
+		Id:          s.ID,
+		Name:        s.Name,
+		Status:      s.Status,
+		Image:       s.ImageRef,
+		Flavor:      s.FlavorRef,
+		Network:     networkStr,
+		IpAddress:   s.IP_Address,
+		CreatedAt:   nil,
+		UpdatedAt:   nil,
+		Metadata:    metadata,
+		UserId:      s.UserID,
+		AddressedIp: s.IP_Address,
 	}
 }
 
