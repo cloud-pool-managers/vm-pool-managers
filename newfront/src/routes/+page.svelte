@@ -7,22 +7,32 @@
     serverPools,
     configs
   } from "$lib/store";
+	import { Button, modal, Modal, Textarea } from "flowbite-svelte";
+
+  let modalssh = false;
+  let sshkey = "";
+  function handleSSHKey() {
+    //search for pools with sshkey in Keypublist
+  }
 </script>
 
-<h3>Configs</h3>
-{#each $configs as conf}
-  <p>{conf}</p>
-{/each}
-<h3>Server Pools</h3>
-{#each $serverPools as pool}
-  <div style="border:1px solid #ccc;padding:8px;margin-bottom:10px;">
-    <h4>{pool.name}</h4>
-    {#each $servers.filter(serv => serv.metadata?.user_id
-        === pool.metadata?.user_id
-        && serv.metadata?.serverpool === pool.name) as serv}
-      <p>{serv.name}</p>
-    {:else}
-      <p><em>Aucun serveur associé</em></p>
-    {/each}
-  </div>
-{/each}
+<Button class="mt-6 bg-option-500"
+  onclick={() => modalssh = true}>
+  Rechercher les pools disponibles
+</Button>
+
+{#if modalssh}
+  <Modal
+  bind:open={modalssh}
+  focustrap>
+  <Textarea
+    placeholder="Entrez votre clé SSH publique"
+    class="w-full h-20"
+    bind:value={sshkey}/>
+  <Button
+    size="md"
+    class="mt-4 bg-option-500"
+    onclick={handleSSHKey}>
+  </Button>
+  </Modal>
+{/if}

@@ -28,6 +28,7 @@ func (s *Service) GetAllImages(
 	req *frontcontrolpb.UserRequest,
 	stream frontcontrolpb.GatherDataService_GetAllImagesServer,
 ) error {
+	ctx := stream.Context()
 	rows, err := s.DB.Model(&models.Image{}).Rows()
 	if err != nil {
 		return err
@@ -35,6 +36,11 @@ func (s *Service) GetAllImages(
 	defer rows.Close()
 
 	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		var img models.Image
 		if err := s.DB.ScanRows(rows, &img); err != nil {
 			return err
@@ -50,6 +56,7 @@ func (s *Service) GetAllFlavors(
 	req *frontcontrolpb.UserRequest,
 	stream frontcontrolpb.GatherDataService_GetAllFlavorsServer,
 ) error {
+	ctx := stream.Context()
 	rows, err := s.DB.Model(&models.Flavor{}).Rows()
 	if err != nil {
 		return err
@@ -57,6 +64,11 @@ func (s *Service) GetAllFlavors(
 	defer rows.Close()
 
 	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		var f models.Flavor
 		if err := s.DB.ScanRows(rows, &f); err != nil {
 			return err
@@ -72,6 +84,7 @@ func (s *Service) GetAllNetworks(
 	req *frontcontrolpb.UserRequest,
 	stream frontcontrolpb.GatherDataService_GetAllNetworksServer,
 ) error {
+	ctx := stream.Context()
 	rows, err := s.DB.Model(&models.Network{}).Rows()
 	if err != nil {
 		return err
@@ -79,6 +92,11 @@ func (s *Service) GetAllNetworks(
 	defer rows.Close()
 
 	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		var n models.Network
 		if err := s.DB.ScanRows(rows, &n); err != nil {
 			return err
@@ -94,6 +112,7 @@ func (s *Service) GetAllServers(
 	req *frontcontrolpb.UserRequest,
 	stream frontcontrolpb.GatherDataService_GetAllServersServer,
 ) error {
+	ctx := stream.Context()
 	rows, err := s.DB.Model(&models.Server{}).Rows()
 	if err != nil {
 		return err
@@ -101,6 +120,11 @@ func (s *Service) GetAllServers(
 	defer rows.Close()
 
 	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		var n models.Server
 		if err := s.DB.ScanRows(rows, &n); err != nil {
 			return err
@@ -118,6 +142,7 @@ func (s *Service) GetAllServerPools(
 	req *frontcontrolpb.UserRequest,
 	stream frontcontrolpb.GatherDataService_GetAllServerPoolsServer,
 ) error {
+	ctx := stream.Context()
 	rows, err := s.DB.Model(&models.Serverpool{}).Rows()
 	if err != nil {
 		return err
@@ -125,6 +150,11 @@ func (s *Service) GetAllServerPools(
 	defer rows.Close()
 
 	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		var n models.Serverpool
 		if err := s.DB.ScanRows(rows, &n); err != nil {
 			return err
@@ -142,6 +172,7 @@ func (s *Service) GetAllConfigs(
 	req *frontcontrolpb.UserRequest,
 	stream frontcontrolpb.GatherDataService_GetAllConfigsServer,
 ) error {
+	ctx := stream.Context()
 	rows, err := s.DB.Model(&models.ConfigPool{}).Rows()
 	if err != nil {
 		return err
@@ -149,6 +180,11 @@ func (s *Service) GetAllConfigs(
 	defer rows.Close()
 
 	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		var n models.ConfigPool
 		if err := s.DB.ScanRows(rows, &n); err != nil {
 			return err

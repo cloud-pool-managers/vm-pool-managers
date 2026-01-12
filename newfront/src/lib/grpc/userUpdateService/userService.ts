@@ -4,6 +4,8 @@ import { create } from "@bufbuild/protobuf";
 import {
     UserService,
     UpdateDataUserRequestSchema,
+    type AddPersonalSSHKeyRequest,
+    type AddPersonnalSSHKeyResponse,
 } from "../frontcontrol_pb"
 import { handleUserUpdate } from "$lib/utils/updateHandlers";
 
@@ -32,6 +34,17 @@ export async function subscribeUserUpdate(user: string, signal?: AbortSignal) {
         } else {
             console.error("Erreur stream UserService:", err);
         }
+    }
+}
+
+export async function addSSHPersonalKey(req: AddPersonalSSHKeyRequest): Promise<AddPersonnalSSHKeyResponse> {
+    try {
+        const res: AddPersonnalSSHKeyResponse = await userclient.addPersonalSSHKey(req);
+        return res;
+    }
+    catch (err) { 
+        console.error("Erreur ajout clé SSH perso :", err);
+        throw err;
     }
 }
 

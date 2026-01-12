@@ -1,13 +1,16 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"control_center/event"
 	"control_center/frontcontrolpb"
+	"control_center/models"
 
+	"golang.org/x/crypto/ssh"
 	"gorm.io/gorm"
 )
 
@@ -114,4 +117,26 @@ func (s *Service) UpdateDataUser(
 			}
 		}
 	}
+}
+
+func (s *Service) AddPersonalSSHKey(
+	ctx context.Context,
+	req *frontcontrolpb.AddPersonalSSHKeyRequest,
+) (*frontcontrolpb.AddPersonnalSSHKeyResponse, error) {
+	var user models.User
+	if err := s.DB.Model(&models.User{}).Where(
+		"Email = ?", req.GetUserId()).First(&user).Error; err != nil {
+		return &frontcontrolpb.AddPersonnalSSHKeyResponse{Success: false}, err
+	}
+	_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(req.GetPublicKey()))
+	if err != nil {
+		return &frontcontrolpb.AddPersonnalSSHKeyResponse{Success: false}, err
+	}
+
+	user.Keypubuser = req.GetPublicKey()
+	if err := s.DB.Save(&user).Error; err != nil {
+		return &frontcontrolpb.AddPersonnalSSHKeyResponse{Success: false}, err
+	}
+
+	return &frontcontrolpb.AddPersonnalSSHKeyResponse{Success: true}, nil
 }

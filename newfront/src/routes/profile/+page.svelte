@@ -19,6 +19,9 @@
 	Modal,
 	Textarea,
   } from "flowbite-svelte";
+  import { create } from '@bufbuild/protobuf';
+	import { AddPersonalSSHKeyRequestSchema, type AddPersonalSSHKeyRequest, type AddPersonnalSSHKeyResponse } from '$lib/grpc/frontcontrol_pb';
+	import { addSSHPersonalKey } from '$lib/grpc/userUpdateService/userService';
 
   let token: string | null = null;
   $: token = $authStore?.token ?? null;
@@ -27,6 +30,21 @@
 
   async function handleSSHKeySubmit() {
     console.log("Submitting SSH Key:", sshKey);
+    const req: AddPersonalSSHKeyRequest = create(AddPersonalSSHKeyRequestSchema,{
+      userId: $authStore?.email ?? "",
+      publicKey: sshKey,
+    });
+    try {
+      const res: AddPersonnalSSHKeyResponse = await addSSHPersonalKey(req);
+      if (!res.success) {
+        console.error("Failed to add SSH Key");
+      } else {
+        console.log("SSH Key added successfully");
+      }
+    }
+    catch (err) {
+      console.error("Error adding SSH Key:", err);
+    }
     sshModal = false;
   }
 
