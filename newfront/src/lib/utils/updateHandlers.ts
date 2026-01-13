@@ -87,6 +87,10 @@ function applyStoreMutation(store: Writable<any[]>, status: Status, obj: any) {
                     console.log("🟡 UPDATE :", obj);
                     items[idx] = { ...items[idx], ...obj };
                 }
+                if (idx === -1) {
+                    console.log("🟢 CREATE :", obj);
+                    items.push(obj);
+                }
                 break;
             case Status.DELETE:
                 if (idx !== -1) {

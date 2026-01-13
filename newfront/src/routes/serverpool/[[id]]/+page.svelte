@@ -225,7 +225,7 @@ async function handleCreateServerpool(event: Event) {
     };
 
     
-    if (!data.image || !data.flavor || !data.config) {
+    if (!data.image || !data.flavor) {
       createError = "Veuillez remplir tous les champs obligatoires.";
       return;
     }
@@ -480,8 +480,8 @@ async function handleSendSSHKeys() {
       <!-- CONFIG -->
       <Label>
         <span>Config</span>
-        <Select bind:value={selectedConfigFile} required>
-          <option disabled selected value="">Choisir une config</option>
+        <Select bind:value={selectedConfigFile}>
+          <option selected value="">Choisir une config</option>
           {#each $configs as c}
             <option value={c.name}>{c.name}</option>
           {/each}

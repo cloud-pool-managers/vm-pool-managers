@@ -91,7 +91,10 @@ func (s *Service) AttribVMinPool(
 			Update("locked", true).Error; err != nil {
 			return err
 		}
-
+		if err := tx.Model(&server).
+			Update("ssh_key_assigned", req.GetPubkey()).Error; err != nil {
+			return err
+		}
 		return nil
 	})
 

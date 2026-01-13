@@ -35,7 +35,6 @@ func AttribVM(workerID int, job models.Job) error {
 
 	var target *servers.Server
 	config.DBmu.Lock()
-	println("coucou")
 	for i := range allServers {
 		srv := &allServers[i]
 		if srv.Metadata["user_id"] == "admin" &&
@@ -90,7 +89,7 @@ func AttribVM(workerID int, job models.Job) error {
 		config.DBmu.Unlock()
 	}
 	err = config.Database.Model(&models.Server{}).Where("id = ?", target.ID).
-		Update("user_id", job.Data["user_id"]).Error
+		Updates(models.FromGopherServer(*target)).Error
 	if err != nil {
 		log.Println("Failed to update user_id in DB:", err)
 		config.DBmu.Unlock()

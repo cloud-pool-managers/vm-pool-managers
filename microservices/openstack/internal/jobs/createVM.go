@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -60,13 +61,20 @@ func CreateVM(workerID int, job models.Job) error {
 	} else {
 		log.Printf("Found config file : \n%s\n", conf_file.Data)
 	}
+
+	userData, err := buildUserData(conf_file.Data)
+	if err != nil {
+		log.Println("Failed to build user-data:", err)
+		userData = "#!/bin/bash\n"
+	}
+
 	createOpts := servers.CreateOpts{
 		Name:      fmt.Sprintf(`%s-%s`, serv.ServerpoolID, uuid.New().String()),
 		FlavorRef: serv.FlavorRef,
 		ImageRef:  serv.ImageRef,
 		Metadata:  serv.Metadata,
 		Networks:  serv.Networks.ToNetworks(),
-		UserData:  []byte(conf_file.Data),
+		UserData:  []byte(userData),
 	}
 
 	createOptsExt := keypairs.CreateOptsExt{
@@ -111,4 +119,79 @@ func CreateVM(workerID int, job models.Job) error {
 	fmt.Println("Worker ", workerID, " finished its job")
 
 	return nil
+}
+
+func buildUserData(confData string) (string, error) {
+	boundary := "==BOUNDARY=="
+
+	sshKey, err := readSSHPublicKey()
+	if err != nil {
+		return "", err
+	}
+
+	var parts []string
+
+	// Part 1 : création de l'utilisateur
+	userPart := fmt.Sprintf(
+		`--%s
+Content-Type: text/cloud-config
+
+#cloud-config
+users:
+  - name: vmuser
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo
+    ssh_authorized_keys:
+      - %s
+`, boundary, sshKey)
+
+	parts = append(parts, userPart)
+
+	// Part 2 : confData (optionnelle)
+	if strings.TrimSpace(confData) != "" {
+		confType := detectContentType(confData)
+
+		confPart := fmt.Sprintf(
+			`--%s
+Content-Type: %s
+
+%s
+`, boundary, confType, confData)
+
+		parts = append(parts, confPart)
+	}
+
+	// Fin du multipart
+	footer := fmt.Sprintf(`--%s--`, boundary)
+
+	// Ajout obligatoire de MIME-Version
+	return fmt.Sprintf(
+		`MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="%s"
+
+%s
+%s
+`, boundary, strings.Join(parts, ""), footer), nil
+}
+
+func detectContentType(data string) string {
+	if strings.HasPrefix(strings.TrimSpace(data), "#cloud-config") {
+		return "text/cloud-config"
+	}
+	return "text/x-shellscript"
+}
+
+func readSSHPublicKey() (string, error) {
+	path := os.Getenv("SSH_PUBLIC_KEY_PATH")
+	if path == "" {
+		return "", fmt.Errorf("SSH_PUBLIC_KEY_PATH not set")
+	}
+
+	key, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(key)), nil
 }

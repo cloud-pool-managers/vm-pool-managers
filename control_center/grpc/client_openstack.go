@@ -80,8 +80,9 @@ func handleDBServerEvent(server *models.Server, status pb.Status) {
 			log.Printf("Erreur CREATE %T : %v", server, err)
 		}
 	case pb.Status_UPDATE:
+		log.Println("coucou on est la avec ", server)
 		err := config.Database.Model(&models.Server{}).
-			Where("user_id = ? AND name = ?", server.UserID, server.Name).
+			Where("id = ?", server.ID).
 			Updates(server).Error
 		if err != nil {
 			log.Printf("Erreur UPDATE %T : %v", server, err)
