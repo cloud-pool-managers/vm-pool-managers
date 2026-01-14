@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type Serverpool struct {
@@ -22,7 +24,7 @@ type Serverpool struct {
 	ConfigID     string
 	Timewindow   *time.Duration `gorm:"type:bigint"`
 	TimeStart    *time.Time     `gorm:"type:timestamptz"`
-	Keypublist   []string       `gorm:"type:text[]"`
+	Keypublist   pq.StringArray `gorm:"type:text[]"`
 	Keypubuser   string
 	Status       string
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"control_center/config"
 	"control_center/frontcontrolpb"
+	"control_center/internal/attribvm"
 	"control_center/internal/auth"
 	"control_center/internal/configpool"
 	"control_center/internal/gatherdata"
@@ -69,6 +70,8 @@ func Start_grpc(ctx context.Context) {
 	frontcontrolpb.RegisterPoolServiceServer(s, poolService)
 	frontcontrolpb.RegisterUserServiceServer(s,
 		user.New(config.Database, config.Broker))
+	frontcontrolpb.RegisterAttribVMServiceServer(s,
+		attribvm.New(config.Database))
 
 	reflection.Register(s)
 

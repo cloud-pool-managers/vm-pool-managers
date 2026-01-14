@@ -19,6 +19,8 @@ import type {
     GetPoolRequest,
     DeletePoolRequest,
     RebuildServerRequest,
+    ListSSHPublicKeysRequest,
+    ListSSHPublicKeysResponse,
 } from "../frontcontrol_pb"
 
 const transport = createGrpcWebTransport({
@@ -87,6 +89,18 @@ export async function addServer (
         return res;
     } catch (err) {
         console.error("Error adding server: ", err)
+        throw err;
+    }
+}
+
+export async function addSSHKeys (
+    req: ListSSHPublicKeysRequest
+): Promise<ListSSHPublicKeysResponse> {
+    try {
+        const res: ListSSHPublicKeysResponse = await poolClient.addSSHKeys(req);
+        return res;
+    } catch (err) {
+        console.error("Error adding SSH keys: ", err)
         throw err;
     }
 }

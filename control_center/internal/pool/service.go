@@ -2,6 +2,7 @@ package pool
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"control_center/models"
 	"control_center/pb"
 
+	"golang.org/x/crypto/ssh"
 	"gorm.io/gorm"
 )
 
@@ -178,4 +180,28 @@ func (s *Service) AddServer(
 	}
 
 	return &frontcontrolpb.RebuildServerResponse{Success: true}, nil
+}
+
+func (s *Service) AddSSHKeys(
+	ctx context.Context,
+	req *frontcontrolpb.ListSSHPublicKeysRequest,
+) (*frontcontrolpb.ListSSHPublicKeysResponse, error) {
+	var pool models.Serverpool
+	if err := s.DB.Model(models.Serverpool{}).
+		Where("serverpool_id = ? AND user_id = ?", req.GetServerpoolId(), req.GetUserId()).
+		First(&pool).Error; err != nil {
+		return &frontcontrolpb.ListSSHPublicKeysResponse{Success: false}, err
+	}
+	log.Printf("req keys: %v", req.GetPubkeys())
+	for _, key := range req.GetPubkeys() {
+		_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(key))
+		if err != nil {
+			return &frontcontrolpb.ListSSHPublicKeysResponse{Success: false}, err
+		}
+		pool.Keypublist = append(pool.Keypublist, key)
+	}
+	if err := s.DB.Save(&pool).Error; err != nil {
+		return &frontcontrolpb.ListSSHPublicKeysResponse{Success: false}, err
+	}
+	return &frontcontrolpb.ListSSHPublicKeysResponse{Success: true}, nil
 }

@@ -23,7 +23,8 @@ export { createPool,
     getPool,
     deletePool,
     rebuildServer,
-    addServer
+    addServer,
+    addSSHKeys,
 } from './grpc/poolService/poolService';
 export { loadAll, resetAll } from './store/serverpoolStore';
 export { RebuildServerRequestSchema,

@@ -27,6 +27,7 @@ import {
   deletePool,
   createPool,
   addServer,
+  addSSHKeys,
 } from '$lib/index';
 import type {
   ServerPool,
@@ -48,9 +49,11 @@ import {
 import { onMount } from 'svelte';
 import { page } from '$app/state';
 import { create } from '@bufbuild/protobuf';
-import type {
-  DeletePoolResponse,
-  RebuildServerResponse,
+import {
+	ListSSHPublicKeysRequestSchema,
+  type DeletePoolResponse,
+  type RebuildServerResponse,
+  
 } from '$lib/grpc/frontcontrol_pb';
 
 
@@ -289,6 +292,21 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
 
 async function handleSendSSHKeys() {
   console.log("Sending SSH keys:", sshkeys);
+  const req = create(ListSSHPublicKeysRequestSchema, {
+    userId: $authStore?.email,
+    serverpoolId: selectedPool?.name ?? "",
+    pubkeys: sshkeys.split("\n").map(k => k.trim()).filter(k => k.length > 0),
+  });
+  try {
+    const res = await addSSHKeys(req);
+    if (!res.success) {
+      console.error("Erreur lors de l'ajout des clés SSH");
+    }
+  }
+  catch (err) {
+    console.error("Erreur lors de l'ajout des clés SSH: ", err);
+    throw err;
+  }
   createsshModal = false;
 }
 
@@ -481,7 +499,7 @@ async function handleSendSSHKeys() {
       <Label>
         <span>Config</span>
         <Select bind:value={selectedConfigFile}>
-          <option selected value="">Choisir une config</option>
+          <option selected value="">Defaut</option>
           {#each $configs as c}
             <option value={c.name}>{c.name}</option>
           {/each}

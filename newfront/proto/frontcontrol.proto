@@ -262,6 +262,7 @@ message ListSSHPublicKeysResponse {
 message AttribVMinPoolRequest {
     string serverpool_id = 1;
     string pubkey = 2;
+    string user_id = 3;
 }
 
 message AttribVMinPoolResponse {
