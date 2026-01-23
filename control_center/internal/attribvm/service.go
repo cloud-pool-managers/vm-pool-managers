@@ -76,157 +76,6 @@ func (s *Service) ReturnPoolWithKey(
 	return nil
 }
 
-// func (s *Service) AttribVMinPool(
-// 	ctx context.Context,
-// 	req *frontcontrolpb.AttribVMinPoolRequest,
-// ) (*frontcontrolpb.AttribVMinPoolResponse, error) {
-
-// 	if req.GetServerpoolId() == "" || req.GetUserId() == "" || req.GetPubkey() == "" {
-// 		return &frontcontrolpb.AttribVMinPoolResponse{
-// 			Success:     false,
-// 			AddressedIp: "",
-// 		}, status.Error(codes.InvalidArgument, "missing required fields")
-// 	}
-
-// 	var existingServer models.Server
-// 	err := s.DB.
-// 		Where("ssh_key_assigned = ? AND user_id = ? AND serverpool_id = ?", req.GetPubkey(), req.GetUserId(), req.GetServerpoolId()).
-// 		First(&existingServer).Error
-
-// 	if err == nil {
-// 		log.Printf(
-// 			"SSH key déjà associée → VM %s renvoyée",
-// 			existingServer.IP_Address,
-// 		)
-
-// 		return &frontcontrolpb.AttribVMinPoolResponse{
-// 			Success:     true,
-// 			AddressedIp: existingServer.IP_Address,
-// 		}, nil
-// 	}
-
-// 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-// 		return &frontcontrolpb.AttribVMinPoolResponse{
-// 			Success: false,
-// 		}, err
-// 	}
-
-// 	var server models.Server
-// 	err = s.DB.Transaction(func(tx *gorm.DB) error {
-// 		if err := tx.
-// 			Clauses(clause.Locking{Strength: "UPDATE"}).
-// 			Where("serverpool_id = ? AND user_id = ? AND locked = false",
-// 				req.GetServerpoolId(), req.GetUserId()).
-// 			Order("id").
-// 			First(&server).Error; err != nil {
-
-// 			if errors.Is(err, gorm.ErrRecordNotFound) {
-// 				return status.Error(codes.ResourceExhausted, "no available server")
-// 			}
-// 			return err
-// 		}
-// 		if err := tx.Model(&server).
-// 			Update("locked", true).Error; err != nil {
-// 			return err
-// 		}
-// 		if err := tx.Model(&server).
-// 			Update("ssh_key_assigned", req.GetPubkey()).Error; err != nil {
-// 			return err
-// 		}
-// 		return nil
-// 	})
-
-// 	if err != nil {
-// 		return &frontcontrolpb.AttribVMinPoolResponse{
-// 			Success:     false,
-// 			AddressedIp: "",
-// 		}, err
-// 	}
-// 	log.Printf("Server %s attribué à l'utilisateur %s\n", server.IP_Address, req.GetUserId())
-// 	if err := s.installSSHKey(&server, req.GetPubkey()); err != nil {
-// 		_ = s.DB.Model(&server).Update("locked", false)
-// 		return &frontcontrolpb.AttribVMinPoolResponse{
-// 			Success:     false,
-// 			AddressedIp: "",
-// 		}, status.Errorf(codes.Internal, "ssh setup failed: %v", err)
-// 	}
-// 	return &frontcontrolpb.AttribVMinPoolResponse{
-// 		Success:     true,
-// 		AddressedIp: server.IP_Address,
-// 	}, nil
-// }
-
-// func (s *Service) installSSHKey(server *models.Server, pubKey string) error {
-
-// 	if err := godotenv.Load(); err != nil {
-// 		log.Panicln("Error on loading .env")
-// 		return fmt.Errorf("Error on loading.env")
-// 	}
-// 	signer, err := loadPrivateKey(os.Getenv("SSH_PRIVATE_KEY_PATH"))
-// 	if err != nil {
-// 		log.Printf("Erreur loadPrivateKey")
-// 		return fmt.Errorf("load private key: %w", err)
-// 	}
-
-// 	config := sshConfig("vmuser", signer)
-// 	addr := fmt.Sprintf("%s:22", server.IP_Address)
-
-// 	client, err := ssh.Dial("tcp", addr, config)
-// 	if err != nil {
-// 		log.Printf("Erreur ssh dial")
-// 		return fmt.Errorf("ssh dial failed: %w", err)
-// 	}
-// 	defer client.Close()
-
-// 	var user models.User
-// 	if err := s.DB.
-// 		Where("email = ?", server.UserID).
-// 		First(&user).Error; err != nil {
-// 		log.Printf("Erreur fetch user from db")
-// 		return fmt.Errorf("fetch user from db failed: %w", err)
-// 	}
-
-// 	appUsername := usernameFromEmail(user.Email)
-
-// 	cmd := fmt.Sprintf(`
-// set -e
-
-// create_user_and_key() {
-//   USERNAME="$1"
-//   PUBKEY="$2"
-
-//   if ! id "$USERNAME" >/dev/null 2>&1; then
-//     sudo /usr/sbin/useradd -m -s /bin/bash "$USERNAME"
-//   fi
-
-//   HOME_DIR="/home/$USERNAME"
-//   SSH_DIR="$HOME_DIR/.ssh"
-//   AUTH_KEYS="$SSH_DIR/authorized_keys"
-
-//   sudo mkdir -p "$SSH_DIR"
-//   sudo chmod 700 "$SSH_DIR"
-//   sudo touch "$AUTH_KEYS"
-//   sudo chmod 600 "$AUTH_KEYS"
-
-//   if ! sudo grep -qxF "$PUBKEY" "$AUTH_KEYS"; then
-//     echo "$PUBKEY" | sudo tee -a "$AUTH_KEYS" > /dev/null
-//   fi
-
-//   sudo chown -R "$USERNAME:$USERNAME" "$SSH_DIR"
-// }
-
-// create_user_and_key "student" "%s"
-// create_user_and_key "%s" "%s"
-// `, pubKey, appUsername, user.Keypubuser)
-
-// 	if err := runSSHcmd(client, cmd); err != nil {
-// 		log.Printf("Erreur run ssh cmd")
-// 		return fmt.Errorf("run ssh cmd failed: %w", err)
-// 	}
-
-// 	return nil
-// }
-
 func (s *Service) AttribVMinPool(
 	ctx context.Context,
 	req *frontcontrolpb.AttribVMinPoolRequest,
@@ -368,10 +217,10 @@ create_user() {
   sudo chown -R "$USERNAME:$USERNAME" "$SSH"
 }
 
-# 👨‍🎓 étudiant (sans sudo)
+# étudiant (sans sudo)
 create_user "%s" "%s" "false"
 
-# 👨‍🏫 prof (avec sudo)
+# prof (avec sudo)
 create_user "%s" "%s" "true"
 `,
 		studentUsername,

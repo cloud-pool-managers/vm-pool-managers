@@ -454,30 +454,6 @@ async function handleSendSSHKeys() {
   <Button
   size="md"
   class="bg-option-500 mt-4"
-  onclick={() => createsshModal = true}>
-    Add SSH keys
-  </Button>
-
-  {#if createsshModal}
-  <Modal
-    bind:open={createsshModal}
-    class="bg-gray-500 bg-opacity-50"
-    focustrap>
-    <Textarea
-      placeholder="Copiez vos clés SSH ici (une par ligne)"
-      class="w-full h-full"
-      bind:value={sshkeys}/>
-    <Button
-    size="md"
-    onclick={handleSendSSHKeys}>
-      Envoyer les clés SSH
-    </Button>
-  </Modal>
-  {/if}
-
-  <Button
-  size="md"
-  class="bg-option-500 mt-4"
   onclick={() => ListStudentModalOpen = true}>
     Liste des étudiants
   </Button>

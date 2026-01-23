@@ -94,8 +94,6 @@
             error = "Aucun étudiant valide à ajouter.";
             return;
         }
-
-        // TODO: Implement the logic to add students to the backend
         const req: AddStudentRequest = create(AddStudentRequestSchema, {
             user: $authStore?.email,
             poolname: poolname,
@@ -109,7 +107,6 @@
             loading = true;
             error = null;
             const res: AddStudentResponse = await addStudents(req);
-            // Après ajout, recharger la liste des étudiants
             await handleListStudents();
         } catch (err) {
             error = "Erreur lors de l'ajout des étudiants.";
@@ -123,7 +120,47 @@
     }
 
     async function handleAddingStudentRaw() {
-        // TODO: Implement the logic to add students from raw input
+        const lines = Rawinput
+            .split("\n")
+            .map(line => line.trim())
+            .filter(line => line !== "");
+
+        const parsedStudents: NewStudent[] = [];
+        const invalidLines: string[] = [];
+
+        for (const line of lines) {
+            const separatorIndex = line.indexOf(";");
+            if (separatorIndex === -1) { 
+                invalidLines.push(line);
+                continue;
+            }
+
+            const login = line.slice(0, separatorIndex).trim();
+            const sshKey = line.slice(separatorIndex + 1).trim();
+
+            if (!login || !sshKey) {
+                invalidLines.push(line);
+                continue;
+            }
+            parsedStudents.push({
+                login,
+                sshKey,
+            });
+        }
+        if (parsedStudents.length === 0) {
+            error = "Aucun étudiant valide";
+            Rawinput = "";
+            newStudents = [{login: "", sshKey: ""}]
+            openSSHModal = false;
+            return;
+        }
+
+        newStudents = parsedStudents;
+        await handleAddingStudent();
+
+        Rawinput = "";
+        newStudents = [{login: "", sshKey: ""}]
+        openSSHModal = false;
     }
 
 
