@@ -90,7 +90,7 @@ users:
     ssh_authorized_keys:
       - %s
 
-package-update: true
+package_update: true
 packages:
   - nfs-common
 

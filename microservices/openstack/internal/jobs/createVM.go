@@ -65,7 +65,7 @@ func CreateVM(workerID int, job models.Job) error {
 		log.Println("Failed to fetch admin's sshKey")
 	}
 	// userData, err := buildUserData(baseUserConfig(sshkey), mountNFSScript(job.Data["user_id"], job.Data["serverpool_id"]), conf_file.Data)
-	userData, err := buildUserData(baseUserConfig(sshkey), installNFSClient(), conf_file.Data)
+	userData, err := buildUserData(baseUserConfig(sshkey), conf_file.Data)
 	if err != nil {
 		log.Println("Failed to build user-data:", err)
 		userData = "#!/bin/bash\n"
