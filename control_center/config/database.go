@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"sync"
-	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -79,21 +78,6 @@ func Start_DB(ctx context.Context) {
 			log.Printf("ListenPostgres error: %v", err)
 		}
 	}()
-}
-
-func Sync_DB(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("Arrêt de la synchronisation DB")
-			return
-		case <-ticker.C:
-			log.Println("Synchronisation de la base de données...")
-		}
-	}
 }
 
 func createNotifyTriggers() {

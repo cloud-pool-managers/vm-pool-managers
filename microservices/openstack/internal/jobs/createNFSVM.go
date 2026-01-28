@@ -87,8 +87,9 @@ func CreateNFSVM(workerID int, job models.Job) error {
 		return fmt.Errorf("failed to create VM: %w", err)
 	}
 
+	var current *servers.Server
 	for {
-		current, err := servers.Get(context.Background(),
+		current, err = servers.Get(context.Background(),
 			models.ComputeClient, server.ID).Extract()
 		if err != nil {
 			ChangePendingNFS(uint(paramID))
@@ -112,12 +113,35 @@ func CreateNFSVM(workerID int, job models.Job) error {
 		time.Sleep(3 * time.Second)
 	}
 	fmt.Println("Worker ", workerID, " finished its job")
-	res := config.Database.Model(models.Serverpool{}).
+
+	ipaddr, err := getServerIPv4(current)
+	if err != nil {
+		log.Println("Error: ", err)
+		return nil
+	}
+	res := config.Database.Model(&models.Serverpool{}).
 		Where("serverpool_id = ? AND user_id = ?", job.Data["serverpool_id"], job.Data["user_id"]).
-		UpdateColumn("ip_address_nfs", server.AccessIPv4)
-	if res != nil {
+		Update("ip_address_nfs", ipaddr)
+	if res.Error != nil {
 		log.Println("Error adding ip_address_nfs")
 	}
-
+	ChangePendingNFS(uint(paramID))
 	return nil
+}
+
+func getServerIPv4(server *servers.Server) (string, error) {
+	for _, network := range server.Addresses {
+		if addrs, ok := network.([]any); ok {
+			for _, addr := range addrs {
+				if addrMap, ok := addr.(map[string]any); ok {
+					if version, ok := addrMap["version"].(float64); ok && int(version) == 4 {
+						if ip, ok := addrMap["addr"].(string); ok {
+							return ip, nil
+						}
+					}
+				}
+			}
+		}
+	}
+	return "", fmt.Errorf("no IPv4 address found for server %s", server.ID)
 }

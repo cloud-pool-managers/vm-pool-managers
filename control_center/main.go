@@ -26,9 +26,6 @@ func main() {
 		os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Lancement des goroutines
-	go config.Sync_DB(ctx)
-
 	// Remplissage initial de la base de données
 	cc.PopulateDBImageMicroOpen()
 	cc.PopulateDBFlavorMicroOpen()

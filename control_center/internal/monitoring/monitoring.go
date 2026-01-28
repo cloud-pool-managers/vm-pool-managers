@@ -22,7 +22,7 @@ func Start_Monitoring(
 			log.Println("Monitoring stopped")
 			return
 		case <-ticker.C:
-			log.Println("Monitoring tick...")
+			// log.Println("Monitoring tick...")
 			checkallpool(clientMicroservice)
 		}
 	}

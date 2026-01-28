@@ -64,11 +64,22 @@ func CreateVM(workerID int, job models.Job) error {
 	if err != nil {
 		log.Println("Failed to fetch admin's sshKey")
 	}
-	// userData, err := buildUserData(baseUserConfig(sshkey), mountNFSScript(job.Data["user_id"], job.Data["serverpool_id"]), conf_file.Data)
-	userData, err := buildUserData(baseUserConfig(sshkey), conf_file.Data)
-	if err != nil {
-		log.Println("Failed to build user-data:", err)
-		userData = "#!/bin/bash\n"
+	var pool models.Serverpool
+	if err := config.Database.Where("serverpool_id = ? AND user_id = ?", job.Data["serverpool_id"], job.Data["user_id"]).
+		First(&pool).Error; err != nil {
+		log.Println("Unable to fetch serverpool:", err)
+	}
+	var userData string
+	if pool.IPAddressNFS != "" {
+		userData, err = buildUserData(
+			baseUserConfig(sshkey),
+			computeNFSCloudConfig(pool.IPAddressNFS),
+			conf_file.Data)
+	} else {
+		userData, err = buildUserData(
+			baseUserConfig(sshkey),
+			conf_file.Data,
+		)
 	}
 
 	createOpts := servers.CreateOpts{

@@ -78,7 +78,10 @@ func CheckAndCreate() {
 			worker.AddJob(*worker.CreateJob(models.CreateNFSVM,
 				utils.BuildDataMap(utils.FlatstringSP(p))), false)
 		}
-		for i := 0; i < missing; i++ {
+		if p.IPAddressNFS == "" || p.Pendingnfs {
+			continue
+		}
+		for range missing {
 			if p.ImageRef == os.Getenv("SERVER_IMAGE_REF") &&
 				p.FlavorRef == os.Getenv("SERVER_FLAVOR_REF") &&
 				len(p.Networks) == 1 &&

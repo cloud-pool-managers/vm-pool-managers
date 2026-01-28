@@ -6,52 +6,6 @@ import (
 	"strings"
 )
 
-func mountNFSScript(userID, serverpoolID string) string {
-	nfsHost := sanitizeHostname(fmt.Sprintf("%s-%s-NFS", userID, serverpoolID))
-
-	return fmt.Sprintf(`#!/bin/bash
-set -e
-
-apt-get update
-apt-get install -y nfs-common
-
-mkdir -p /mnt/pool
-
-echo "Waiting for DNS (%s)..."
-until getent hosts %s >/dev/null 2>&1; do
-  sleep 5
-done
-
-echo "Waiting for NFS server..."
-until showmount -e %s >/dev/null 2>&1; do
-  sleep 5
-done
-
-mount %s:/srv/nfs /mnt/pool
-
-echo "%s:/srv/nfs /mnt/pool nfs defaults,_netdev,x-systemd.automount 0 0" >> /etc/fstab
-`, nfsHost, nfsHost, nfsHost, nfsHost, nfsHost)
-}
-
-func installNFSClient() string {
-	return `#!/bin/bash
-
-# Installer le client NFS sur la VM (nfs-common)
-
-# Met à jour la liste des paquets
-apt-get update
-
-# Installe nfs-common s'il n'est pas déjà présent
-if ! dpkg -l | grep -qw nfs-common; then
-    apt-get install -y nfs-common
-else
-    echo "nfs-common déjà installé"
-fi
-
-echo "Installation de nfs-common terminée"
-`
-}
-
 func nfsCloudConfig(userID, serverpoolID string) string {
 	nfsHost := sanitizeHostname(fmt.Sprintf("%s-%s-NFS", userID, serverpoolID))
 
@@ -97,6 +51,44 @@ packages:
 runcmd:
   - echo "Installation de nfs-common terminee"
 `, sshKey)
+}
+
+func computeNFSCloudConfig(nfsIP string) string {
+	return fmt.Sprintf(`#cloud-config
+package_update: true
+packages:
+  - nfs-common
+
+write_files:
+  - path: /usr/local/bin/mount-nfs.sh
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      set -e
+
+      NFS_IP="%s"
+      NFS_EXPORT="/srv/nfs"
+      MOUNT_POINT="/mnt/pool"
+
+      mkdir -p ${MOUNT_POINT}
+
+      echo "[NFS] Waiting for NFS server ${NFS_IP}"
+      until showmount -e ${NFS_IP} >/dev/null 2>&1; do
+        sleep 5
+      done
+
+      if ! mountpoint -q ${MOUNT_POINT}; then
+        mount -t nfs ${NFS_IP}:${NFS_EXPORT} ${MOUNT_POINT}
+      fi
+
+      if ! grep -q "${NFS_IP}:${NFS_EXPORT}" /etc/fstab; then
+        echo "${NFS_IP}:${NFS_EXPORT} ${MOUNT_POINT} nfs defaults,_netdev,x-systemd.automount 0 0" >> /etc/fstab
+      fi
+
+runcmd:
+  - /usr/local/bin/mount-nfs.sh
+`, nfsIP)
 }
 
 func sanitizeHostname(s string) string {
