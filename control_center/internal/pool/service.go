@@ -220,7 +220,6 @@ func (s *Service) ListStudents(
 		First(&pool).Error; err != nil {
 		return &frontcontrolpb.ListStudentsResponse{}, err
 	}
-	log.Println("test test")
 
 	var students []*frontcontrolpb.Student
 	for _, student := range pool.ListStudents.Students {

@@ -73,13 +73,8 @@ func HandleStreamEvent(resp *pb.StreamRessourceResponse) {
 }
 
 func handleDBServerEvent(server *models.Server, status pb.Status, data map[string]string) {
-	// A retravailler
 	switch status {
 	case pb.Status_CREATE:
-		// if err := config.Database.Clauses(clause.OnConflict{UpdateAll: true}).
-		// 	Create(server).Error; err != nil {
-		// 	log.Printf("Erreur CREATE %T : %v", server, err)
-		// }
 		updates := serverUpdatesFromMap(data)
 		err := config.Database.
 			Clauses(clause.OnConflict{
@@ -90,14 +85,7 @@ func handleDBServerEvent(server *models.Server, status pb.Status, data map[strin
 		if err != nil {
 			log.Printf("Erreur CREATE %T : %v", server, err)
 		}
-
 	case pb.Status_UPDATE:
-		// err := config.Database.Model(&models.Server{}).
-		// 	Where("id = ?", server.ID).
-		// 	Updates(server).Error
-		// if err != nil {
-		// 	log.Printf("Erreur UPDATE %T : %v", server, err)
-		// }
 		updates := serverUpdatesFromMap(data)
 		if len(updates) == 0 {
 			return

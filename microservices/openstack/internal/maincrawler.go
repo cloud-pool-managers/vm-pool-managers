@@ -78,7 +78,7 @@ func CheckAndCreate() {
 			worker.AddJob(*worker.CreateJob(models.CreateNFSVM,
 				utils.BuildDataMap(utils.FlatstringSP(p))), false)
 		}
-		if p.IPAddressNFS == "" || p.Pendingnfs {
+		if !shouldStartPool(p.TimeStart) {
 			continue
 		}
 		for range missing {
@@ -243,4 +243,14 @@ func servstillinuse(v volumes.Volume) bool {
 		}
 	}
 	return false
+}
+
+func shouldStartPool(timestart string) bool {
+	now := time.Now().UTC()
+	t, err := time.Parse(time.RFC3339, timestart)
+	if err != nil {
+		return false
+	}
+	start := t.Add(-30 * time.Minute)
+	return now.After(start) && now.Before(t)
 }

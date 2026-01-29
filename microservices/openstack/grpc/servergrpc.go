@@ -94,6 +94,7 @@ func (s *ServerMicroOpenstack) handleServerpool(
 			MinVM:        parseInt(data["min_vm"]),
 			MaxVM:        parseInt(data["max_vm"]),
 			ConfigID:     int(conf.ID),
+			TimeStart:    data["timestart"],
 		}
 		return db.Create(&pool).Error
 	case pb.Status_UPDATE:

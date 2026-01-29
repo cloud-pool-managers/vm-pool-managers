@@ -45,9 +45,9 @@ func checkpool(pool *models.Serverpool, client pb.PoolManagerClient) {
 
 	switch pool.Status {
 	case "scheduled":
-		if shouldStartPool(pool, now) {
-			startPool(pool, client)
-		}
+		// if shouldStartPool(pool, now) {
+		startPool(pool, client)
+		// }
 	case "running":
 		if shouldDeletePool(pool, now) {
 			deletePool(pool, client)

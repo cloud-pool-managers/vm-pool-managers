@@ -6,6 +6,7 @@ import (
 	"PoolManagerVM/backend/pb"
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"gorm.io/gorm"
@@ -80,9 +81,7 @@ func FromGopherServer(s servers.Server) Server {
 		}
 	}
 	metadata := make(map[string]string)
-	for k, v := range s.Metadata {
-		metadata[k] = v
-	}
+	maps.Copy(metadata, s.Metadata)
 	return Server{
 		ID:           s.ID,
 		Name:         s.Name,
@@ -95,25 +94,6 @@ func FromGopherServer(s servers.Server) Server {
 		UserID:       s.Metadata["user_id"],
 		IP_Address:   ipaddr,
 	}
-}
-
-func PrintServer(server Server) error {
-	fmt.Println("=== Server Data ===")
-	fmt.Printf("ID: %s\n", server.ID)
-	fmt.Printf("Name: %s\n", server.Name)
-	fmt.Printf("Status: %s\n", server.Status)
-	fmt.Printf("FlavorRef: %s\n", server.FlavorRef)
-	fmt.Printf("ImageRef: %s\n", server.ImageRef)
-	fmt.Printf("Networks: %+v\n", server.Networks)
-	fmt.Printf("Metadata: %+v\n", server.Metadata)
-	fmt.Printf("ServerpoolID: %s\n", server.ServerpoolID)
-	fmt.Printf("UserID: %s\n", server.UserID)
-
-	if server.ServerPool != nil {
-		PrintServerpool(*server.ServerPool)
-	}
-
-	return nil
 }
 
 func (s *Server) AfterCreate(tx *gorm.DB) (err error) {

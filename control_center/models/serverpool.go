@@ -95,6 +95,9 @@ func (sp *Serverpool) ToMap() map[string]string {
 			result["networks"] = string(b)
 		}
 	}
+	if sp.TimeStart != nil {
+		result["timestart"] = sp.TimeStart.Format(time.RFC3339)
+	}
 	result["host"] = "OpenStack"
 	return result
 }

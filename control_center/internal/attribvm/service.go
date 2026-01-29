@@ -118,7 +118,9 @@ func (s *Service) AttribVMinPool(
 
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("serverpool_id = ? AND user_id = ? AND locked = false", req.GetServerpoolId(), req.GetUserId()).
+			Where("serverpool_id = ? AND user_id = ? AND locked = false AND name <> ?",
+				req.GetServerpoolId(), req.GetUserId(),
+				fmt.Sprintf("%s-%s-NFS", req.GetUserId(), req.GetServerpoolId())).
 			Order("id").First(&server).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return status.Error(codes.ResourceExhausted, "no available server")
@@ -182,52 +184,7 @@ func (s *Service) installSSHKey(server *models.Server, student *models.Student) 
 		return fmt.Errorf("fetch user failed: %w", err)
 	}
 
-	studentUsername := usernameFromEmail(student.Name)
-	userUsername := usernameFromEmail(user.Email)
-
-	cmd := fmt.Sprintf(`
-set -e
-
-create_user() {
-  USERNAME="$1"
-  PUBKEY="$2"
-  SUDO="$3"
-
-  if ! id "$USERNAME" >/dev/null 2>&1; then
-    sudo useradd -m -s /bin/bash "$USERNAME"
-  fi
-
-  HOME="/home/$USERNAME"
-  SSH="$HOME/.ssh"
-  AUTH="$SSH/authorized_keys"
-
-  sudo mkdir -p "$SSH"
-  sudo chmod 700 "$SSH"
-  sudo touch "$AUTH"
-  sudo chmod 600 "$AUTH"
-
-  if ! sudo grep -qxF "$PUBKEY" "$AUTH"; then
-    echo "$PUBKEY" | sudo tee -a "$AUTH" > /dev/null
-  fi
-
-  if [ "$SUDO" = "true" ]; then
-    sudo usermod -aG sudo "$USERNAME"
-  fi
-
-  sudo chown -R "$USERNAME:$USERNAME" "$SSH"
-}
-
-# étudiant (sans sudo)
-create_user "%s" "%s" "false"
-
-# prof (avec sudo)
-create_user "%s" "%s" "true"
-`,
-		studentUsername,
-		student.SshKey,
-		userUsername,
-		user.Keypubuser,
-	)
+	cmd := cmdInit(*student, user)
 	if err := runSSHcmd(client, cmd); err != nil {
 		return fmt.Errorf("run ssh cmd failed: %w", err)
 	}
@@ -293,3 +250,124 @@ func usernameFromEmail(email string) string {
 
 	return local
 }
+
+func cmdInit(student models.Student, user models.User) string {
+	studentUsername := usernameFromEmail(student.Name)
+	userUsername := usernameFromEmail(user.Email)
+
+	cmd := fmt.Sprintf(`
+set -e
+
+POOL_MOUNT="/mnt/pool"
+POOL_GROUP="pool_prof"
+
+ensure_group() {
+  if ! getent group "$POOL_GROUP" >/dev/null; then
+    sudo groupadd "$POOL_GROUP"
+  fi
+}
+
+create_user() {
+  USERNAME="$1"
+  PUBKEY="$2"
+  ROLE="$3" # student | prof
+
+  if ! id "$USERNAME" >/dev/null 2>&1; then
+    sudo useradd -m -s /bin/bash "$USERNAME"
+  fi
+
+  HOME="/home/$USERNAME"
+  SSH="$HOME/.ssh"
+  AUTH="$SSH/authorized_keys"
+
+  sudo mkdir -p "$SSH"
+  sudo chmod 700 "$SSH"
+  sudo touch "$AUTH"
+  sudo chmod 600 "$AUTH"
+
+  if ! sudo grep -qxF "$PUBKEY" "$AUTH"; then
+    echo "$PUBKEY" | sudo tee -a "$AUTH" > /dev/null
+  fi
+
+  # Prof → sudo + écriture
+  if [ "$ROLE" = "prof" ]; then
+    sudo usermod -aG sudo "$USERNAME"
+    sudo usermod -aG "$POOL_GROUP" "$USERNAME"
+  fi
+
+  sudo chown -R "$USERNAME:$USERNAME" "$SSH"
+
+  # Lien vers le pool
+  if [ ! -L "$HOME/pool" ]; then
+    sudo ln -s "$POOL_MOUNT" "$HOME/pool"
+  fi
+
+  sudo chown -h "$USERNAME:$USERNAME" "$HOME/pool"
+}
+
+ensure_group
+
+# étudiant (lecture seule)
+create_user "%s" "%s" "student"
+
+# prof (lecture + écriture)
+create_user "%s" "%s" "prof"
+`,
+		studentUsername,
+		student.SshKey,
+		userUsername,
+		user.Keypubuser,
+	)
+
+	return cmd
+}
+
+// func cmdInit(student models.Student, user models.User) string {
+// 	studentUsername := usernameFromEmail(student.Name)
+// 	userUsername := usernameFromEmail(user.Email)
+
+// 	cmd := fmt.Sprintf(`
+// set -e
+
+// create_user() {
+//   USERNAME="$1"
+//   PUBKEY="$2"
+//   SUDO="$3"
+
+//   if ! id "$USERNAME" >/dev/null 2>&1; then
+//     sudo useradd -m -s /bin/bash "$USERNAME"
+//   fi
+
+//   HOME="/home/$USERNAME"
+//   SSH="$HOME/.ssh"
+//   AUTH="$SSH/authorized_keys"
+
+//   sudo mkdir -p "$SSH"
+//   sudo chmod 700 "$SSH"
+//   sudo touch "$AUTH"
+//   sudo chmod 600 "$AUTH"
+
+//   if ! sudo grep -qxF "$PUBKEY" "$AUTH"; then
+//     echo "$PUBKEY" | sudo tee -a "$AUTH" > /dev/null
+//   fi
+
+//   if [ "$SUDO" = "true" ]; then
+//     sudo usermod -aG sudo "$USERNAME"
+//   fi
+
+//   sudo chown -R "$USERNAME:$USERNAME" "$SSH"
+// }
+
+// # étudiant (sans sudo)
+// create_user "%s" "%s" "false"
+
+// # prof (avec sudo)
+// create_user "%s" "%s" "true"
+// `,
+// 		studentUsername,
+// 		student.SshKey,
+// 		userUsername,
+// 		user.Keypubuser,
+// 	)
+// 	return cmd
+// }

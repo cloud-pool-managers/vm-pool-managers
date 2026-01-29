@@ -25,6 +25,7 @@ type Serverpool struct {
 	NetworkUuid  string
 	Pendingnfs   bool `gorm:"default:false; not null"`
 	IPAddressNFS string
+	TimeStart    string
 }
 
 func (sp *Serverpool) ToMap() map[string]string {
@@ -48,34 +49,6 @@ func (sp *Serverpool) ToMap() map[string]string {
 	}
 	result["host"] = "OpenStack"
 	return result
-}
-
-func PrintServerpool(sp Serverpool) error {
-	fmt.Println("=== Serverpool Data ===")
-	fmt.Println("ID: ", sp.ID)
-	fmt.Println("ServerpoolID: ", sp.ServerpoolID)
-	fmt.Println("UserID: ", sp.UserID)
-	fmt.Println("ImageRef: ", sp.ImageRef)
-	fmt.Println("FlavorRef: ", sp.FlavorRef)
-	fmt.Println("Networks: ", sp.Networks)
-	fmt.Println("MinVM: ", sp.MinVM)
-	fmt.Println("MaxVm: ", sp.MaxVM)
-	fmt.Println("PendingJobs: ", sp.PendingJobs)
-	fmt.Println("ConfigID: ", sp.ConfigID)
-	for _, s := range sp.ListServ {
-		PrintServer(s)
-	}
-
-	return nil
-}
-
-func PrintMapServerpool(m []Serverpool) error {
-	fmt.Println("=== Print Map Serverpool ===")
-	for _, p := range m {
-		PrintServerpool(p)
-		fmt.Println("=====================================")
-	}
-	return nil
 }
 
 func (s *Serverpool) AfterCreate(tx *gorm.DB) (err error) {
