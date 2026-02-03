@@ -180,6 +180,7 @@ func (s *Service) installSSHKey(server *models.Server, student *models.Student) 
 		return fmt.Errorf("fetch user failed: %w", err)
 	}
 
+	//mettre un retry ici
 	cmd := cmdInit(*student, user)
 	if err := sshinject.RunSSHcmd(client, cmd); err != nil {
 		return fmt.Errorf("run ssh cmd failed: %w", err)

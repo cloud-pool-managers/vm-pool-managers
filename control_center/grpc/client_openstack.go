@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"control_center/config"
+	"control_center/internal/sshinject"
 	"control_center/models"
 	"control_center/pb"
 	"encoding/json"
@@ -99,13 +100,30 @@ func handleDBServerEvent(server *models.Server, status pb.Status, data map[strin
 		if err != nil {
 			log.Printf("Erreur UPDATE %T : %v", server, err)
 		}
-		if updates["status"] == "ACTIVE" && server.Name == fmt.Sprintf(`%s-%s-NFS`, server.UserID, server.ServerpoolID) {
+		config.DBmu.Lock()
+		if server.Status == "ACTIVE" && server.Name == fmt.Sprintf(`%s-%s-NFS`, server.UserID, server.ServerpoolID) && !server.Configured && !server.PendingConf {
 			go func(server *models.Server) {
-				if err := retryConfigureSSHUserNFS(server, 5*time.Minute); err != nil {
+				err := config.Database.
+					Model(&server).
+					Where("id = ?", server.ID).
+					UpdateColumn("pending_conf", true).Error
+				if err != nil {
+					log.Println("Error updating pendingconf")
+					return
+				}
+				if err := sshinject.RetryConfigureSSHUserNFS(server, 5*time.Minute); err != nil {
 					log.Printf("[SSH][FAIL] %s: %v\n", server.IP_Address, err)
+				}
+				err = config.Database.
+					Model(&server).
+					Where("id = ?", server.ID).
+					UpdateColumn("configured", true).Error
+				if err != nil {
+					log.Println("Error updating configured")
 				}
 			}(server)
 		}
+		config.DBmu.Unlock()
 	case pb.Status_DELETE:
 		if err := config.Database.Delete(server).Error; err != nil {
 			log.Printf("Erreur DELETE %T : %v", server, err)
@@ -291,25 +309,46 @@ func serverpoolUpdatesFromMap(data map[string]string) map[string]any {
 
 func serverUpdatesFromMap(data map[string]string) map[string]any {
 	updates := map[string]any{}
+
 	for k, v := range data {
 		switch k {
 		case "status":
+			log.Printf("DEBUG: status présent → %s", v)
 			updates["status"] = v
+
 		case "attach_volume_id":
+			log.Printf("DEBUG: attach_volume_id présent → %s", v)
 			updates["attach_volume_id"] = v
+
 		case "name":
+			log.Printf("DEBUG: name présent → %s", v)
 			updates["name"] = v
+
 		case "user_id":
+			log.Printf("DEBUG: user_id présent → %s", v)
 			updates["user_id"] = v
+
 		case "serverpool_id":
+			log.Printf("DEBUG: serverpool_id présent → %s", v)
 			updates["serverpool_id"] = v
+
 		case "metadata":
+			log.Printf("DEBUG: metadata présent → %s", v)
 			updates["metadata"] = v
+
 		case "ip_address":
+			log.Printf("DEBUG: ip_address présent → %s", v)
 			updates["ip_address"] = v
+
 		case "reattrib":
+			log.Printf("DEBUG: reattrib présent → %s", v)
 			updates["reattrib"] = v
+
+		default:
+			log.Printf("DEBUG: clé ignorée → %s = %s", k, v)
 		}
 	}
+	log.Printf("DEBUG: updates générés → %+v", updates)
+
 	return updates
 }

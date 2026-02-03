@@ -131,14 +131,14 @@ func (s *Server) IsEqual(other Server) bool {
 		return false
 	}
 
-	if len(s.Networks) != len(other.Networks) {
-		return false
-	}
-	for i, v := range s.Networks {
-		if v != other.Networks[i] {
-			return false
-		}
-	}
+	// if len(s.Networks) != len(other.Networks) {
+	// 	return false
+	// }
+	// for i, v := range s.Networks {
+	// 	if v != other.Networks[i] {
+	// 		return false
+	// 	}
+	// }
 
 	if len(s.Metadata) != len(other.Metadata) {
 		return false

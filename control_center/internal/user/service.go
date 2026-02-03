@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
+	"control_center/config"
 	"control_center/event"
 	"control_center/frontcontrolpb"
+	"control_center/internal/sshinject"
 	"control_center/models"
 
 	"golang.org/x/crypto/ssh"
@@ -137,6 +140,20 @@ func (s *Service) AddPersonalSSHKey(
 	if err := s.DB.Save(&user).Error; err != nil {
 		return &frontcontrolpb.AddPersonnalSSHKeyResponse{Success: false}, err
 	}
-
+	servs := searchAllNFSs(user)
+	for _, s := range servs {
+		go sshinject.RetryConfigureSSHUserNFS(&s, 5*time.Minute)
+	}
 	return &frontcontrolpb.AddPersonnalSSHKeyResponse{Success: true}, nil
+}
+
+func searchAllNFSs(user models.User) []models.Server {
+	var servs []models.Server
+	if err := config.Database.Model(&models.Server{}).
+		Where("user_id = ? AND name LIKE ? AND name LIKE ?", user.Email, user.Email+"-%", "%-NFS").
+		Find(&servs).Error; err != nil {
+		log.Println("Error searchings NFS")
+		return nil
+	}
+	return servs
 }

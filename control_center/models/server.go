@@ -29,6 +29,8 @@ type Server struct {
 	IP_Address     string
 	Locked         bool `gorm:"default:false; not null"`
 	SshKeyAssigned string
+	Configured     bool `gorm:"default:false; not null"`
+	PendingConf    bool `gorm:"default:false; not null"`
 }
 
 func FromGopherServer(s servers.Server) Server {
