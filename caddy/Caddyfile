@@ -1,51 +1,22 @@
 {
-	order grpc_web before reverse_proxy
+    debug
+    order grpc_web before reverse_proxy
 }
 
 :80 {
-	# Répondre aux OPTIONS preflight
-	@options method OPTIONS
-	respond @options 200
 
-	# Ajouter headers CORS pour toutes les requêtes
-	header {
-		Access-Control-Allow-Origin "http://localhost:5173"
-		Access-Control-Allow-Methods "POST, GET, OPTIONS"
-		Access-Control-Allow-Headers "content-type,x-grpc-web,x-user-agent"
-		Access-Control-Max-Age "3600"
-	}
+    # ---------- gRPC-Web ----------
+    handle_path /rpc/* {
+        grpc_web
+        reverse_proxy host.docker.internal:50051 {
+            transport http {
+                versions h2c
+            }
+        }
+    }
 
-	# Activer gRPC-Web
-	grpc_web
-
-	# Reverse proxy vers ton backend gRPC
-	reverse_proxy host.docker.internal:50051 {
-		transport http {
-			versions h2c
-		}
-	}
+    # ---------- Frontend ----------
+    handle {
+        reverse_proxy host.docker.internal:5173
+    }
 }
-
-# Version VM:
-# {
-#     debug
-#     order grpc_web before reverse_proxy
-# }
-
-# :80 {
-
-#     # ---------- gRPC-Web ----------
-#     handle_path /rpc/* {
-#         grpc_web
-#         reverse_proxy host.docker.internal:50051 {
-#             transport http {
-#                 versions h2c
-#             }
-#         }
-#     }
-
-#     # ---------- Frontend ----------
-#     handle {
-#         reverse_proxy host.docker.internal:5173
-#     }
-# }

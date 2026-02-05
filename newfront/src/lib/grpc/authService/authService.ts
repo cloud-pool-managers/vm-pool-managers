@@ -15,7 +15,7 @@ import { create } from "@bufbuild/protobuf";
 
 
 const transport = createGrpcWebTransport({
-  baseUrl: "http://localhost:80", //a modifier ! 
+  baseUrl: "/rpc/", //a modifier ! 
   // baseUrl: "/rpc/", // Version VM
   useBinaryFormat: true,
   interceptors: [],
