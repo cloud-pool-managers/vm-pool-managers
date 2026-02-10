@@ -53,6 +53,11 @@ packages:
 runcmd:
   - curl https://rclone.org/install.sh | bash
   - echo "Installation de rclone terminee"
+  - sudo usermod -aG fuse vmuser
+  - sudo sed -i 's/^#user_allow_other/user_allow_other/' /etc/fuse.conf
+  - sudo mkdir -p /home/vmuser/depot
+  - sudo chown vmuser:vmuser /home/vmuser/depot
+  - sudo chmod 700 /home/vmuser/depot
 `, sshKey)
 }
 

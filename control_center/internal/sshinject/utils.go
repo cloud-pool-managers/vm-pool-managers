@@ -48,12 +48,12 @@ func RunSSHcmd(client *ssh.Client, cmd string) error {
 	session.Stderr = &stderr
 
 	if err := session.Run(cmd); err != nil {
+		if exitErr, ok := err.(*ssh.ExitError); ok {
+			log.Printf("SSH exit code: %d", exitErr.ExitStatus())
+		}
 		log.Printf("SSH stdout: %s", stdout.String())
 		log.Printf("SSH stderr: %s", stderr.String())
-		if stderr.Len() > 0 {
-			return fmt.Errorf("ssh command error: %s", stderr.String())
-		}
-		return fmt.Errorf("ssh command failed: %w", err)
+		return err
 	}
 
 	return nil
@@ -208,80 +208,26 @@ echo "[NFS] user configuration done"
 	)
 }
 
-// func cmdInitNFS(user models.User) string {
-// 	userUsername := UsernameFromEmail(user.Email)
+func RunSSHcmdWithOutput(client *ssh.Client, cmd string) (string, error) {
+	session, err := client.NewSession()
+	if err != nil {
+		return "", fmt.Errorf("failed to create ssh session: %w", err)
+	}
+	defer session.Close()
 
-// 	return fmt.Sprintf(`
-// set -e
+	var stdoutBuf bytes.Buffer
+	var stderrBuf bytes.Buffer
 
-// MARKER="/var/lib/poolmanager/nfs_config_done"
-// POOL_MOUNT="/mnt/pool"
-// PROF_GROUP="pool_prof"
+	session.Stdout = &stdoutBuf
+	session.Stderr = &stderrBuf
 
-// if [ -f "$MARKER" ]; then
-//   echo "NFS users already configured"
-//   exit 0
-// fi
+	if err := session.Run(cmd); err != nil {
+		return "", fmt.Errorf(
+			"ssh command failed: %w\nstderr: %s",
+			err,
+			stderrBuf.String(),
+		)
+	}
 
-// ensure_group() {
-//   GROUP="$1"
-//   if ! getent group "$GROUP" >/dev/null; then
-//     sudo groupadd "$GROUP"
-//   fi
-// }
-
-// create_user() {
-//   USERNAME="$1"
-//   PUBKEY="$2"
-//   ROLE="$3" # prof | student
-
-//   if ! id "$USERNAME" >/dev/null 2>&1; then
-//     if [ -d "/home/$USERNAME" ]; then
-//       sudo useradd -M -s /bin/bash "$USERNAME"
-//     else
-//       sudo useradd -m -s /bin/bash "$USERNAME"
-//     fi
-//   fi
-
-//   HOME="/home/$USERNAME"
-//   SSH="$HOME/.ssh"
-//   AUTH="$SSH/authorized_keys"
-
-//   sudo mkdir -p "$SSH"
-//   sudo chmod 700 "$SSH"
-//   sudo touch "$AUTH"
-//   sudo chmod 600 "$AUTH"
-
-//   if ! sudo grep -qxF "$PUBKEY" "$AUTH"; then
-//     echo "$PUBKEY" | sudo tee -a "$AUTH" > /dev/null
-//   fi
-
-//   if [ "$ROLE" = "prof" ]; then
-//     sudo usermod -aG sudo "$USERNAME"
-//     sudo usermod -aG "$PROF_GROUP" "$USERNAME"
-//   else
-//     sudo usermod -aG "$STUDENT_GROUP" "$USERNAME"
-//   fi
-
-//   sudo chown -R "$USERNAME:$USERNAME" "$SSH"
-
-//   # Lien NFS dans le home (idempotent)
-//   sudo ln -sfn "$POOL_MOUNT" "$HOME/pool"
-//   sudo chown -h "$USERNAME:$USERNAME" "$HOME/pool"
-// }
-
-// sudo chmod 755 /home
-
-// ensure_group "$PROF_GROUP"
-// create_user "%s" "%s" "prof"
-
-// sudo mkdir -p /var/lib/poolmanager
-// sudo touch "$MARKER"
-// sudo chmod 644 "$MARKER"
-
-// echo "NFS user configuration done"
-// `,
-// 		userUsername,
-// 		user.Keypubuser,
-// 	)
-// }
+	return stdoutBuf.String(), nil
+}
