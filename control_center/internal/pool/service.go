@@ -8,6 +8,7 @@ import (
 
 	"control_center/config"
 	"control_center/frontcontrolpb"
+	"control_center/internal/rclone"
 	"control_center/models"
 	"control_center/pb"
 
@@ -56,6 +57,10 @@ func (s *Service) CreatePool(
 	res := config.Database.Create(&pool)
 	if res.Error != nil {
 		return &frontcontrolpb.CreatePoolResponse{Success: false}, res.Error
+	}
+	if err := rclone.CreatePoolLocal(req.GetUser(), req.GetName()); err != nil {
+		log.Printf("Failed to create local pool: %v", err)
+		return &frontcontrolpb.CreatePoolResponse{Success: false}, err
 	}
 	return &frontcontrolpb.CreatePoolResponse{Success: true}, nil
 

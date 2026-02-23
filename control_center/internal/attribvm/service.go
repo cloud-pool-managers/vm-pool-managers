@@ -3,7 +3,7 @@ package attribvm
 import (
 	"context"
 	"control_center/frontcontrolpb"
-	rclonev2 "control_center/internal/rclone/v2"
+	"control_center/internal/rclone"
 	"control_center/internal/sshinject"
 	"control_center/models"
 	"errors"
@@ -154,7 +154,7 @@ func (s *Service) AttribVMinPool(
 		}, status.Errorf(codes.Internal, "ssh setup failed: %v", err)
 	}
 
-	if err := rclonev2.InstallRclone(&server, &student); err != nil {
+	if err := rclone.SetupRcloneForStudent(server, student, req.GetUserId(), req.GetServerpoolId()); err != nil {
 		_ = s.DB.Model(&server).Update("locked", false)
 		return &frontcontrolpb.AttribVMinPoolResponse{
 			Success:     false,
@@ -204,62 +204,26 @@ func cmdInit(student models.Student) string {
 
 	cmd := fmt.Sprintf(`
 set -e
+USERNAME="%s"
+PUBKEY="%s"
+if ! id "$USERNAME" >/dev/null 2>&1; then
+	sudo useradd -m -s /bin/bash "$USERNAME"
+fi
 
-POOL_MOUNT="/mnt/pool"
-POOL_GROUP="pool_prof"
+HOME="/home/$USERNAME"
+SSH="$HOME/.ssh"
+AUTH="$SSH/authorized_keys"
 
-ensure_group() {
-  if ! getent group "$POOL_GROUP" >/dev/null; then
-    sudo groupadd "$POOL_GROUP"
-  fi
-}
+sudo mkdir -p "$SSH"
+sudo chmod 700 "$SSH"
+sudo touch "$AUTH"
+sudo chmod 600 "$AUTH"
 
-create_user() {
-  USERNAME="$1"
-  PUBKEY="$2"
-  ROLE="$3" # student | prof
+if ! sudo grep -qxF "$PUBKEY" "$AUTH"; then
+	echo "$PUBKEY" | sudo tee -a "$AUTH" > /dev/null
+fi
 
-  if ! id "$USERNAME" >/dev/null 2>&1; then
-    sudo useradd -m -s /bin/bash "$USERNAME"
-  fi
-
-  HOME="/home/$USERNAME"
-  SSH="$HOME/.ssh"
-  AUTH="$SSH/authorized_keys"
-
-  sudo mkdir -p "$SSH"
-  sudo chmod 700 "$SSH"
-  sudo touch "$AUTH"
-  sudo chmod 600 "$AUTH"
-
-  if ! sudo grep -qxF "$PUBKEY" "$AUTH"; then
-    echo "$PUBKEY" | sudo tee -a "$AUTH" > /dev/null
-  fi
-
-  # Prof → sudo + écriture
-  if [ "$ROLE" = "prof" ]; then
-    sudo usermod -aG sudo "$USERNAME"
-    sudo usermod -aG "$POOL_GROUP" "$USERNAME"
-  fi
-
-  sudo chown -R "$USERNAME:$USERNAME" "$SSH"
-
-  # Lien vers le pool
-  if [ ! -L "$HOME/pool" ]; then
-    sudo ln -s "$POOL_MOUNT" "$HOME/pool"
-  fi
-
-  sudo chown -h "$USERNAME:$USERNAME" "$HOME/pool"
-}
-
-ensure_group
-
-# étudiant (lecture seule)
-create_user "%s" "%s" "student"
-`,
-		studentUsername,
-		student.SshKey,
-	)
-
+sudo chown -R "$USERNAME:$USERNAME" "$SSH"
+`, studentUsername, student.SshKey)
 	return cmd
 }

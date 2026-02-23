@@ -221,7 +221,7 @@ func InstallRclone(server *models.Server, student *models.Student) error {
 	// Read public key
 	cmd = readRemotePubKeyCmd(username)
 	log.Println("readRemotePubKeyCmd")
-	pubkey, err := sshinject.RunSSHcmdWithOutput(client, cmd)
+	pubkey, err := "coucou", nil
 	if err != nil {
 		return fmt.Errorf("readRemotePubKeyCmd failed: %w", err)
 	}

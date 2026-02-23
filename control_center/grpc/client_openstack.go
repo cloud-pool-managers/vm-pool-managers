@@ -3,15 +3,12 @@ package grpc
 import (
 	"context"
 	"control_center/config"
-	"control_center/internal/sshinject"
 	"control_center/models"
 	"control_center/pb"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"strconv"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -100,30 +97,6 @@ func handleDBServerEvent(server *models.Server, status pb.Status, data map[strin
 		if err != nil {
 			log.Printf("Erreur UPDATE %T : %v", server, err)
 		}
-		config.DBmu.Lock()
-		if server.Status == "ACTIVE" && server.Name == fmt.Sprintf(`%s-%s-NFS`, server.UserID, server.ServerpoolID) && !server.Configured && !server.PendingConf {
-			go func(server *models.Server) {
-				err := config.Database.
-					Model(&server).
-					Where("id = ?", server.ID).
-					UpdateColumn("pending_conf", true).Error
-				if err != nil {
-					log.Println("Error updating pendingconf")
-					return
-				}
-				if err := sshinject.RetryConfigureSSHUserNFS(server, 5*time.Minute); err != nil {
-					log.Printf("[SSH][FAIL] %s: %v\n", server.IP_Address, err)
-				}
-				err = config.Database.
-					Model(&server).
-					Where("id = ?", server.ID).
-					UpdateColumn("configured", true).Error
-				if err != nil {
-					log.Println("Error updating configured")
-				}
-			}(server)
-		}
-		config.DBmu.Unlock()
 	case pb.Status_DELETE:
 		if err := config.Database.Delete(server).Error; err != nil {
 			log.Printf("Erreur DELETE %T : %v", server, err)
