@@ -24,6 +24,7 @@ tasks:
     - task check_clouds
     - task init_control
     - task init_micro
+    - task init_front
 
   init_control:
     dir: control_center
@@ -34,6 +35,11 @@ tasks:
     dir: microservices/openstack
     cmds:
       - '[ ! -f go.mod ] && go mod init PoolManagerVM/backend || echo "go.mod exists"'
+
+  init_front:
+    dir: newfront
+    cmds:
+      - npm install
 
   build:
     desc: build the binary file for the backend
@@ -70,6 +76,7 @@ tasks:
   control:
     dir: control_center
     cmds:
+    - go mod tidy
     - go run main.go
 
   run:

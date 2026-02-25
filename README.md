@@ -44,3 +44,28 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
 
 ### Configuration du projet
 
+Copier clouds.yaml dans ```~/.config/openstack/clouds.yaml```
+
+A la racine du projet
+
+```sh
+task setup
+```
+
+Renseigner les informations
+
+### Configuration du proxy Caddy
+
+Depuis la racine du projet :
+
+```sh
+cd caddy
+docker build -t my-caddy .
+docker run -d   -p 80:80   --add-host=host.docker.internal:host-gateway   --name caddy   my-caddy
+```
+
+### Lancer le projet
+
+```sh
+task dev
+```
