@@ -120,12 +120,17 @@ func CreatePoolLocal(profName, poolName string) error {
 	cmd := fmt.Sprintf(`
 set -e
 POOL_DIR="/home/%[1]s/%[2]s"
+SHARED="$POOL_DIR/shared_files"
 
 sudo install -d -m 750 -o "%[1]s" -g "%[1]s" "$POOL_DIR"
+sudo install -d -m 770 -o "%[1]s" -g "%[1]s" "$SHARED"
 
 # mask + héritage
 sudo setfacl -m m:rwx "$POOL_DIR"
 sudo setfacl -d -m m:rwx "$POOL_DIR"
+
+sudo setfacl -m m:rwx "$SHARED"
+sudo setfacl -d -m m:rwx "$SHARED"
 `, profUsername, poolName)
 
 	return runLocalCmd(cmd)
@@ -189,6 +194,7 @@ func AddStudentToPool(profName, studentName, poolName string) error {
 set -e
 BASE="/home/%[1]s/%[2]s"
 STUD_DIR="$BASE/%[3]s"
+SHARED="$BASE/shared_files"
 
 sudo install -d -m 750 -o "%[1]s" -g "%[1]s" "$STUD_DIR"
 
@@ -200,23 +206,29 @@ sudo setfacl -m u:%[3]s:rx "$BASE"
 
 # accès complet au dossier étudiant pour student
 sudo setfacl -m u:%[3]s:rwx "$STUD_DIR"
+sudo setfacl -d -m u:%[3]s:rwx "$STUD_DIR"
 
 # le prof doit pouvoir lire ce que le student crée
-sudo setfacl -m u:%[1]s:rwx "$STUD_DIR"
+sudo setfacl -m u:%[1]s:rx "$STUD_DIR"
+sudo setfacl -d -m u:%[1]s:rx "$STUD_DIR"
 
-# ACL par défaut (héritage)
-sudo setfacl -d -m u:%[3]s:rwx "$STUD_DIR"
-sudo setfacl -d -m u:%[1]s:rwx "$STUD_DIR"
+# shared_files lecture seule
+sudo setfacl -R -m u:%[3]s:rx "$SHARED"
+sudo setfacl -m u:%[3]s:rx "$SHARED"
+sudo setfacl -d -m u:%[3]s:rx "$SHARED"
 
 # mask (important sinon les ACL sont réduites)
 sudo setfacl -m m:rwx "$STUD_DIR"
 sudo setfacl -d -m m:rwx "$STUD_DIR"
+
+sudo setfacl -R -m m:rwx "$SHARED"
+sudo setfacl -m m:rwx "$SHARED"
+sudo setfacl -d -m m:rwx "$SHARED"
+
 `, profUsername, poolName, studentUsername)
 
 	return runLocalCmd(cmd)
 }
-
-
 
 func RemoveStudentFromPool(profName, studentName, poolName string) error {
 	profUsername := UsernameFromEmail(profName)
@@ -380,34 +392,32 @@ func RcloneSystemdCmd(username, profName, poolName string) string {
 	return fmt.Sprintf(`
 set -e
 
-REMOTE_PATH="/home/%[2]s/%[3]s/%[1]s"
-MOUNT_PATH="/home/%[1]s/depot"
-SERVICE="/etc/systemd/system/rclone-depot-%[1]s.service"
+BASE_REMOTE="/home/%[2]s/%[3]s"
+DEPOT_REMOTE="$BASE_REMOTE/%[1]s"
+SHARED_REMOTE="$BASE_REMOTE/shared_files"
 
-# créer le dossier de montage si nécessaire
-sudo -u %[1]s mkdir -p "$MOUNT_PATH"
+DEPOT_MOUNT="/home/%[1]s/depot"
+SHARED_MOUNT="/home/%[1]s/shared_files"
 
-# créer le service systemd
-sudo tee "$SERVICE" > /dev/null << EOF
+sudo -u %[1]s mkdir -p "$DEPOT_MOUNT"
+sudo -u %[1]s mkdir -p "$SHARED_MOUNT"
+
+# SERVICE 1 : depot personnel
+sudo tee /etc/systemd/system/rclone-depot-%[1]s.service > /dev/null << EOF
 [Unit]
-Description=Rclone depot mount for %[1]s
+Description=Rclone personal depot for %[1]s
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=%[1]s
-
-ExecStart=/usr/bin/rclone mount depot_%[1]s:$REMOTE_PATH $MOUNT_PATH \
-    --vfs-cache-mode writes \
-    --dir-cache-time 30s \
-    --poll-interval 15s \
-    --umask 002 \
-    --log-file /home/%[1]s/.rclone_mount.log \
-    --log-level INFO
-
-ExecStop=/bin/fusermount3 -u $MOUNT_PATH
-
+ExecStart=/usr/bin/rclone mount depot_%[1]s:$DEPOT_REMOTE $DEPOT_MOUNT \
+  --vfs-cache-mode writes \
+  --umask 002 \
+  --log-file /home/%[1]s/.rclone_depot.log \
+  --log-level INFO
+ExecStop=/bin/fusermount3 -u $DEPOT_MOUNT
 Restart=on-failure
 RestartSec=5
 
@@ -415,10 +425,35 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-sudo chmod 644 "$SERVICE"
+# SERVICE 2 : shared files (read-only)
+sudo tee /etc/systemd/system/rclone-shared-%[1]s.service > /dev/null << EOF
+[Unit]
+Description=Rclone shared files for %[1]s
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%[1]s
+ExecStart=/usr/bin/rclone mount depot_%[1]s:$SHARED_REMOTE $SHARED_MOUNT \
+  --vfs-cache-mode writes \
+  --read-only \
+  --umask 002 \
+  --log-file /home/%[1]s/.rclone_shared.log \
+  --log-level INFO
+ExecStop=/bin/fusermount3 -u $SHARED_MOUNT
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 sudo systemctl daemon-reload
 sudo systemctl enable rclone-depot-%[1]s.service
+sudo systemctl enable rclone-shared-%[1]s.service
 sudo systemctl restart rclone-depot-%[1]s.service
+sudo systemctl restart rclone-shared-%[1]s.service
 `, username, profName, poolName)
 }
 
