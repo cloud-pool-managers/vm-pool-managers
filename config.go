@@ -164,6 +164,7 @@ func main() {
 		"CONTROL_CENTER_PORT":  "50051",
 		"SSH_PUBLIC_KEY_PATH":  sshPublicKeyPath,
 		"SSH_PRIVATE_KEY_PATH": sshPrivateKeyPath,
+		"IP_ADDRESS":           ipAddress,
 	}
 
 	ccEnvPath := filepath.Join("control_center", ".env")

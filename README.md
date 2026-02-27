@@ -45,7 +45,6 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
 ### Configuration du projet
 
 Copier clouds.yaml dans ```~/.config/openstack/clouds.yaml```
-
 A la racine du projet
 
 ```sh
@@ -69,3 +68,33 @@ docker run -d   -p 80:80   --add-host=host.docker.internal:host-gateway   --name
 ```sh
 task dev
 ```
+
+### Reinitialiser les Databases
+
+Pour Postgres :
+
+```sh
+psql -h localhost -U admin -d control_center
+```
+
+Renseigner le mot de passe puis :
+
+```sh
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+```
+
+Pour Sqlite (database dans microservices/openstack), a la racine du projet:
+
+```sh
+task clean
+```
+
+## Piste d'amélioration
+
+- Faire en sorte que tout les users (prof et student) aient un identifiant unique
+- Mettre en place un OIDC pour se connecter + OpenPubkey
+- Faire une page pour drag/drop les fichiers directement sur l'interface web
+- Faire un service pour un Broker CI
+- Ajouter dans les proto un message d'erreur
+- Corriger le problème de stream du control_center
