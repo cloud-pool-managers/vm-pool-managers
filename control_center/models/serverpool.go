@@ -5,6 +5,7 @@ import (
 	"control_center/pb"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -28,6 +29,7 @@ type Serverpool struct {
 	ListStudents ListStudents   `gorm:"foreignKey:PoolId;constraint:OnDelete:CASCADE"`
 	Keypubuser   string
 	Status       string
+	OffDays      string `gorm:"type:text"`
 }
 
 func (sp *Serverpool) FromPb(pbs *pb.StreamRessourceResponse) error {
@@ -98,6 +100,9 @@ func (sp *Serverpool) ToMap() map[string]string {
 	if sp.TimeStart != nil {
 		result["timestart"] = sp.TimeStart.Format(time.RFC3339)
 	}
+	if sp.OffDays != "" {
+		result["off_days"] = sp.OffDays
+	}
 	result["host"] = "OpenStack"
 	return result
 }
@@ -123,25 +128,25 @@ func (sp *Serverpool) ToFrontControlPb() *frontcontrolpb.ServerPool {
 }
 
 func PrintServerpool(sp Serverpool) error {
-	fmt.Println("=== Serverpool Data ===")
-	fmt.Println("ID: ", sp.ID)
-	fmt.Println("ServerpoolID: ", sp.ServerpoolID)
-	fmt.Println("UserID: ", sp.UserID)
-	fmt.Println("ImageRef: ", sp.ImageRef)
-	fmt.Println("FlavorRef: ", sp.FlavorRef)
-	fmt.Println("Networks: ", sp.Networks)
-	fmt.Println("MinVM: ", sp.MinVM)
-	fmt.Println("MaxVm: ", sp.MaxVM)
-	fmt.Println("PendingJobs: ", sp.PendingJobs)
-	fmt.Println("ConfigID: ", sp.ConfigID)
+	log.Println("=== Serverpool Data ===")
+	log.Println("ID: ", sp.ID)
+	log.Println("ServerpoolID: ", sp.ServerpoolID)
+	log.Println("UserID: ", sp.UserID)
+	log.Println("ImageRef: ", sp.ImageRef)
+	log.Println("FlavorRef: ", sp.FlavorRef)
+	log.Println("Networks: ", sp.Networks)
+	log.Println("MinVM: ", sp.MinVM)
+	log.Println("MaxVm: ", sp.MaxVM)
+	log.Println("PendingJobs: ", sp.PendingJobs)
+	log.Println("ConfigID: ", sp.ConfigID)
 	return nil
 }
 
 func PrintMapServerpool(m []Serverpool) error {
-	fmt.Println("=== Print Map Serverpool ===")
+	log.Println("=== Print Map Serverpool ===")
 	for _, p := range m {
 		PrintServerpool(p)
-		fmt.Println("=====================================")
+		log.Println("=====================================")
 	}
 	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"PoolManagerVM/backend/internal/jobs"
 	"PoolManagerVM/backend/models"
 	"context"
-	"fmt"
+	
 	"log"
 	"sync"
 )
@@ -92,7 +92,7 @@ func CreateJob(JobType models.JobType, data map[string]string) *models.Job {
 }
 
 func AddJob(job models.Job, highPriority bool) {
-	fmt.Printf("Adding job to queue\n")
+	log.Println("Adding job to queue")
 	if highPriority {
 		HighPriorityJobs <- job
 	} else {

@@ -1,6 +1,5 @@
 version: '3'
 
-
 vars:
   DOTENV_PATH: '.env'
 
@@ -11,20 +10,20 @@ tasks:
     - task --list
 
   check_clouds:
-    desc: "Vérifie que le fichier clouds.yaml existe"
+    desc: "Vérifie que clouds.yaml existe"
     cmds:
-      - '[ -f {{.OS_CLIENT_CONFIG_FILE}} ] || { echo "❌ clouds.yaml introuvable à {{.OS_CLIENT_CONFIG_FILE}}"; exit 1; }'
+      - '[ -f {{.OS_CLIENT_CONFIG_FILE}} ] || { echo "❌ clouds.yaml introuvable"; exit 1; }'
 
-  setup :
-    desc: setup project 
+  setup:
+    desc: "Setup initial du projet (interactif)"
     cmds:
-    - '[ ! -f go.mod ] && go mod init github.com/tonpseudo/monprojet || echo "go.mod exists"'
+    - '[ ! -f go.mod ] && go mod init github.com/cloud-pool-managers/vm-pool-managers || echo "go.mod exists"'
     - 'go get github.com/charmbracelet/huh@latest'
     - 'go run config.go'
-    - task check_clouds
-    - task init_control
-    - task init_micro
-    - task init_front
+    - task: check_clouds
+    - task: init_control
+    - task: init_micro
+    - task: init_front
 
   init_control:
     dir: control_center
@@ -34,86 +33,79 @@ tasks:
   init_micro:
     dir: microservices/openstack
     cmds:
-      - '[ ! -f go.mod ] && go mod init PoolManagerVM/backend || echo "go.mod exists"'
+      - '[ ! -f go.mod ] && go mod init vm-pool-managers/microservice || echo "go.mod exists"'
 
   init_front:
-    dir: newfront
+    dir: frontend
     cmds:
       - npm install
 
   build:
-    desc: build the binary file for the backend
+    desc: "Build le microservice OpenStack"
     dir: microservices/openstack
     sources:
     - "**/*.go"
     generates:
-    - ./bin/app .
+    - ./bin/app
     cmds:
     - go mod tidy
-    - echo "building app"
     - go build -o ./bin/app .
 
   backend:
-    deps: [build, check_clouds]
+    desc: "Lance le microservice OpenStack"
+    deps: [build]
     dir: microservices/openstack
     cmds:
       - |
         export PORT=8080
         export DOTENV_PATH={{.DOTENV_PATH}}
-        #export GIN_MODE=release
         ./bin/app
 
   frontend:
-    dir:  newfront
+    desc: "Lance le frontend en dev"
+    dir: frontend
     cmds:
-      - npm run dev
+      - sudo npm run dev -- --host --port 80
 
   frontexpose:
-    dir: newfront
+    desc: "Lance le frontend exposé sur le réseau"
+    dir: frontend
     cmds:
       - npm run dev -- --host
 
   control:
+    desc: "Lance le control center"
     dir: control_center
     cmds:
     - go mod tidy
     - go run main.go
 
-  run:
-    desc: run the binary file, build it if not existed
-    cmds:
-      - task backend &
-      - task frontend
-      
-
-  clean:
-    desc: delete binary file
-    cmds:
-    - 
-      rm -rf ./microservices/openstack/bin
-      rm ./microservices/openstack/PoolManagerVM.db
-
   dev:
-    desc: "Lance tout le soft (backend → control → frontend)"
+    desc: "Lance tout (backend + control + frontend) via tmux"
     cmds:
       - |
-        tmux new-session -d -s soft
+        tmux new-session -d -s poolmanager
 
-        tmux rename-window -t soft:0 backend
-        tmux send-keys -t soft:backend "task backend" C-m
+        tmux rename-window -t poolmanager:0 backend
+        tmux send-keys -t poolmanager:backend "task backend" C-m
 
-        tmux new-window -t soft -n control
-        tmux send-keys -t soft:control \
+        tmux new-window -t poolmanager -n control
+        tmux send-keys -t poolmanager:control \
           "until nc -z localhost 50052; do echo '...'; sleep 1; done && task control" C-m
 
-        tmux new-window -t soft -n frontend
-        tmux send-keys -t soft:frontend "task frontexpose" C-m
+        tmux new-window -t poolmanager -n frontend
+        tmux send-keys -t poolmanager:frontend "task frontexpose" C-m
 
-        tmux attach -t soft
+        tmux attach -t poolmanager
 
+  clean:
+    desc: "Supprime les fichiers build et DB"
+    cmds:
+    - rm -rf ./microservices/openstack/bin
+    - rm -f ./microservices/openstack/PoolManagerVM.db
 
   cli:
-    desc: cli
+    desc: "Ouvre le CLI OpenStack"
     cmds:
     - |
       export OS_CLIENT_CONFIG_FILE={{.OS_CLIENT_CONFIG_FILE}}

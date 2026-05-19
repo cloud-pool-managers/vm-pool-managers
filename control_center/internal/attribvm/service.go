@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 	"google.golang.org/grpc/codes"
@@ -49,12 +50,12 @@ func (s *Service) ReturnPoolWithKey(
 
 	var results []result
 
+	// Find all serverpools that have at least one unlocked server available
 	err := s.DB.
-		Table("students").
-		Select("serverpools.serverpool_id, serverpools.user_id").
-		Joins("JOIN list_students ON list_students.id = students.list_id").
-		Joins("JOIN serverpools ON serverpools.id = list_students.pool_id").
-		Where("students.ssh_key = ?", pubKey).
+		Table("serverpools").
+		Select("DISTINCT serverpools.serverpool_id, serverpools.user_id").
+		Joins("JOIN servers ON servers.serverpool_id = serverpools.serverpool_id AND servers.user_id = serverpools.user_id").
+		Where("servers.locked = ?", false).
 		Scan(&results).Error
 
 	if err != nil {
@@ -94,15 +95,34 @@ func (s *Service) AttribVMinPool(
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Auto-register student if not found
+			var pool models.Serverpool
+			if err := s.DB.Where("serverpool_id = ? AND user_id = ?", req.GetServerpoolId(), req.GetUserId()).First(&pool).Error; err != nil {
+				return &frontcontrolpb.AttribVMinPoolResponse{
+					Success: false,
+					AddressedIp: "",
+				}, status.Errorf(codes.NotFound, "pool not found")
+			}
+			
+			var list models.ListStudents
+			if err := s.DB.Where("pool_id = ?", pool.ID).FirstOrCreate(&list, models.ListStudents{PoolId: pool.ID}).Error; err != nil {
+				return &frontcontrolpb.AttribVMinPoolResponse{Success: false}, err
+			}
+
+			student = models.Student{
+				ListId: list.ID,
+				Name:   "student_" + req.GetServerpoolId(),
+				SshKey: req.GetPubkey(),
+			}
+			if err := s.DB.Create(&student).Error; err != nil {
+				return &frontcontrolpb.AttribVMinPoolResponse{Success: false}, err
+			}
+		} else {
 			return &frontcontrolpb.AttribVMinPoolResponse{
 				Success:     false,
 				AddressedIp: "",
-			}, status.Error(codes.NotFound, "student not found in pool")
+			}, err
 		}
-		return &frontcontrolpb.AttribVMinPoolResponse{
-			Success:     false,
-			AddressedIp: "",
-		}, err
 	}
 
 	if student.IP != "" {
@@ -148,18 +168,24 @@ func (s *Service) AttribVMinPool(
 
 	if err := s.installSSHKey(&server, &student); err != nil {
 		_ = s.DB.Model(&server).Update("locked", false)
+		_ = s.DB.Model(&student).Update("ip", "") // Clear the IP so they can try again
 		return &frontcontrolpb.AttribVMinPoolResponse{
 			Success:     false,
 			AddressedIp: "",
 		}, status.Errorf(codes.Internal, "ssh setup failed: %v", err)
 	}
 
-	if err := rclone.SetupRcloneForStudent(server, student, req.GetUserId(), req.GetServerpoolId()); err != nil {
-		_ = s.DB.Model(&server).Update("locked", false)
-		return &frontcontrolpb.AttribVMinPoolResponse{
-			Success:     false,
-			AddressedIp: "",
-		}, status.Errorf(codes.Internal, "rclone setup failed: %v", err)
+	if os.Getenv("SKIP_RCLONE") != "true" {
+		if err := rclone.SetupRcloneForStudent(server, student, req.GetUserId(), req.GetServerpoolId()); err != nil {
+			_ = s.DB.Model(&server).Update("locked", false)
+			_ = s.DB.Model(&student).Update("ip", "")
+			return &frontcontrolpb.AttribVMinPoolResponse{
+				Success:     false,
+				AddressedIp: "",
+			}, status.Errorf(codes.Internal, "rclone setup failed: %v", err)
+		}
+	} else {
+		log.Println("[attribvm] SKIP_RCLONE=true, skipping rclone setup")
 	}
 
 	return &frontcontrolpb.AttribVMinPoolResponse{
@@ -177,19 +203,21 @@ func (s *Service) installSSHKey(server *models.Server, student *models.Student) 
 	config := sshinject.SshConfig("vmuser", signer)
 	addr := fmt.Sprintf("%s:22", server.IP_Address)
 
-	client, err := ssh.Dial("tcp", addr, config)
-	if err != nil {
-		return err
+	var client *ssh.Client
+	var dialErr error
+	for i := 0; i < 12; i++ {
+		client, dialErr = ssh.Dial("tcp", addr, config)
+		if dialErr == nil {
+			break
+		}
+		log.Printf("ssh.Dial failed, retrying in 5 seconds... (%v)", dialErr)
+		time.Sleep(5 * time.Second)
+	}
+	if dialErr != nil {
+		return fmt.Errorf("failed to connect to VM after retries: %v", dialErr)
 	}
 	defer client.Close()
 
-	var user models.User
-	if err := s.DB.
-		Where("email = ?", server.UserID).
-		First(&user).Error; err != nil {
-		return fmt.Errorf("fetch user failed: %w", err)
-	}
-	//mettre un retry ici
 	cmd := cmdInit(*student)
 	log.Println("cmdInit")
 	if err := sshinject.RunSSHcmd(client, cmd); err != nil {

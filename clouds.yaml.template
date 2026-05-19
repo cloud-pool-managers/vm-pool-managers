@@ -1,0 +1,28 @@
+# ============================================
+# clouds.yaml — Dual-project OpenStack config
+# ============================================
+# Copier ce fichier en ~/.config/openstack/clouds.yaml
+# et remplir les valeurs d'authentification
+
+clouds:
+  # Projet Infrastructure (listing images/flavors/networks)
+  ipp-idcs-vmpoolmanager:
+    auth:
+      auth_url: https://keystone.example.com:5000/v3
+      application_credential_id: "YOUR_INFRA_CREDENTIAL_ID"
+      application_credential_secret: "YOUR_INFRA_CREDENTIAL_SECRET"
+    region_name: "lal"
+    interface: "public"
+    identity_api_version: 3
+    auth_type: "v3applicationcredential"
+
+  # Projet VMs Etudiants (creation/suppression VMs)
+  ipp-idcs-vmpool:
+    auth:
+      auth_url: https://keystone.example.com:5000/v3
+      application_credential_id: "YOUR_VMPOOL_CREDENTIAL_ID"
+      application_credential_secret: "YOUR_VMPOOL_CREDENTIAL_SECRET"
+    region_name: "lal"
+    interface: "public"
+    identity_api_version: 3
+    auth_type: "v3applicationcredential"

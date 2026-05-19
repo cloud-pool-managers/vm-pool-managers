@@ -8,7 +8,6 @@ import (
 
 	"control_center/config"
 	"control_center/frontcontrolpb"
-	"control_center/internal/rclone"
 	"control_center/models"
 	"control_center/pb"
 
@@ -45,23 +44,56 @@ func (s *Service) CreatePool(
 		MaxVM:        maxVM,
 		Networks:     models.JSONStringSlice{req.GetNetwork()},
 		ConfigID:     req.GetConfig(),
-		Status:       "scheduled",
+		Status:       "creating", // changed from "scheduled" to launch immediately
 	}
-	pool.TimeStart = new(time.Time)
-	*pool.TimeStart = req.GetStartTime().AsTime()
-
-	// modif here to test timewindow and delete
-	tw := time.Duration(req.GetTimeWindow()) * time.Hour
-	pool.Timewindow = new(time.Duration)
-	*pool.Timewindow = tw
+	if start := req.GetStartTime(); start != nil {
+		if err := start.CheckValid(); err == nil {
+			t := start.AsTime()
+			if !t.IsZero() {
+				pool.TimeStart = &t
+			}
+		}
+	}
+	if req.GetTimeWindow() > 0 && pool.TimeStart != nil {
+		tw := time.Duration(req.GetTimeWindow()) * time.Hour
+		pool.Timewindow = &tw
+	}
+	if md := req.GetMetadata(); md != nil {
+		if offDays, ok := md["off_days"]; ok && offDays != "" {
+			pool.OffDays = offDays
+		}
+	}
 	res := config.Database.Create(&pool)
 	if res.Error != nil {
 		return &frontcontrolpb.CreatePoolResponse{Success: false}, res.Error
 	}
-	if err := rclone.CreatePoolLocal(req.GetUser(), req.GetName()); err != nil {
-		log.Printf("Failed to create local pool: %v", err)
+
+	// Trigger immediate creation via gRPC
+	rep, err := s.pm.SendRessources(
+		ctx,
+		&pb.RessourceRequest{
+			User:   pool.UserID,
+			Data:   pool.ToMap(),
+			Status: pb.Status_CREATE,
+			Type:   pb.Type_SERVERPOOL,
+		},
+	)
+	
+	if err != nil || !rep.GetSuccess() {
+		log.Printf("Failed to create pool in OpenStack immediately: %v", err)
+		// Revert status so we know it failed
+		config.Database.Model(&pool).Update("status", "error")
 		return &frontcontrolpb.CreatePoolResponse{Success: false}, err
 	}
+
+	// Set status to running; pools sans planning ne doivent pas avoir de fenêtre horaire.
+	updates := map[string]any{"status": "running"}
+	if pool.TimeStart == nil {
+		updates["time_start"] = nil
+		updates["timewindow"] = nil
+	}
+	config.Database.Model(&pool).Updates(updates)
+
 	return &frontcontrolpb.CreatePoolResponse{Success: true}, nil
 
 }
@@ -74,6 +106,10 @@ func (s *Service) DeletePool(
 	if err := s.DB.Where(
 		"serverpool_id = ? AND user_id = ?", req.GetPoolId(), req.GetUser(),
 	).First(&pool).Error; err != nil {
+		return &frontcontrolpb.DeletePoolResponse{Success: false}, err
+	}
+
+	if err := s.DB.Where("serverpool_id = ? AND user_id = ?", pool.ServerpoolID, pool.UserID).Delete(&models.Server{}).Error; err != nil {
 		return &frontcontrolpb.DeletePoolResponse{Success: false}, err
 	}
 

@@ -15,7 +15,7 @@ import (
 func main() {
 	// Chargement du fichier .env
 	if err := godotenv.Load(); err != nil {
-		panic("Error on loading .env")
+		log.Fatalf("Error loading .env file: %v", err)
 	}
 
 	// Initialisation de la base de données

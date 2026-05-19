@@ -37,7 +37,7 @@ func CreateNFSVM(workerID int, job models.Job) error {
 	}
 
 	paramID := utils.ParseInt(job.Data["ID"])
-	fmt.Println("Worker ", workerID, " takes the job of creating a VM NFS")
+	log.Printf("[Worker %d] Creating NFS VM", workerID)
 	log.Printf("job.data[config_id]:%s", job.Data["config_id"])
 	serv := models.Server{
 		Metadata: metadata,
@@ -112,7 +112,7 @@ func CreateNFSVM(workerID int, job models.Job) error {
 			current.Status)
 		time.Sleep(3 * time.Second)
 	}
-	fmt.Println("Worker ", workerID, " finished its job")
+	log.Printf("[Worker %d] NFS VM creation finished", workerID)
 
 	ipaddr, err := getServerIPv4(current)
 	if err != nil {

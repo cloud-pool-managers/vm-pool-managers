@@ -23,7 +23,10 @@ var (
 
 // boot the database
 func Start_DB(ctx context.Context) {
-	host := "localhost"
+	host := os.Getenv("POSTGRES_HOST")
+	if host == "" {
+		host = "localhost"
+	}
 	port := os.Getenv("POSTGRES_PORT")
 	user := os.Getenv("POSTGRES_USER")
 	pw := os.Getenv("POSTGRES_PASSWORD")
@@ -37,7 +40,7 @@ func Start_DB(ctx context.Context) {
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		log.Fatalf("failed to connect to PostgreSQL: %v", err)
 	}
 
 	sqlDB, err := db.DB()
@@ -62,6 +65,7 @@ func Start_DB(ctx context.Context) {
 		&models.Network{},
 		&models.ListStudents{},
 		&models.Student{},
+		&models.VMInstance{},
 	)
 
 	syncSequences(Database)

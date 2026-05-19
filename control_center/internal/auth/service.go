@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"control_center/frontcontrolpb"
-	"control_center/internal/rclone"
 	"control_center/models"
 	"control_center/pb"
 
@@ -33,10 +32,20 @@ func (s *Service) CreateUser(
 			UserId:  "",
 		}, fmt.Errorf("missing required fields")
 	}
+
+	// First user becomes admin, all others are students
+	role := "student"
+	var count int64
+	s.DB.Model(&models.User{}).Count(&count)
+	if count == 0 {
+		role = "admin"
+	}
+
 	u := models.User{
 		Name:     req.Username,
 		Email:    req.Email,
 		Password: req.Password,
+		Role:     role,
 	}
 	if err := s.DB.Create(&u).Error; err != nil {
 		return &frontcontrolpb.CreateUserResponse{
@@ -62,12 +71,6 @@ func (s *Service) CreateUser(
 			Success: false,
 			UserId:  "",
 		}, fmt.Errorf("failed to notify PoolManager: %v", err)
-	}
-	if err := rclone.CreateUserLocal(u.Email); err != nil {
-		return &frontcontrolpb.CreateUserResponse{
-			Success: false,
-			UserId:  "",
-		}, fmt.Errorf("create local user failed: %v", err)
 	}
 	return &frontcontrolpb.CreateUserResponse{
 		Success: true,
@@ -99,7 +102,8 @@ func (s *Service) AuthenticateUser(
 			Token:   "",
 		}, fmt.Errorf("invalid password")
 	}
-	token := "dummy-token-for-user-" + fmt.Sprintf("%d", user.ID)
+	// Token encodes role: "role:email:id"
+	token := fmt.Sprintf("%s:%s:%d", user.Role, user.Email, user.ID)
 	return &frontcontrolpb.AuthenticateUserResponse{
 		Success: true,
 		Token:   token,

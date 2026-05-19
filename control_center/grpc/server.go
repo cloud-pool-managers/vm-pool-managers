@@ -12,9 +12,13 @@ import (
 	"control_center/internal/pool"
 	"control_center/internal/user"
 	"control_center/pb"
+	"encoding/json"
 	"log"
 	"net"
+	"net/http"
+	"strings"
 
+	grpcweb "github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -41,12 +45,50 @@ type UserServer struct {
 	DB *gorm.DB
 }
 
+func handleInventory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	result, err := buildInventory()
+	if err != nil {
+		log.Printf("inventory error: %v", err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func handleVMActivity(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Hostname string `json:"hostname"`
+		Status   string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Hostname == "" || req.Status == "" {
+		http.Error(w, "bad request: need hostname and status", http.StatusBadRequest)
+		return
+	}
+
+	RecordVMActivity(req.Hostname, req.Status)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"ok": "true"})
+}
+
 func Start_grpc(ctx context.Context) {
-	log.Println("Démarrage du serveur gRPC...")
+	log.Println("Demarrage du serveur gRPC...")
 
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		log.Fatalf("Erreur lors de l'écoute du port : %v", err)
+		log.Fatalf("Erreur lors de l'ecoute du port : %v", err)
 	}
 
 	s := grpc.NewServer()
@@ -75,18 +117,48 @@ func Start_grpc(ctx context.Context) {
 
 	reflection.Register(s)
 
+	// gRPC server (HTTP/2) on port 50051 for internal use
 	go func() {
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("Erreur serveur gRPC: %v", err)
 		}
 	}()
 
-	log.Println("Serveur gRPC lancé sur le port 50051")
+	// gRPC-Web + REST API server on port 50055
+	wrappedGrpc := grpcweb.WrapServer(s,
+		grpcweb.WithOriginFunc(func(origin string) bool { return true }),
+	)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/inventory", handleInventory)
+	mux.HandleFunc("/api/vm-activity", handleVMActivity)
+
+	httpServer := &http.Server{
+		Addr: ":50055",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// REST API routes
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				mux.ServeHTTP(w, r)
+				return
+			}
+			// gRPC-Web
+			wrappedGrpc.ServeHTTP(w, r)
+		}),
+	}
+	go func() {
+		log.Println("Serveur gRPC-Web + REST API sur le port 50055")
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Erreur serveur gRPC-Web: %v", err)
+		}
+	}()
+
+	log.Println("Serveur gRPC lance sur le port 50051")
 	go monitoring.Start_Monitoring(ctx, client)
 
 	<-ctx.Done()
-	log.Println("Arrêt du serveur gRPC demandé...")
+	log.Println("Arret du serveur gRPC demande...")
 
 	s.GracefulStop()
-	log.Println("Serveur gRPC arrêté proprement ✅")
+	httpServer.Shutdown(ctx)
+	log.Println("Serveur gRPC arrete proprement")
 }

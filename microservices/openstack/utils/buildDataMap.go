@@ -4,11 +4,12 @@ import (
 	"PoolManagerVM/backend/models"
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 func BuildDataMap(kv []string) map[string]string {
 	if len(kv)%2 != 0 {
-		panic("BuildDataMap requires an even number of arguments (clé, valeur)")
+		log.Fatalf("BuildDataMap requires an even number of arguments, got %d", len(kv))
 	}
 
 	data := make(map[string]string, len(kv)/2)

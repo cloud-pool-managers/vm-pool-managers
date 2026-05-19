@@ -1,0 +1,27 @@
+#cloud-config
+package_update: true
+packages:
+  - postgresql
+  - postgresql-contrib
+
+runcmd:
+  # Configurer PostgreSQL pour écouter sur toutes les interfaces
+  - |
+    PG_VERSION=$(ls /etc/postgresql/)
+    PG_CONF="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
+    PG_HBA="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
+    
+    # Écouter sur 0.0.0.0
+    sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" ${PG_CONF}
+    
+    # Autoriser les connexions depuis le réseau public-2
+    echo "host all all 0.0.0.0/0 md5" >> ${PG_HBA}
+    
+    # Créer la base et l'utilisateur
+    sudo -u postgres psql -c "CREATE USER admin WITH PASSWORD 'P00lManager_Secure_2026';"
+    sudo -u postgres psql -c "CREATE DATABASE control_center OWNER admin;"
+    
+    # Redémarrer PostgreSQL
+    systemctl restart postgresql
+    
+    echo "PostgreSQL ready on port 5432"

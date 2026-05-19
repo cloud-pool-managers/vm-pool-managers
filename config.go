@@ -178,7 +178,7 @@ func main() {
 		OPENSTACK SERVICE
 		--------------------------------
 	*/
-	var apiKeyName, optsCloud, secretJWT string
+	var apiKeyName, secretJWT string
 
 	openstackServiceForm := huh.NewForm(
 		huh.NewGroup(
@@ -198,39 +198,22 @@ func main() {
 	}
 
 	osEnv := map[string]string{
-		// Server
-		"SERVER_NAME":            "test",
-		"SERVER_IMAGE_REF":       "72d05dc3-73ec-405b-b870-48f70782526f",
-		"SERVER_FLAVOR_REF":      "a69d1ae1-74cf-4750-8f8c-a621a39f8e24",
-		"SERVER_UUID":            "94e241e7-77d3-46e2-b6b7-f87d97d0a28e",
-		"SERVER_SECURITY_GROUPS": "default",
-		"SERVER_SUBNET":          "fda5f48f-a66e-43a5-8c39-24c598159fe9",
-
-		// Metadata
-		"METADATA_SERVERPOOL_ID": "pool_vms",
-		"METADATA_USER_ID":       "admin",
-		"METADATA_MIN_VM":        "2",
-		"METADATA_MAX_VM":        "9",
-
-		// Network
-		"NETWORK_ID": "39aa90ca-163b-4630-9671-9439fefe516f",
-
-		// Volume
-		"VOLUME_SIZE":        "1",
-		"VOLUME_DESCRIPTION": "test",
-		"VOLUME_NAME":        "test",
-		"VOLUME_TYPE":        "__DEFAULT__",
-
 		// Secrets
 		"API_KEYNAME":    apiKeyName,
-		"OPTS_CLOUD":     optsCloud,
 		"SECRET_KEY_JWT": secretJWT,
 
 		// SSH
 		"SSH_PUBLIC_KEY_PATH": sshPublicKeyPath,
 
+		// OpenStack
 		"OS_CLIENT_CONFIG_FILE": osClientConfigFile,
 		"OS_CLOUD":              osCloud,
+
+		// Defaults (à modifier dans le .env après setup)
+		"METADATA_SERVERPOOL_ID": "pool_vms",
+		"METADATA_USER_ID":       "admin",
+		"METADATA_MIN_VM":        "2",
+		"METADATA_MAX_VM":        "9",
 	}
 
 	osEnvPath := filepath.Join("microservices/openstack", ".env")

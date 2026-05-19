@@ -39,7 +39,7 @@ func CreateVM(workerID int, job models.Job) error {
 	}
 
 	paramID := utils.ParseInt(job.Data["ID"])
-	fmt.Println("Worker ", workerID, " takes the job of creating a VM")
+	log.Printf("[Worker %d] Creating VM", workerID)
 	log.Printf("job.data[config_id]:%s", job.Data["config_id"])
 	serv := models.Server{
 		FlavorRef:    job.Data["flavor_ref"],
@@ -70,15 +70,25 @@ func CreateVM(workerID int, job models.Job) error {
 		log.Println("Unable to fetch serverpool:", err)
 	}
 	var userData string
+	// vm-registrar agent injection
+	registrarDSN := os.Getenv("REGISTRAR_PG_DSN")
+	registrarCCURL := os.Getenv("REGISTRAR_CONTROL_CENTER_URL")
+	registrarScript := ""
+	if registrarDSN != "" || registrarCCURL != "" {
+		registrarScript = registrarCloudConfig(registrarDSN, 0, registrarCCURL)
+		log.Printf("[Worker %d] Injecting vm-registrar agent into cloud-init", workerID)
+	}
+
 	if pool.IPAddressNFS != "" {
 		userData, err = buildUserData(
 			baseUserConfig(sshkey),
-			// computeNFSCloudConfig(pool.IPAddressNFS),
-			conf_file.Data)
+			conf_file.Data,
+			registrarScript)
 	} else {
 		userData, err = buildUserData(
 			baseUserConfig(sshkey),
 			conf_file.Data,
+			registrarScript,
 		)
 	}
 
@@ -130,7 +140,7 @@ func CreateVM(workerID int, job models.Job) error {
 	}
 
 	DecrementPending(uint(paramID))
-	fmt.Println("Worker ", workerID, " finished its job")
+	log.Printf("[Worker %d] VM creation finished", workerID)
 
 	return nil
 }
@@ -143,11 +153,7 @@ func buildUserData(configs ...string) (string, error) {
 		}
 		confType := detectContentType(cfg)
 		part := fmt.Sprintf(
-			`--%s
-Content-Type: %s
-			
-%s
-`, boundary, confType, cfg)
+			"--%s\nContent-Type: %s\n\n%s\n", boundary, confType, cfg)
 
 		parts = append(parts, part)
 	}

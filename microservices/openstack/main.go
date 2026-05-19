@@ -18,7 +18,9 @@ func main() {
 
 	// loading .env
 	config.LoadEnvConfig()
-	models.CreateParams()
+	if err := models.CreateParams(); err != nil {
+		log.Fatalf("Failed to initialize OpenStack clients: %v", err)
+	}
 
 	// creating context to stop cleanly
 	ctx, cancel := context.WithCancel(context.Background())

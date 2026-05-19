@@ -1,0 +1,28 @@
+package models
+
+import (
+	"encoding/json"
+	"time"
+)
+
+// VMInstance is populated by vm-registrar heartbeats (see sql/registrar_schema.sql).
+type VMInstance struct {
+	ID             string          `json:"id" gorm:"primaryKey"`
+	Name           string          `json:"name"`
+	IP             string          `json:"ip"`
+	PublicIP       string          `json:"public_ip" gorm:"column:public_ip"`
+	AZ             string          `json:"az"`
+	Role           string          `json:"role"`
+	AppPort        int             `json:"app_port" gorm:"column:app_port"`
+	Environment    string          `json:"environment"`
+	Status         string          `json:"status"`
+	Healthy        bool            `json:"healthy"`
+	ActivityStatus string          `json:"activity_status" gorm:"column:activity_status"`
+	RegisteredAt   time.Time       `json:"registered_at" gorm:"column:registered_at"`
+	LastSeen       time.Time       `json:"last_seen" gorm:"column:last_seen"`
+	RawMeta        json.RawMessage `json:"raw_meta" gorm:"column:raw_meta;type:jsonb"`
+}
+
+func (VMInstance) TableName() string {
+	return "vm_instances"
+}

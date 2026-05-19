@@ -246,11 +246,6 @@ func servstillinuse(v volumes.Volume) bool {
 }
 
 func shouldStartPool(timestart string) bool {
-	now := time.Now().UTC()
-	t, err := time.Parse(time.RFC3339, timestart)
-	if err != nil {
-		return false
-	}
-	start := t.Add(-30 * time.Minute)
-	return now.After(start) && now.Before(t)
+	// Bypass time window: always return true so VMs are created immediately
+	return true
 }

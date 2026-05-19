@@ -28,7 +28,8 @@ func Start_DB() {
 	var err error
 	Database, err = gorm.Open(sqlite.Open("PoolManagerVM.db"), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		log.Fatalf("failed to connect to SQLite database: %v", err)
+
 	}
 
 	Database.AutoMigrate(&models.User{},

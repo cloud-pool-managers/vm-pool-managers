@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,38 +18,55 @@ import (
 )
 
 func ConnectToMicroOpen(ctx context.Context) {
-	conn, err := grpc.NewClient("localhost:50052",
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("Erreur de connexion: %v", err)
-	}
-	defer conn.Close()
-
-	client := pb.NewPoolManagerClient(conn)
-	stream, err := client.GetStreamRessources(ctx, &emptypb.Empty{})
-	if err != nil {
-		log.Fatalf("Erreur stream: %v", err)
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("Arrêt du streaming ConnectToMicroOpen")
-			_ = stream.CloseSend()
 			return
 		default:
+		}
+
+		conn, err := grpc.NewClient("localhost:50052",
+			grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Printf("Erreur de connexion au microservice: %v, retry dans 5s...", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		client := pb.NewPoolManagerClient(conn)
+		stream, err := client.GetStreamRessources(ctx, &emptypb.Empty{})
+		if err != nil {
+			log.Printf("Erreur ouverture stream: %v, retry dans 5s...", err)
+			conn.Close()
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		log.Println("Connecté au stream du microservice OpenStack")
+
+		for {
 			resp, err := stream.Recv()
 			if err == io.EOF {
-				return
+				break
 			}
 			if err != nil {
 				if ctx.Err() != nil {
-					log.Println("Stream ended due to context")
+					conn.Close()
 					return
 				}
-				log.Fatalf("Error listening stream: %v", err)
+				log.Printf("Stream interrompu: %v, reconnexion dans 5s...", err)
+				break
 			}
 			HandleStreamEvent(resp)
+		}
+
+		conn.Close()
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(5 * time.Second):
 		}
 	}
 }
@@ -114,12 +132,11 @@ func handleDBServerpoolEvent(serverpoolID, userID string, data map[string]string
 		updates["serverpool_id"] = serverpoolID
 		updates["user_id"] = userID
 
+		var pool models.Serverpool
 		_ = config.Database.
-			Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "serverpool_id"}, {Name: "user_id"}},
-				DoUpdates: clause.Assignments(updates),
-			}).
-			Create(&models.Serverpool{}).Error
+			Where("serverpool_id = ? AND user_id = ?", serverpoolID, userID).
+			Assign(updates).
+			FirstOrCreate(&pool).Error
 
 	case pb.Status_UPDATE:
 		updates := serverpoolUpdatesFromMap(data)

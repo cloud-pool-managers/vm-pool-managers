@@ -25,7 +25,7 @@ func (m MetadataUpdate) ToMetadataUpdateMap() (map[string]any, error) {
 
 func AttribVM(workerID int, job models.Job) error {
 
-	fmt.Println("Worker ", workerID, " takes the job of attributing a VM")
+	log.Printf("[Worker %d] Attributing VM", workerID)
 
 	allServers, err := utils.GetAllServers()
 	if err != nil {

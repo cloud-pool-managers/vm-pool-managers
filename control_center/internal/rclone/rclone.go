@@ -256,18 +256,20 @@ sudo setfacl -k "$STUD_DIR" || true
 func EnsureRemoteSSHKey(client *ssh.Client, username string) error {
 	cmd := fmt.Sprintf(`
 set -e
-HOME="/home/%[1]s"
-SSH="$HOME/.ssh"
+UHOME="/home/%[1]s"
+SSH="$UHOME/.ssh"
 
-sudo -u %[1]s mkdir -p "$SSH"
-sudo -u %[1]s chmod 700 "$SSH"
+sudo mkdir -p "$SSH"
+sudo chown %[1]s:%[1]s "$SSH"
+sudo chmod 700 "$SSH"
 
 if [ ! -f "$SSH/id_ed25519" ]; then
-	sudo -u %[1]s ssh-keygen -t ed25519 -f "$SSH/id_ed25519" -N ""
+	sudo ssh-keygen -t ed25519 -f "$SSH/id_ed25519" -N "" -C "%[1]s@vm"
+	sudo chown %[1]s:%[1]s "$SSH/id_ed25519" "$SSH/id_ed25519.pub"
 fi
 
-sudo -u %[1]s chmod 600 "$SSH/id_ed25519"
-sudo -u %[1]s chmod 644 "$SSH/id_ed25519.pub"
+sudo chmod 600 "$SSH/id_ed25519"
+sudo chmod 644 "$SSH/id_ed25519.pub"
 `, username)
 
 	return RunSSHcmd(client, cmd)

@@ -5,6 +5,7 @@ import (
 	"control_center/pb"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -171,16 +172,16 @@ func (s *Server) ToFrontControlPb() *frontcontrolpb.Server {
 }
 
 func PrintServer(server Server) error {
-	fmt.Println("=== Server Data ===")
-	fmt.Printf("ID: %s\n", server.ID)
-	fmt.Printf("Name: %s\n", server.Name)
-	fmt.Printf("Status: %s\n", server.Status)
-	fmt.Printf("FlavorRef: %s\n", server.FlavorRef)
-	fmt.Printf("ImageRef: %s\n", server.ImageRef)
-	fmt.Printf("Networks: %+v\n", server.Networks)
-	fmt.Printf("Metadata: %+v\n", server.Metadata)
-	fmt.Printf("ServerpoolID: %s\n", server.ServerpoolID)
-	fmt.Printf("UserID: %s\n", server.UserID)
+	log.Println("=== Server Data ===")
+	log.Printf("ID: %s", server.ID)
+	log.Printf("Name: %s", server.Name)
+	log.Printf("Status: %s", server.Status)
+	log.Printf("FlavorRef: %s", server.FlavorRef)
+	log.Printf("ImageRef: %s", server.ImageRef)
+	log.Printf("Networks: %+v", server.Networks)
+	log.Printf("Metadata: %+v", server.Metadata)
+	log.Printf("ServerpoolID: %s", server.ServerpoolID)
+	log.Printf("UserID: %s", server.UserID)
 	return nil
 }
 
