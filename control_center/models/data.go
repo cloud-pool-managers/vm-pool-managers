@@ -240,28 +240,3 @@ func (n *Network) ToFrontControlPb() *frontcontrolpb.Network {
 	}
 }
 
-type VolumeDB struct {
-	ID                  string `gorm:"primaryKey"`
-	Status              string
-	Size                int
-	AvailabilityZone    string
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	Name                string
-	Description         string
-	VolumeType          string
-	SnapshotID          string
-	SourceVolID         string
-	BackupID            *string
-	Metadata            JSONStringMap `gorm:"type:json"` // map[string]string
-	UserID              string
-	Bootable            string
-	Encrypted           bool
-	ReplicationStatus   string
-	ConsistencyGroupID  string
-	Multiattach         bool
-	VolumeImageMetadata JSONStringMap `gorm:"type:json"`
-	Host                string
-	TenantID            string
-	Attachments         JSONAttachments `gorm:"type:json"`
-}

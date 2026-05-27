@@ -54,7 +54,7 @@ export async function attribVMinPool(
   serverpool_id: string,
   user_id: string,
   pubkey: string
-): Promise<{ ip: string; username: string }> {
+): Promise<{ ip: string; username: string; appPort: number }> {
   const req: AttribVMinPoolRequest = create(AttribVMinPoolRequestSchema, {
     serverpoolId: serverpool_id,
     userId: user_id,
@@ -66,7 +66,7 @@ export async function attribVMinPool(
     if (!res.success) {
       throw new Error("Aucune VM disponible ou erreur backend");
     }
-    return { ip: res.addressedIp, username: res.username };
+    return { ip: res.addressedIp, username: res.username, appPort: res.appPort };
   } catch (err) {
     console.error("Erreur attribution VM: ", err);
     throw err;

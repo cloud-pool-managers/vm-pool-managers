@@ -4,14 +4,10 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-
-	"github.com/gophercloud/gophercloud/v2/openstack/blockstorage/v3/volumes"
-	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 )
 
 type JSONStringSlice []string
 type JSONStringMap map[string]string
-type JSONAttachments []volumes.Attachment
 
 func (j *JSONStringSlice) Scan(value any) error {
 	if value == nil {
@@ -84,41 +80,3 @@ func (j JSONStringMap) Value() (driver.Value, error) {
 	return json.Marshal(j)
 }
 
-func (j JSONStringSlice) ToNetworks() []servers.Network {
-	nets := make([]servers.Network, 0, len(j))
-	for _, id := range j {
-		nets = append(nets, servers.Network{UUID: id})
-	}
-	return nets
-}
-
-func (j *JSONAttachments) Scan(value any) error {
-	if value == nil {
-		*j = JSONAttachments{}
-		return nil
-	}
-
-	var bytes []byte
-	switch v := value.(type) {
-	case []byte:
-		bytes = v
-	case string:
-		bytes = []byte(v)
-	default:
-		return fmt.Errorf("failed to scan JSONAttachments: %v", value)
-	}
-
-	if len(bytes) == 0 {
-		*j = JSONAttachments{}
-		return nil
-	}
-
-	return json.Unmarshal(bytes, j)
-}
-
-func (j JSONAttachments) Value() (driver.Value, error) {
-	if j == nil {
-		return "[]", nil
-	}
-	return json.Marshal(j)
-}

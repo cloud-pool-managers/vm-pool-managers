@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"control_center/config"
+	"control_center/internal/guacamole"
 	"control_center/internal/sshinject"
 	"control_center/models"
 	"control_center/pb"
@@ -15,17 +16,20 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"gorm.io/gorm"
 )
 
 func Start_Monitoring(
 	ctx context.Context,
 	clientMicroservice pb.PoolManagerClient,
+	guacClient *guacamole.Client,
 ) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	go StartSSHActivityChecker(ctx)
+	if guacClient != nil {
+		go guacamoleSyncLoop(ctx, guacClient)
+	}
 
 	for {
 		select {
@@ -217,25 +221,92 @@ func launchDeletePool(p *models.Serverpool, client pb.PoolManagerClient) {
 	}
 }
 
-// ReapStaleVMs periodically marks VMs without recent heartbeats as dead.
-func ReapStaleVMs(ctx context.Context, db *gorm.DB, interval time.Duration) {
-	ticker := time.NewTicker(interval)
+func guacamoleSyncLoop(ctx context.Context, client *guacamole.Client) {
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			result := db.Exec(`
-				UPDATE vm_instances
-				SET status = 'dead', healthy = false
-				WHERE last_seen < NOW() - INTERVAL '90 seconds'
-				AND status != 'dead'
-			`)
-			if result.RowsAffected > 0 {
-				log.Printf("[Reaper] Marked %d stale VMs as dead", result.RowsAffected)
-			}
+			syncGuacamoleRegistrations(client)
+			cleanupDeadGuacamoleConnections(client)
 		}
+	}
+}
+
+func syncGuacamoleRegistrations(client *guacamole.Client) {
+	// Enregistrer les VMs présentes dans vm_instances mais pas encore dans Guacamole
+	var vms []models.VMInstance
+	config.Database.Where("guac_connection_id = '' AND ip <> '' AND status = 'ready'").Find(&vms)
+	for _, vm := range vms {
+		connID, err := client.CreateSSHConnection(vm.Name, vm.IP)
+		if err != nil {
+			log.Printf("[guac] register vm_instance %s: %v", vm.Name, err)
+			continue
+		}
+		config.Database.Model(&vm).Update("guac_connection_id", connID)
+		log.Printf("[guac] registered %s -> conn %s", vm.Name, connID)
+	}
+
+	// Enregistrer les VMs ACTIVE dans servers qui n'ont pas de ligne vm_instances
+	var servers []models.Server
+	config.Database.Where("status = 'ACTIVE' AND ip_address <> ''").Find(&servers)
+	for _, srv := range servers {
+		// Vérifier si une ligne vm_instances existe déjà avec un guac_connection_id
+		var existing models.VMInstance
+		if err := config.Database.Where("name = ?", srv.Name).First(&existing).Error; err == nil {
+			if existing.GuacConnectionID != "" {
+				continue // déjà enregistré
+			}
+			// Ligne existe mais pas de connexion guac
+			connID, err := client.CreateSSHConnection(srv.Name, srv.IP_Address)
+			if err != nil {
+				log.Printf("[guac] register server %s: %v", srv.Name, err)
+				continue
+			}
+			config.Database.Model(&existing).Updates(map[string]any{
+				"guac_connection_id": connID,
+				"last_seen":          time.Now().UTC(),
+			})
+			log.Printf("[guac] registered server %s -> conn %s", srv.Name, connID)
+		} else {
+			// Pas de ligne vm_instances — créer une entrée minimale avec le guac_connection_id
+			connID, err := client.CreateSSHConnection(srv.Name, srv.IP_Address)
+			if err != nil {
+				log.Printf("[guac] register new server %s: %v", srv.Name, err)
+				continue
+			}
+			meta, _ := json.Marshal(map[string]string{
+				"serverpool_id": srv.ServerpoolID,
+				"user_id":       srv.UserID,
+			})
+			now := time.Now().UTC()
+			config.Database.Create(&models.VMInstance{
+				ID:               srv.ID,
+				Name:             srv.Name,
+				IP:               srv.IP_Address,
+				Status:           "ready",
+				Healthy:          true,
+				ActivityStatus:   "idle",
+				RegisteredAt:     now,
+				LastSeen:         now,
+				RawMeta:          meta,
+				GuacConnectionID: connID,
+			})
+			log.Printf("[guac] created vm_instance + registered %s -> conn %s", srv.Name, connID)
+		}
+	}
+}
+
+func cleanupDeadGuacamoleConnections(client *guacamole.Client) {
+	var vms []models.VMInstance
+	config.Database.Where("status = 'dead' AND guac_connection_id <> ''").Find(&vms)
+	for _, vm := range vms {
+		if err := client.DeleteConnection(vm.GuacConnectionID); err != nil {
+			log.Printf("[guac] delete conn %s: %v", vm.GuacConnectionID, err)
+		}
+		config.Database.Model(&vm).Update("guac_connection_id", "")
 	}
 }
 

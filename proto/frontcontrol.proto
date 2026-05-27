@@ -140,6 +140,7 @@ message CreatePoolRequest {
     map<string, string> metadata = 9;
     google.protobuf.Timestamp start_time = 10;
     int32 time_window = 11;
+    int32 app_port = 12;
 }
 
 message CreatePoolResponse {
@@ -237,6 +238,7 @@ message ServerPool {
     int32 max_vm = 8;
     map<string, string> metadata = 9;
     string user_id = 10;
+    int32 app_port = 11;
 }
 
 message Config {
@@ -269,6 +271,7 @@ message AttribVMinPoolResponse {
     bool success = 1;
     string addressed_ip = 2;
     string username = 3;
+    int32 app_port = 4;
 }
 
 message PoolWithKeyRequest {

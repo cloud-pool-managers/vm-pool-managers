@@ -1319,6 +1319,7 @@ type CreatePoolRequest struct {
 	Metadata      map[string]string      `protobuf:"bytes,9,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	StartTime     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	TimeWindow    int32                  `protobuf:"varint,11,opt,name=time_window,json=timeWindow,proto3" json:"time_window,omitempty"`
+	AppPort       int32                  `protobuf:"varint,12,opt,name=app_port,json=appPort,proto3" json:"app_port,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1426,6 +1427,13 @@ func (x *CreatePoolRequest) GetStartTime() *timestamppb.Timestamp {
 func (x *CreatePoolRequest) GetTimeWindow() int32 {
 	if x != nil {
 		return x.TimeWindow
+	}
+	return 0
+}
+
+func (x *CreatePoolRequest) GetAppPort() int32 {
+	if x != nil {
+		return x.AppPort
 	}
 	return 0
 }
@@ -2126,6 +2134,7 @@ type ServerPool struct {
 	MaxVm         int32                  `protobuf:"varint,8,opt,name=max_vm,json=maxVm,proto3" json:"max_vm,omitempty"`
 	Metadata      map[string]string      `protobuf:"bytes,9,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	UserId        string                 `protobuf:"bytes,10,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	AppPort       int32                  `protobuf:"varint,11,opt,name=app_port,json=appPort,proto3" json:"app_port,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2228,6 +2237,13 @@ func (x *ServerPool) GetUserId() string {
 		return x.UserId
 	}
 	return ""
+}
+
+func (x *ServerPool) GetAppPort() int32 {
+	if x != nil {
+		return x.AppPort
+	}
+	return 0
 }
 
 type Config struct {
@@ -2503,6 +2519,7 @@ type AttribVMinPoolResponse struct {
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	AddressedIp   string                 `protobuf:"bytes,2,opt,name=addressed_ip,json=addressedIp,proto3" json:"addressed_ip,omitempty"`
 	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	AppPort       int32                  `protobuf:"varint,4,opt,name=app_port,json=appPort,proto3" json:"app_port,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2556,6 +2573,13 @@ func (x *AttribVMinPoolResponse) GetUsername() string {
 		return x.Username
 	}
 	return ""
+}
+
+func (x *AttribVMinPoolResponse) GetAppPort() int32 {
+	if x != nil {
+		return x.AppPort
+	}
+	return 0
 }
 
 type PoolWithKeyRequest struct {
@@ -3147,7 +3171,7 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\x03key\x18\x02 \x01(\tR\x03key\";\n" +
 	"\x11GetConfigResponse\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\"\xad\x03\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"\xc8\x03\n" +
 	"\x11CreatePoolRequest\x12\x12\n" +
 	"\x04user\x18\x01 \x01(\tR\x04user\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -3162,7 +3186,8 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"start_time\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x12\x1f\n" +
 	"\vtime_window\x18\v \x01(\x05R\n" +
-	"timeWindow\x1a;\n" +
+	"timeWindow\x12\x19\n" +
+	"\bapp_port\x18\f \x01(\x05R\aappPort\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"G\n" +
@@ -3222,7 +3247,7 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\faddressed_ip\x18\f \x01(\tR\vaddressedIp\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd8\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf3\x02\n" +
 	"\n" +
 	"ServerPool\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -3235,7 +3260,8 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\x06max_vm\x18\b \x01(\x05R\x05maxVm\x12B\n" +
 	"\bmetadata\x18\t \x03(\v2&.frontcontrol.ServerPool.MetadataEntryR\bmetadata\x12\x17\n" +
 	"\auser_id\x18\n" +
-	" \x01(\tR\x06userId\x1a;\n" +
+	" \x01(\tR\x06userId\x12\x19\n" +
+	"\bapp_port\x18\v \x01(\x05R\aappPort\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"I\n" +
@@ -3254,11 +3280,12 @@ const file_frontcontrol_proto_rawDesc = "" +
 	"\x15AttribVMinPoolRequest\x12#\n" +
 	"\rserverpool_id\x18\x01 \x01(\tR\fserverpoolId\x12\x16\n" +
 	"\x06pubkey\x18\x02 \x01(\tR\x06pubkey\x12\x17\n" +
-	"\auser_id\x18\x03 \x01(\tR\x06userId\"q\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\"\x8c\x01\n" +
 	"\x16AttribVMinPoolResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12!\n" +
 	"\faddressed_ip\x18\x02 \x01(\tR\vaddressedIp\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\",\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x19\n" +
+	"\bapp_port\x18\x04 \x01(\x05R\aappPort\",\n" +
 	"\x12PoolWithKeyRequest\x12\x16\n" +
 	"\x06pubkey\x18\x01 \x01(\tR\x06pubkey\"G\n" +
 	"\x13PoolWithKeyResponse\x12\x17\n" +

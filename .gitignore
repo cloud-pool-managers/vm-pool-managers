@@ -58,3 +58,4 @@ profile.cov
 # Proto generated (optional: keep or regenerate)
 # *_grpc.pb.go
 # *.pb.go
+images/

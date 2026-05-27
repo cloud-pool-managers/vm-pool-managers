@@ -30,6 +30,7 @@ let scheduleWindowHours: number | undefined = undefined;
 let offDays = { monday:false, tuesday:false, wednesday:false, thursday:false, friday:false, saturday:true, sunday:true };
 let selectedGroupImage: string | null = null;
 let selectedImage: string | null = null;
+let appPort = 0;
 
 onMount(() => {
   if (!token) window.location.href = '/';
@@ -93,7 +94,7 @@ async function handleCreateServerpool(event: Event) {
     user: $authStore?.email ?? '', name: data.name, image: data.image,
     flavor: data.flavor, network: data.networks, minVm: String(data.minVm), maxVm: String(data.maxVm),
     config: data.config ?? '', metadata: enabledOffDays.length > 0 ? { off_days: enabledOffDays.join(',') } : {},
-    timeWindow: 0,
+    timeWindow: 0, appPort: appPort > 0 ? appPort : 0,
   });
   if (hasSchedule) {
     const startDate = computeNextSchedule(Number(scheduleDay), scheduleTime);
@@ -247,11 +248,11 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
     images={$images} flavors={sortedFlavors} networks={$networks} configs={$configs}
     bind:selectedGroupImage bind:selectedImage bind:selectedFlavor bind:selectedNetwork
     bind:selectedConfigFile bind:scheduleDay bind:scheduleTime bind:scheduleWindowHours bind:offDays
-    {createError} {createSuccess}
+    bind:appPort {createError} {createSuccess}
     {handleCreateServerpool} {getUniqueFirstAlphaBlocks} {filterImagesByPrefix}
   />
 {/if}
 
 {#if ListStudentModalOpen && selectedPool}
-  <AddSSHKeys bind:open={ListStudentModalOpen} bind:poolname={selectedPool.name} />
+  <AddSSHKeys bind:open={ListStudentModalOpen} poolname={selectedPool.name} />
 {/if}

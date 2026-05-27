@@ -20,6 +20,12 @@ export default defineConfig({
 				target: 'http://localhost:5556',
 				changeOrigin: true,
 				followRedirects: true,
+			},
+			'/guacamole': {
+				target: 'http://localhost:18080',
+				changeOrigin: true,
+				ws: true,
+				timeout: 0,
 			}
 		}
 	}

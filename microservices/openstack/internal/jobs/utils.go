@@ -124,11 +124,11 @@ func sanitizeHostname(s string) string {
 // registrarCloudConfig generates a cloud-init script that installs and starts
 // the vm-registrar agent on the VM. The agent will auto-register itself
 // into the PostgreSQL inventory using OpenStack metadata.
-func registrarCloudConfig(pgDSN string, healthPort int, controlCenterURL string) string {
+func registrarCloudConfig(pgDSN string, healthPort int, controlCenterURL string, downloadBaseURL string) string {
 	return fmt.Sprintf(`#!/bin/bash
-set -e
 
-# ─── vm-registrar agent setup ───────────────────────────────
+# ─── vm-registrar agent setup (runs in background to not block cloud-init) ───
+(
 REGISTRAR_DIR="/etc/registrar"
 REGISTRAR_BIN="/usr/local/bin/vm-registrar"
 
@@ -146,9 +146,13 @@ ENVEOF
 
 chmod 600 ${REGISTRAR_DIR}/registrar.env
 
-# Download pre-compiled vm-registrar
-curl -fsSL http://157.136.249.205/vm-registrar -o ${REGISTRAR_BIN} || wget -qO ${REGISTRAR_BIN} http://157.136.249.205/vm-registrar
-chmod +x ${REGISTRAR_BIN}
+# Download pre-compiled vm-registrar (hard 60s total timeout)
+DOWNLOAD_URL="%s"
+if [ -n "$DOWNLOAD_URL" ]; then
+  timeout 60 curl -fsSLk --max-time 30 ${DOWNLOAD_URL}/vm-registrar -o ${REGISTRAR_BIN} || \
+  timeout 60 wget -qO ${REGISTRAR_BIN} --no-check-certificate --timeout=30 --tries=1 ${DOWNLOAD_URL}/vm-registrar || true
+fi
+[ -f ${REGISTRAR_BIN} ] && chmod +x ${REGISTRAR_BIN} || echo "[registrar] download skipped"
 
 # Create systemd service
 cat > /etc/systemd/system/vm-registrar.service << 'SVCEOF'
@@ -173,12 +177,6 @@ systemctl enable vm-registrar
 systemctl start vm-registrar
 
 # ─── ssh-monitor agent setup ───────────────────────────────
-export DEBIAN_FRONTEND=noninteractive
-echo "deb http://archive.debian.org/debian/ buster main" > /etc/apt/sources.list
-echo "deb http://archive.debian.org/debian-security buster/updates main" >> /etc/apt/sources.list
-apt-get -o Acquire::Check-Valid-Until=false update -qq
-apt-get install -y -qq postgresql-client
-
 cat > /usr/local/bin/ssh-monitor.sh << 'MOF'
 #!/bin/bash
 while true; do
@@ -190,7 +188,7 @@ while true; do
   fi
   HOST=$(hostname)
   if [ -n "$REGISTRAR_CC_URL" ]; then
-    curl -sf -X POST "${REGISTRAR_CC_URL}/api/vm-activity" \
+    curl -sfk -X POST "${REGISTRAR_CC_URL}/api/vm-activity" \
       -H "Content-Type: application/json" \
       -d "{\"hostname\":\"${HOST}\",\"status\":\"${STATUS}\"}" > /dev/null 2>&1 || true
   fi
@@ -224,5 +222,8 @@ systemctl enable ssh-monitor
 systemctl start ssh-monitor
 
 echo "[cloud-init] vm-registrar & ssh-monitor started"
-`, pgDSN, controlCenterURL, healthPort)
+) &
+
+echo "[cloud-init] registrar setup launched in background"
+`, pgDSN, controlCenterURL, healthPort, downloadBaseURL)
 }

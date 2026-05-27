@@ -8,6 +8,7 @@ import (
 
 	"control_center/config"
 	"control_center/frontcontrolpb"
+	"control_center/internal/guacamole"
 	"control_center/models"
 	"control_center/pb"
 
@@ -17,14 +18,16 @@ import (
 
 type Service struct {
 	frontcontrolpb.UnimplementedPoolServiceServer
-	DB *gorm.DB
-	pm pb.PoolManagerClient
+	DB         *gorm.DB
+	pm         pb.PoolManagerClient
+	guacClient *guacamole.Client
 }
 
-func New(db *gorm.DB, pm pb.PoolManagerClient) *Service {
+func New(db *gorm.DB, pm pb.PoolManagerClient, guacClient *guacamole.Client) *Service {
 	return &Service{
-		DB: db,
-		pm: pm,
+		DB:         db,
+		pm:         pm,
+		guacClient: guacClient,
 	}
 }
 
@@ -44,7 +47,8 @@ func (s *Service) CreatePool(
 		MaxVM:        maxVM,
 		Networks:     models.JSONStringSlice{req.GetNetwork()},
 		ConfigID:     req.GetConfig(),
-		Status:       "creating", // changed from "scheduled" to launch immediately
+		Status:       "creating",
+		AppPort:      int(req.GetAppPort()),
 	}
 	if start := req.GetStartTime(); start != nil {
 		if err := start.CheckValid(); err == nil {
@@ -68,12 +72,20 @@ func (s *Service) CreatePool(
 		return &frontcontrolpb.CreatePoolResponse{Success: false}, res.Error
 	}
 
+	poolData := pool.ToMap()
+	if pool.ConfigID != "" {
+		var cfgPool models.ConfigPool
+		if err := config.Database.Where("name = ?", pool.ConfigID).First(&cfgPool).Error; err == nil {
+			poolData["config_data"] = cfgPool.Data
+		}
+	}
+
 	// Trigger immediate creation via gRPC
 	rep, err := s.pm.SendRessources(
 		ctx,
 		&pb.RessourceRequest{
 			User:   pool.UserID,
-			Data:   pool.ToMap(),
+			Data:   poolData,
 			Status: pb.Status_CREATE,
 			Type:   pb.Type_SERVERPOOL,
 		},
@@ -130,6 +142,25 @@ func (s *Service) DeletePool(
 	if err != nil || rep.GetSuccess() == false {
 		return &frontcontrolpb.DeletePoolResponse{Success: false}, err
 	}
+
+	// Delete vm_instances rows for this pool (registrar data from old VMs)
+	var vms []models.VMInstance
+	s.DB.Where("raw_meta->>'serverpool_id' = ?", pool.ServerpoolID).Find(&vms)
+	if s.guacClient != nil {
+		for _, vm := range vms {
+			if vm.GuacConnectionID != "" {
+				_ = s.guacClient.DeleteConnection(vm.GuacConnectionID)
+			}
+		}
+	}
+	if len(vms) > 0 {
+		ids := make([]string, len(vms))
+		for i, vm := range vms {
+			ids[i] = vm.ID
+		}
+		s.DB.Where("id IN ?", ids).Delete(&models.VMInstance{})
+	}
+
 	log.Println("success deleting")
 	return &frontcontrolpb.DeletePoolResponse{Success: true}, nil
 }

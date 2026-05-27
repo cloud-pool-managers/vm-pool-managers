@@ -21,13 +21,6 @@ type Service struct {
 	Broker *event.EventBroker
 }
 
-type RessourceEvent struct {
-	User      string
-	Action    string
-	Type      frontcontrolpb.Type
-	Ressource any
-}
-
 func New(db *gorm.DB, broker *event.EventBroker) *Service {
 	return &Service{
 		Broker: broker,
@@ -109,8 +102,6 @@ func (s *Service) UpdateDataUser(
 				Type:   typ,
 				Data:   stringData,
 			}
-
-			// log.Println("data send : ", resp.GetData())
 
 			if err := stream.Send(resp); err != nil {
 				log.Printf("Stream send error: %v", err)

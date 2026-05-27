@@ -50,14 +50,17 @@ func CreateVM(workerID int, job models.Job) error {
 	}
 
 	var conf_file models.ConfigPool
-	conferr := config.Database.Model(&models.ConfigPool{}).Where("id = ?", job.Data["config_id"]).First(&conf_file).Error
-	if conferr != nil {
-		log.Println("Error fetching config file:", conferr)
-		conf_file = models.ConfigPool{
-			Data: "#!/bin/bash\n",
-		}
+	if configData := job.Data["config_data"]; configData != "" {
+		conf_file = models.ConfigPool{Data: configData}
+		log.Printf("[Worker %d] Using config_data from request (%d bytes)", workerID, len(configData))
 	} else {
-		log.Printf("Found config file : \n%s\n", conf_file.Data)
+		conferr := config.Database.Model(&models.ConfigPool{}).Where("id = ? OR name = ?", job.Data["config_id"], job.Data["config_id"]).First(&conf_file).Error
+		if conferr != nil {
+			log.Println("Error fetching config file:", conferr)
+			conf_file = models.ConfigPool{Data: "#!/bin/bash\n"}
+		} else {
+			log.Printf("Found config file : \n%s\n", conf_file.Data)
+		}
 	}
 
 	sshkey, err := readSSHPublicKey()
@@ -73,9 +76,10 @@ func CreateVM(workerID int, job models.Job) error {
 	// vm-registrar agent injection
 	registrarDSN := os.Getenv("REGISTRAR_PG_DSN")
 	registrarCCURL := os.Getenv("REGISTRAR_CONTROL_CENTER_URL")
+	registrarDownloadURL := os.Getenv("REGISTRAR_DOWNLOAD_URL")
 	registrarScript := ""
 	if registrarDSN != "" || registrarCCURL != "" {
-		registrarScript = registrarCloudConfig(registrarDSN, 0, registrarCCURL)
+		registrarScript = registrarCloudConfig(registrarDSN, 0, registrarCCURL, registrarDownloadURL)
 		log.Printf("[Worker %d] Injecting vm-registrar agent into cloud-init", workerID)
 	}
 

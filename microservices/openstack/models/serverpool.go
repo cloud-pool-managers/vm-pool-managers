@@ -21,7 +21,7 @@ type Serverpool struct {
 	MaxVM        int
 	PendingJobs  int
 	ListServ     []Server `gorm:"foreignKey:ServerpoolID,UserID;references:ServerpoolID,UserID"`
-	ConfigID     int
+	ConfigID     string
 	NetworkUuid  string
 	Pendingnfs   bool `gorm:"default:false; not null"`
 	IPAddressNFS string
@@ -38,7 +38,7 @@ func (sp *Serverpool) ToMap() map[string]string {
 		"min_vm":        fmt.Sprintf("%d", sp.MinVM),
 		"max_vm":        fmt.Sprintf("%d", sp.MaxVM),
 		"pending_jobs":  fmt.Sprintf("%d", sp.PendingJobs),
-		"config_id":     fmt.Sprintf("%d", sp.ConfigID),
+		"config_id":     sp.ConfigID,
 	}
 
 	// Sérialiser les champs JSON custom

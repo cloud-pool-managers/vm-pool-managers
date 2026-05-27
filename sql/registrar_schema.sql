@@ -25,6 +25,9 @@ CREATE INDEX IF NOT EXISTS idx_vm_status      ON vm_instances(status);
 CREATE INDEX IF NOT EXISTS idx_vm_healthy     ON vm_instances(healthy);
 CREATE INDEX IF NOT EXISTS idx_vm_last_seen   ON vm_instances(last_seen DESC);
 
+-- Guacamole connection identifier (populated by control center sync loop)
+ALTER TABLE vm_instances ADD COLUMN IF NOT EXISTS guac_connection_id TEXT NOT NULL DEFAULT '';
+
 -- Stale VMs view (heartbeat > 60s ago)
 CREATE OR REPLACE VIEW vm_stale AS
     SELECT id, name, ip, role, status, last_seen,

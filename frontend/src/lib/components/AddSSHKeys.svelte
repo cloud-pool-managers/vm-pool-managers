@@ -8,20 +8,22 @@
   import { create } from '@bufbuild/protobuf';
   import { authStore } from '$lib/store';
 
-  export let open: boolean;
-  export let poolname: string;
+  let {
+    open = $bindable(),
+    poolname,
+  }: { open: boolean; poolname: string } = $props();
 
-  let addModal = false;
-  let loading = false;
-  let error: string | null = null;
-  let rawMode = false;
-  let rawInput = '';
+  let addModal = $state(false);
+  let loading = $state(false);
+  let error: string | null = $state(null);
+  let rawMode = $state(false);
+  let rawInput = $state('');
 
   interface User { name: string; sshKey: string; ip: string; }
   interface NewStudent { login: string; sshKey: string; }
 
-  let users: User[] = [];
-  let newStudents: NewStudent[] = [{ login: '', sshKey: '' }];
+  let users: User[] = $state([]);
+  let newStudents: NewStudent[] = $state([{ login: '', sshKey: '' }]);
 
   function addRow() { newStudents = [...newStudents, { login: '', sshKey: '' }]; }
   function removeRow(i: number) { newStudents = newStudents.filter((_, idx) => idx !== i); }
@@ -84,8 +86,8 @@
     addModal = false;
   }
 
-  $: if (open) handleListStudents();
-  $: if (rawMode) newStudents = [{ login: '', sshKey: '' }];
+  $effect(() => { if (open) handleListStudents(); });
+  $effect(() => { if (rawMode) newStudents = [{ login: '', sshKey: '' }]; });
 </script>
 
 <!-- Main modal -->

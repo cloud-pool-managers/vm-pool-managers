@@ -1,25 +1,76 @@
 <script lang="ts">
   import type { Image, Flavor, Network, Config } from '$lib/type';
 
-  export let open: boolean;
-  export let images: Image[];
-  export let flavors: Flavor[];
-  export let networks: Network[];
-  export let configs: Config[];
-  export let selectedGroupImage: string | null;
-  export let selectedImage: string | null;
-  export let selectedFlavor: string;
-  export let selectedNetwork: string;
-  export let selectedConfigFile: string;
-  export let scheduleDay: string;
-  export let scheduleTime: string;
-  export let scheduleWindowHours: number | undefined;
-  export let offDays: { monday:boolean; tuesday:boolean; wednesday:boolean; thursday:boolean; friday:boolean; saturday:boolean; sunday:boolean; };
-  export let createError: string;
-  export let createSuccess: boolean;
-  export let handleCreateServerpool: (e: Event) => void;
-  export let getUniqueFirstAlphaBlocks: (images: Image[]) => string[];
-  export let filterImagesByPrefix: (images: Image[], prefix: string) => Image[];
+  let {
+    open = $bindable(),
+    images,
+    flavors,
+    networks,
+    configs,
+    selectedGroupImage = $bindable(),
+    selectedImage = $bindable(),
+    selectedFlavor = $bindable(),
+    selectedNetwork = $bindable(),
+    selectedConfigFile = $bindable(),
+    scheduleDay = $bindable(),
+    scheduleTime = $bindable(),
+    scheduleWindowHours = $bindable(),
+    offDays = $bindable(),
+    appPort = $bindable(),
+    createError,
+    createSuccess,
+    handleCreateServerpool,
+    getUniqueFirstAlphaBlocks,
+    filterImagesByPrefix,
+  }: {
+    open: boolean;
+    images: Image[];
+    flavors: Flavor[];
+    networks: Network[];
+    configs: Config[];
+    selectedGroupImage: string | null;
+    selectedImage: string | null;
+    selectedFlavor: string;
+    selectedNetwork: string;
+    selectedConfigFile: string;
+    scheduleDay: string;
+    scheduleTime: string;
+    scheduleWindowHours: number | undefined;
+    offDays: { monday:boolean; tuesday:boolean; wednesday:boolean; thursday:boolean; friday:boolean; saturday:boolean; sunday:boolean; };
+    appPort: number;
+    createError: string;
+    createSuccess: boolean;
+    handleCreateServerpool: (e: Event) => void;
+    getUniqueFirstAlphaBlocks: (images: Image[]) => string[];
+    filterImagesByPrefix: (images: Image[], prefix: string) => Image[];
+  } = $props();
+
+  const jupyterEnvs = [
+    { label: 'Python scientifique (scipy-notebook)',    config: 'jupyter-scipy' },
+    { label: 'Python scientifique+ (scipy-plus)',       config: 'jupyter-scipy-plus' },
+    { label: 'Data Science (Python + R + Julia)',       config: 'jupyter-datascience' },
+    { label: 'Julia',                                   config: 'jupyter-julia' },
+    { label: 'BIO583',                                  config: 'jupyter-bio583' },
+    { label: 'ECO589',                                  config: 'jupyter-eco589' },
+    { label: 'Computational Economics',                 config: 'jupyter-compeco' },
+    { label: 'MEC431',                                  config: 'jupyter-mec431' },
+    { label: 'MEC558',                                  config: 'jupyter-mec558' },
+  ];
+
+  let selectedJupyterEnv = $state('');
+
+  $effect(() => {
+    const img = images.find(i => i.id === selectedImage);
+    if (!img?.name?.includes('docker')) {
+      selectedJupyterEnv = '';
+    }
+  });
+
+  function onJupyterEnvChange(env: string) {
+    selectedJupyterEnv = env;
+    selectedConfigFile = env;
+    appPort = env ? 8888 : 0;
+  }
 
   const offDayLabels: { key: keyof typeof offDays; label: string }[] = [
     { key: 'monday', label: 'Lun' }, { key: 'tuesday', label: 'Mar' },
@@ -127,6 +178,23 @@
                 <input class="field" type="number" name="max_vm" min="1" value="5" required />
               </div>
             </div>
+
+            <div class="space-y-1.5">
+              <label class="section-label" for="app_port">Port application <span class="text-neutral-400 font-normal">(optionnel)</span></label>
+              <div class="flex items-center gap-2">
+                <input
+                  id="app_port"
+                  class="field w-36"
+                  type="number"
+                  min="1" max="65535"
+                  bind:value={appPort}
+                  placeholder="ex: 8888"
+                />
+                <p class="text-xs text-neutral-400 leading-snug">
+                  Si l'image expose une app web (Jupyter = 8888), les étudiants verront un bouton d'accès direct.
+                </p>
+              </div>
+            </div>
           </div>
 
           <!-- 2. Infrastructure — OS + Réseau -->
@@ -150,6 +218,24 @@
                 </select>
               {/if}
             </div>
+
+            {#if images.find(i => i.id === selectedImage)?.name?.includes('docker')}
+              <div class="space-y-1.5 animate-fade-in">
+                <label class="section-label">
+                  <svg class="w-3.5 h-3.5 inline mr-1 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                  </svg>
+                  Environnement Jupyter
+                </label>
+                <select class="field" value={selectedJupyterEnv} onchange={(e) => onJupyterEnvChange((e.target as HTMLSelectElement).value)} required>
+                  <option value="" disabled selected>Choisir un environnement…</option>
+                  {#each jupyterEnvs as env}
+                    <option value={env.config}>{env.label}</option>
+                  {/each}
+                </select>
+                <p class="text-xs text-neutral-400">Port 8888 activé automatiquement</p>
+              </div>
+            {/if}
 
             <div class="space-y-1.5">
               <label class="section-label">Réseau</label>

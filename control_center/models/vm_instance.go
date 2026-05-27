@@ -20,7 +20,8 @@ type VMInstance struct {
 	ActivityStatus string          `json:"activity_status" gorm:"column:activity_status"`
 	RegisteredAt   time.Time       `json:"registered_at" gorm:"column:registered_at"`
 	LastSeen       time.Time       `json:"last_seen" gorm:"column:last_seen"`
-	RawMeta        json.RawMessage `json:"raw_meta" gorm:"column:raw_meta;type:jsonb"`
+	RawMeta          json.RawMessage `json:"raw_meta" gorm:"column:raw_meta;type:jsonb"`
+	GuacConnectionID string          `json:"guac_connection_id" gorm:"column:guac_connection_id;default:''"`
 }
 
 func (VMInstance) TableName() string {

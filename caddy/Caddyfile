@@ -16,9 +16,18 @@
         }
     }
 
-    # ---------- REST API ----------
+    # ---------- REST API + vm-registrar binary ----------
     handle /api/* {
         reverse_proxy host.docker.internal:50055
+    }
+
+    handle /vm-registrar {
+        reverse_proxy host.docker.internal:50055
+    }
+
+    # ---------- Guacamole ----------
+    handle /guacamole/* {
+        reverse_proxy host.docker.internal:18080
     }
 
     # ---------- Frontend ----------

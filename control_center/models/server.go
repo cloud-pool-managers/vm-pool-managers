@@ -5,11 +5,8 @@ import (
 	"control_center/pb"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
-
-	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 )
 
 type Server struct {
@@ -32,37 +29,6 @@ type Server struct {
 	SshKeyAssigned string
 	Configured     bool `gorm:"default:false; not null"`
 	PendingConf    bool `gorm:"default:false; not null"`
-}
-
-func FromGopherServer(s servers.Server) Server {
-	var networks []string
-	for netName, netAddrs := range s.Addresses {
-		for _, addr := range netAddrs.([]any) {
-			if addrMap, ok := addr.(map[string]any); ok {
-				if ip, ok := addrMap["addr"].(string); ok {
-					networks = append(networks, fmt.Sprintf("%s:%s",
-						netName, ip))
-				}
-			}
-		}
-	}
-
-	metadata := make(map[string]string)
-	for k, v := range s.Metadata {
-		metadata[k] = v
-	}
-
-	return Server{
-		ID:           s.ID,
-		Name:         s.Name,
-		Status:       s.Status,
-		FlavorRef:    s.Flavor["id"].(string),
-		ImageRef:     s.Image["id"].(string),
-		Networks:     networks,
-		Metadata:     metadata,
-		ServerpoolID: s.Metadata["serverpool_id"],
-		UserID:       s.Metadata["user_id"],
-	}
 }
 
 func (s *Server) ToMap() map[string]string {
@@ -171,48 +137,3 @@ func (s *Server) ToFrontControlPb() *frontcontrolpb.Server {
 	}
 }
 
-func PrintServer(server Server) error {
-	log.Println("=== Server Data ===")
-	log.Printf("ID: %s", server.ID)
-	log.Printf("Name: %s", server.Name)
-	log.Printf("Status: %s", server.Status)
-	log.Printf("FlavorRef: %s", server.FlavorRef)
-	log.Printf("ImageRef: %s", server.ImageRef)
-	log.Printf("Networks: %+v", server.Networks)
-	log.Printf("Metadata: %+v", server.Metadata)
-	log.Printf("ServerpoolID: %s", server.ServerpoolID)
-	log.Printf("UserID: %s", server.UserID)
-	return nil
-}
-
-func (s *Server) IsEqual(other Server) bool {
-	if s.ID != other.ID ||
-		s.Name != other.Name ||
-		s.Status != other.Status ||
-		s.FlavorRef != other.FlavorRef ||
-		s.ImageRef != other.ImageRef ||
-		s.ServerpoolID != other.ServerpoolID ||
-		s.UserID != other.UserID {
-		return false
-	}
-
-	if len(s.Networks) != len(other.Networks) {
-		return false
-	}
-	for i, v := range s.Networks {
-		if v != other.Networks[i] {
-			return false
-		}
-	}
-
-	if len(s.Metadata) != len(other.Metadata) {
-		return false
-	}
-	for k, v := range s.Metadata {
-		if otherVal, ok := other.Metadata[k]; !ok || v != otherVal {
-			return false
-		}
-	}
-
-	return true
-}

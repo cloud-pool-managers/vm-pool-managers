@@ -8,6 +8,7 @@ import (
 	"control_center/internal/auth"
 	"control_center/internal/configpool"
 	"control_center/internal/gatherdata"
+	"control_center/internal/guacamole"
 	"control_center/internal/monitoring"
 	oidcmw "control_center/internal/oidc"
 	"control_center/internal/pool"
@@ -114,13 +115,19 @@ func Start_grpc(ctx context.Context) {
 
 	client := pb.NewPoolManagerClient(conn)
 
+	gc, err := guacamole.NewClientFromEnv()
+	if err != nil {
+		log.Printf("[guac] init error: %v", err)
+	}
+	guacClient = gc
+
 	frontcontrolpb.RegisterAuthServiceServer(s,
 		auth.New(config.Database, client))
 	frontcontrolpb.RegisterGatherDataServiceServer(s,
 		gatherdata.New(client, config.Database))
 	frontcontrolpb.RegisterConfigServiceServer(s,
 		configpool.New(client, config.Database))
-	poolService := pool.New(config.Database, client)
+	poolService := pool.New(config.Database, client, gc)
 	frontcontrolpb.RegisterPoolServiceServer(s, poolService)
 	frontcontrolpb.RegisterUserServiceServer(s,
 		user.New(config.Database, config.Broker))
@@ -144,6 +151,11 @@ func Start_grpc(ctx context.Context) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/inventory", handleInventory)
 	mux.HandleFunc("/api/vm-activity", handleVMActivity)
+	mux.HandleFunc("/api/guac-url", handleGuacURL)
+	mux.HandleFunc("/api/app-status", handleAppStatus)
+	mux.HandleFunc("/vm-registrar", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "vm-registrar")
+	})
 
 	httpServer := &http.Server{
 		Addr: ":50055",
@@ -165,7 +177,7 @@ func Start_grpc(ctx context.Context) {
 	}()
 
 	log.Println("Serveur gRPC lance sur le port 50051")
-	go monitoring.Start_Monitoring(ctx, client)
+	go monitoring.Start_Monitoring(ctx, client, gc)
 
 	<-ctx.Done()
 	log.Println("Arret du serveur gRPC demande...")

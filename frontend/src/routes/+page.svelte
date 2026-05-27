@@ -6,8 +6,11 @@
   let selectedPool: { pool_id: string; user_id: string } | null = $state(null);
   let vmIp = $state("");
   let vmUser = $state("");
+  let vmAppPort = $state(0);
+  let guacUrl = $state("");
   let loading = $state(false);
   let errorMsg = $state("");
+  let noCoursFound = $state(false);
   let copied = $state(false);
 
   function fallbackCopy(text: string) {
@@ -34,10 +37,10 @@
 
   async function handleSSHKey() {
     if (!sshkey.trim()) return;
-    loading = true; errorMsg = ""; availablePools = []; selectedPool = null; vmIp = "";
+    loading = true; errorMsg = ""; noCoursFound = false; availablePools = []; selectedPool = null; vmIp = "";
     try {
       availablePools = await returnPoolsWithKey(sshkey);
-      if (availablePools.length === 0) errorMsg = "Aucun cours disponible pour cette clé SSH.";
+      if (availablePools.length === 0) noCoursFound = true;
     } catch { errorMsg = "Erreur lors de la récupération des cours disponibles."; }
     finally { loading = false; }
   }
@@ -50,11 +53,16 @@
   }
 
   async function assignVM(pool: { pool_id: string; user_id: string }) {
-    selectedPool = pool; loading = true; errorMsg = ""; vmIp = ""; vmUser = "";
+    selectedPool = pool; loading = true; errorMsg = ""; vmIp = ""; vmUser = ""; vmAppPort = 0; guacUrl = "";
     try {
       const result = await attribVMinPool(pool.pool_id, pool.user_id, sshkey);
       vmIp = result.ip;
       vmUser = result.username || computeUsername(pool.pool_id);
+      vmAppPort = result.appPort ?? 0;
+      fetch(`/api/guac-url?ip=${encodeURIComponent(result.ip)}`)
+        .then(r => r.json())
+        .then(data => { if (data.url) guacUrl = data.url; })
+        .catch(() => {});
     } catch (err: any) {
       errorMsg = err?.message || "Erreur lors de l'attribution de la VM.";
     } finally { loading = false; }
@@ -107,6 +115,19 @@
       {/if}
     </div>
 
+    {#if noCoursFound}
+      <div class="mt-6 card p-6 flex flex-col items-center text-center gap-3 animate-fade-in">
+        <svg class="w-10 h-10 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <p class="text-sm font-semibold text-neutral-700">Aucun cours lié à cette clé SSH</p>
+          <p class="text-xs text-neutral-400 mt-1">Vérifiez que vous avez bien collé votre clé publique, ou contactez votre enseignant.</p>
+        </div>
+      </div>
+    {/if}
+
     {#if availablePools.length > 0}
       <div class="mt-6">
         <p class="section-label mb-3 block">Cours disponibles</p>
@@ -144,8 +165,45 @@
     </div>
 
     <div class="card p-6 space-y-5 animate-fade-in">
+
+      {#if vmAppPort > 0}
+        <a
+          href="http://{vmIp}:{vmAppPort}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-lg font-semibold text-base
+            bg-amber-500 hover:bg-amber-400 text-white transition-all shadow-sm hover:shadow-md"
+        >
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+          </svg>
+          Ouvrir l'application (port {vmAppPort})
+        </a>
+      {/if}
+
+      {#if guacUrl}
+        <a
+          href={guacUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-lg font-semibold text-base
+            bg-primary-700 hover:bg-primary-600 text-white transition-all shadow-sm hover:shadow-md"
+        >
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Ouvrir le terminal web
+        </a>
+      {/if}
+
+      {#if vmAppPort > 0 || guacUrl}
+        <hr class="border-neutral-200"/>
+      {/if}
+
       <div>
-        <p class="section-label mb-2.5 block">Commande de connexion</p>
+        <p class="section-label mb-2.5 block">Connexion SSH</p>
         <div class="flex items-center gap-2 bg-neutral-900 pl-4 pr-2 py-2 rounded-md font-mono">
           <svg class="w-4 h-4 text-primary-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3"/>
@@ -170,15 +228,14 @@
             {/if}
           </button>
         </div>
+        <p class="text-xs text-neutral-400 mt-2">
+          Si la connexion demande un mot de passe :
+          <code class="font-mono text-neutral-500">ssh -i ~/.ssh/id_ed25519 {vmUser}@{vmIp}</code>
+        </p>
       </div>
 
-      <p class="text-xs text-neutral-400">
-        Si la connexion demande un mot de passe, précisez votre clé privée :
-        <code class="font-mono text-neutral-500">ssh -i ~/.ssh/id_ed25519 {vmUser}@{vmIp}</code>
-      </p>
-
       <button
-        onclick={() => { vmIp = ""; vmUser = ""; availablePools = []; sshkey = ""; }}
+        onclick={() => { vmIp = ""; vmUser = ""; vmAppPort = 0; guacUrl = ""; availablePools = []; sshkey = ""; }}
         class="btn btn-secondary text-sm"
       >
         ← Retour

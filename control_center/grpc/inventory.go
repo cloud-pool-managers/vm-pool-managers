@@ -2,8 +2,11 @@ package grpc
 
 import (
 	"control_center/config"
+	"control_center/internal/guacamole"
 	"control_center/models"
 	"encoding/json"
+	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -13,11 +16,20 @@ import (
 // (used when vm-registrar is not running or vm_instances row is missing).
 var vmActivityCache sync.Map // hostname -> activity status string
 
+// guacClient is initialized in Start_grpc and used to build terminal URLs.
+var guacClient *guacamole.Client
+
+// InventoryVM wraps VMInstance with a derived Guacamole terminal URL.
+type InventoryVM struct {
+	models.VMInstance
+	GuacURL string `json:"guac_url,omitempty"`
+}
+
 // InventoryPool groups VMs by serverpool for the admin dashboard.
 type InventoryPool struct {
-	PoolID string              `json:"pool_id"`
-	UserID string              `json:"user_id"`
-	VMs    []models.VMInstance `json:"vms"`
+	PoolID string        `json:"pool_id"`
+	UserID string        `json:"user_id"`
+	VMs    []InventoryVM `json:"vms"`
 }
 
 const registrarStaleAfter = 30 * time.Minute
@@ -36,7 +48,8 @@ func buildInventory() ([]InventoryPool, error) {
 	var registrarRows []models.VMInstance
 	if err := config.Database.Order("name ASC").Find(&registrarRows).Error; err == nil {
 		for _, vm := range registrarRows {
-			if time.Since(vm.LastSeen) > registrarStaleAfter {
+			// Garder les lignes stale si elles ont une connexion Guacamole enregistrée
+			if time.Since(vm.LastSeen) > registrarStaleAfter && vm.GuacConnectionID == "" {
 				continue
 			}
 			registrarByName[vm.Name] = vm
@@ -67,10 +80,10 @@ func buildInventory() ([]InventoryPool, error) {
 			pools[key] = &InventoryPool{
 				PoolID: poolID,
 				UserID: userID,
-				VMs:    []models.VMInstance{},
+				VMs:    []InventoryVM{},
 			}
 		}
-		pools[key].VMs = append(pools[key].VMs, vm)
+		pools[key].VMs = append(pools[key].VMs, toInventoryVM(vm))
 		seen[vm.Name] = true
 	}
 
@@ -94,10 +107,10 @@ func buildInventory() ([]InventoryPool, error) {
 			pools[key] = &InventoryPool{
 				PoolID: poolID,
 				UserID: userID,
-				VMs:    []models.VMInstance{},
+				VMs:    []InventoryVM{},
 			}
 		}
-		pools[key].VMs = append(pools[key].VMs, vm)
+		pools[key].VMs = append(pools[key].VMs, toInventoryVM(vm))
 	}
 
 	result := make([]InventoryPool, 0, len(pools))
@@ -105,6 +118,14 @@ func buildInventory() ([]InventoryPool, error) {
 		result = append(result, *p)
 	}
 	return result, nil
+}
+
+func toInventoryVM(vm models.VMInstance) InventoryVM {
+	ivm := InventoryVM{VMInstance: vm}
+	if guacClient != nil && vm.GuacConnectionID != "" {
+		ivm.GuacURL = guacClient.BuildClientURL(vm.GuacConnectionID)
+	}
+	return ivm
 }
 
 func mergeInventoryVM(srv models.Server, reg models.VMInstance) models.VMInstance {
@@ -142,6 +163,9 @@ func mergeInventoryVM(srv models.Server, reg models.VMInstance) models.VMInstanc
 		if reg.ActivityStatus != "" && reg.ActivityStatus != "idle" {
 			vm.ActivityStatus = reg.ActivityStatus
 		}
+		if reg.GuacConnectionID != "" {
+			vm.GuacConnectionID = reg.GuacConnectionID
+		}
 	}
 
 	if cached, ok := vmActivityCache.Load(srv.Name); ok {
@@ -171,6 +195,63 @@ func serverUserID(srv models.Server) string {
 		return srv.Metadata["user_id"]
 	}
 	return ""
+}
+
+// handleGuacURL returns the Guacamole client URL for a VM given its IP.
+func handleGuacURL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	ip := r.URL.Query().Get("ip")
+	if ip == "" {
+		http.Error(w, "missing ip parameter", http.StatusBadRequest)
+		return
+	}
+	if guacClient == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"url": ""})
+		return
+	}
+	var vm models.VMInstance
+	if err := config.Database.Where("ip = ? AND guac_connection_id <> ''", ip).First(&vm).Error; err != nil {
+		// Try matching by server IP
+		var srv models.Server
+		if err2 := config.Database.Where("ip_address = ?", ip).First(&srv).Error; err2 != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"url": ""})
+			return
+		}
+		if err2 := config.Database.Where("name = ? AND guac_connection_id <> ''", srv.Name).First(&vm).Error; err2 != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"url": ""})
+			return
+		}
+	}
+	url := guacClient.BuildClientURL(vm.GuacConnectionID)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"url": url})
+}
+
+// handleAppStatus checks if a TCP port is open on a VM (used to poll app readiness).
+func handleAppStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	ip := r.URL.Query().Get("ip")
+	port := r.URL.Query().Get("port")
+	if ip == "" || port == "" {
+		http.Error(w, "missing ip or port", http.StatusBadRequest)
+		return
+	}
+	conn, err := net.DialTimeout("tcp", ip+":"+port, 2*time.Second)
+	ready := err == nil
+	if ready {
+		conn.Close()
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"ready": ready})
 }
 
 func RecordVMActivity(hostname, status string) {

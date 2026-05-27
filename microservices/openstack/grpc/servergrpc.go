@@ -76,15 +76,6 @@ func (s *ServerMicroOpenstack) handleServerpool(
 	data := req.GetData()
 	switch req.GetStatus() {
 	case pb.Status_CREATE:
-		var conf models.ConfigPool
-		err := db.Model(models.ConfigPool{}).Where("name = ? AND user_id = ?", data["config_id"], req.GetUser()).First(&conf).Error
-		if err != nil {
-			log.Println("cannot find conf_file")
-			conf = models.ConfigPool{
-				ID:   0,
-				Data: "#!/bin/bash\n",
-			}
-		}
 		pool := models.Serverpool{
 			ServerpoolID: data["serverpool_id"],
 			UserID:       req.GetUser(),
@@ -93,10 +84,24 @@ func (s *ServerMicroOpenstack) handleServerpool(
 			Networks:     models.ParseJSONStringSlice(data["networks"]),
 			MinVM:        parseInt(data["min_vm"]),
 			MaxVM:        parseInt(data["max_vm"]),
-			ConfigID:     int(conf.ID),
+			ConfigID:     data["config_id"],
 			TimeStart:    data["timestart"],
 		}
-		return db.Create(&pool).Error
+		if err := db.Create(&pool).Error; err != nil {
+			return err
+		}
+		if configData := data["config_data"]; configData != "" && data["config_id"] != "" {
+			var cfg models.ConfigPool
+			result := db.Where("user_id = ? AND name = ?", req.GetUser(), data["config_id"]).First(&cfg)
+			if result.Error != nil {
+				cfg = models.ConfigPool{UserID: req.GetUser(), Name: data["config_id"], Data: configData}
+				db.Create(&cfg)
+			} else {
+				db.Model(&cfg).Update("data", configData)
+			}
+			log.Printf("Stored config '%s' in SQLite for pool '%s'", data["config_id"], data["serverpool_id"])
+		}
+		return nil
 	case pb.Status_UPDATE:
 		return db.Model(&models.Serverpool{}).
 			Where("serverpool_id = ? AND user_id = ?", data["serverpool_id"],
@@ -154,8 +159,17 @@ func (s *ServerMicroOpenstack) handleServer(
 			First(&pool).Error; err != nil {
 			return err
 		}
-		worker.AddJob(*worker.CreateJob(models.CreateVM,
-			utils.BuildDataMap(utils.FlatstringSP(pool))), true)
+		jobData := utils.BuildDataMap(utils.FlatstringSP(pool))
+		if pool.ConfigID != "" {
+			var cfg models.ConfigPool
+			if err := db.Where("name = ? AND user_id = ?", pool.ConfigID, pool.UserID).First(&cfg).Error; err == nil {
+				jobData["config_data"] = cfg.Data
+				log.Printf("Injecting config '%s' into CreateVM job for pool '%s'", pool.ConfigID, pool.ServerpoolID)
+			} else {
+				log.Printf("Config '%s' not found in SQLite for pool '%s': %v", pool.ConfigID, pool.ServerpoolID, err)
+			}
+		}
+		worker.AddJob(*worker.CreateJob(models.CreateVM, jobData), true)
 		return nil
 	case pb.Status_UPDATE:
 		opts := &clientconfig.ClientOpts{

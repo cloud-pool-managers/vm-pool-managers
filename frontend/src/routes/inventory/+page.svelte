@@ -7,6 +7,7 @@
     id: string; name: string; ip: string; public_ip: string; az: string;
     status: string; healthy: boolean; activity_status: string;
     registered_at: string; last_seen: string; raw_meta: Record<string, string>;
+    guac_url?: string;
   }
   interface InventoryPool { pool_id: string; user_id: string; vms: VMInstance[]; }
 
@@ -138,6 +139,7 @@
                 <th>Statut</th>
                 <th>Santé</th>
                 <th>Activité SSH</th>
+                <th>Terminal</th>
                 <th class="text-right">Dernière activité</th>
               </tr>
             </thead>
@@ -168,6 +170,20 @@
                       </span>
                     {:else}
                       <span class="text-xs text-neutral-400">Inactif</span>
+                    {/if}
+                  </td>
+                  <td>
+                    {#if vm.guac_url}
+                      <a href={vm.guac_url} target="_blank" rel="noopener"
+                         class="btn btn-secondary text-xs px-2 py-1 flex items-center gap-1.5 w-fit">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Terminal
+                      </a>
+                    {:else}
+                      <span class="text-xs text-neutral-400">—</span>
                     {/if}
                   </td>
                   <td class="text-right">

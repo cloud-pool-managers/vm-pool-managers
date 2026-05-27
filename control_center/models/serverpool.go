@@ -5,7 +5,6 @@ import (
 	"control_center/pb"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -30,6 +29,7 @@ type Serverpool struct {
 	Keypubuser   string
 	Status       string
 	OffDays      string `gorm:"type:text"`
+	AppPort      int    `gorm:"default:0"`
 }
 
 func (sp *Serverpool) FromPb(pbs *pb.StreamRessourceResponse) error {
@@ -124,29 +124,7 @@ func (sp *Serverpool) ToFrontControlPb() *frontcontrolpb.ServerPool {
 		MaxVm:    int32(sp.MaxVM),
 		Metadata: map[string]string{},
 		UserId:   sp.UserID,
+		AppPort:  int32(sp.AppPort),
 	}
 }
 
-func PrintServerpool(sp Serverpool) error {
-	log.Println("=== Serverpool Data ===")
-	log.Println("ID: ", sp.ID)
-	log.Println("ServerpoolID: ", sp.ServerpoolID)
-	log.Println("UserID: ", sp.UserID)
-	log.Println("ImageRef: ", sp.ImageRef)
-	log.Println("FlavorRef: ", sp.FlavorRef)
-	log.Println("Networks: ", sp.Networks)
-	log.Println("MinVM: ", sp.MinVM)
-	log.Println("MaxVm: ", sp.MaxVM)
-	log.Println("PendingJobs: ", sp.PendingJobs)
-	log.Println("ConfigID: ", sp.ConfigID)
-	return nil
-}
-
-func PrintMapServerpool(m []Serverpool) error {
-	log.Println("=== Print Map Serverpool ===")
-	for _, p := range m {
-		PrintServerpool(p)
-		log.Println("=====================================")
-	}
-	return nil
-}

@@ -50,24 +50,18 @@ func (s *Service) ReturnPoolWithKey(
 
 	var results []result
 
-	// Return pools where there are unlocked servers OR this student already has a VM assigned
+	// Return all pools where this student's SSH key is registered
 	err := s.DB.Raw(`
 		SELECT DISTINCT sp.serverpool_id, sp.user_id
 		FROM serverpools sp
 		WHERE
-			EXISTS (
-				SELECT 1 FROM servers s
-				WHERE s.serverpool_id = sp.serverpool_id
-				AND s.user_id = sp.user_id
-				AND s.locked = false
-			)
-			OR EXISTS (
+			sp.serverpool_id != '' AND sp.user_id != ''
+			AND EXISTS (
 				SELECT 1 FROM list_students ls
 				JOIN students st ON st.list_id = ls.id
 				WHERE ls.pool_id = sp.id
 				AND (split_part(st.ssh_key, ' ', 1) || ' ' || split_part(st.ssh_key, ' ', 2) =
 				     split_part(?, ' ', 1) || ' ' || split_part(?, ' ', 2))
-				AND st.ip IS NOT NULL AND st.ip != ''
 			)
 	`, pubKey, pubKey).Scan(&results).Error
 
@@ -99,6 +93,15 @@ func (s *Service) AttribVMinPool(
 		}, status.Error(codes.InvalidArgument, "missing required fields")
 	}
 
+	// Always load the pool to get app_port and other metadata.
+	var pool models.Serverpool
+	if err := s.DB.Where("serverpool_id = ? AND user_id = ?", req.GetServerpoolId(), req.GetUserId()).First(&pool).Error; err != nil {
+		return &frontcontrolpb.AttribVMinPoolResponse{
+			Success:     false,
+			AddressedIp: "",
+		}, status.Errorf(codes.NotFound, "pool not found")
+	}
+
 	var student models.Student
 	err := s.DB.
 		Joins("JOIN list_students ON list_students.id = students.list_id").
@@ -108,15 +111,6 @@ func (s *Service) AttribVMinPool(
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Auto-register student if not found
-			var pool models.Serverpool
-			if err := s.DB.Where("serverpool_id = ? AND user_id = ?", req.GetServerpoolId(), req.GetUserId()).First(&pool).Error; err != nil {
-				return &frontcontrolpb.AttribVMinPoolResponse{
-					Success: false,
-					AddressedIp: "",
-				}, status.Errorf(codes.NotFound, "pool not found")
-			}
-			
 			var list models.ListStudents
 			if err := s.DB.Where("pool_id = ?", pool.ID).FirstOrCreate(&list, models.ListStudents{PoolId: pool.ID}).Error; err != nil {
 				return &frontcontrolpb.AttribVMinPoolResponse{Success: false}, err
@@ -143,6 +137,7 @@ func (s *Service) AttribVMinPool(
 			Success:     true,
 			AddressedIp: student.IP,
 			Username:    sshinject.UsernameFromEmail(student.Name),
+			AppPort:     int32(pool.AppPort),
 		}, nil
 	}
 
@@ -206,6 +201,7 @@ func (s *Service) AttribVMinPool(
 		Success:     true,
 		AddressedIp: server.IP_Address,
 		Username:    sshinject.UsernameFromEmail(student.Name),
+		AppPort:     int32(pool.AppPort),
 	}, nil
 }
 

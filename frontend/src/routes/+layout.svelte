@@ -8,6 +8,7 @@
   import { authStore, startOIDCLogin } from '$lib/store/authStore';
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
+  import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { page } from '$app/state';
 
@@ -15,6 +16,9 @@
   let userStreamController: AbortController | null = null;
 
   let previousEmail: string | null = null;
+
+  const LOGIN_ROUTE = '/login';
+  const PUBLIC_ROUTES = ['/login', '/auth/callback'];
 
   authStore.subscribe(async (auth) => {
     if (!browser) return;
@@ -29,13 +33,22 @@
     } else {
       previousEmail = null;
       resetAll();
+      const path = page.url?.pathname ?? '';
+      if (!PUBLIC_ROUTES.some(r => path.startsWith(r))) {
+        goto(LOGIN_ROUTE);
+      }
     }
   });
 
   onMount(async () => {
     if (!browser) return;
     const token = get(authStore);
-    if (!token) resetAll();
+    if (!token) {
+      const path = page.url?.pathname ?? '';
+      if (!PUBLIC_ROUTES.some(r => path.startsWith(r))) {
+        goto(LOGIN_ROUTE);
+      }
+    }
   });
 
   let mobileOpen = $state(false);
@@ -68,6 +81,7 @@
 
 <div class="min-h-screen flex flex-col" style="background: #f8f9fa; font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif; color: #212529;">
 
+{#if page.url?.pathname !== LOGIN_ROUTE}
   <!-- Barre bleue Polytechnique -->
   <div class="nav-stripe"></div>
 
@@ -160,5 +174,11 @@
       <span class="text-xs text-neutral-400 tracking-wide">École Polytechnique · Institut Polytechnique de Paris</span>
     </div>
   </footer>
+
+{:else}
+  <!-- Login page — plein écran sans nav -->
+  {@render children?.()}
+{/if}
+
 </div>
 

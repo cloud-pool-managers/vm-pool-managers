@@ -92,6 +92,22 @@ tasks:
     cmds:
       - docker compose -f docker-compose.auth.yaml down
 
+  guac:
+    desc: "Lance Guacamole (guacd + guacamole-client + MySQL)"
+    cmds:
+      - docker compose -f docker-compose.guacamole.yaml --env-file .env up -d
+      - echo "Guacamole sur http://localhost:8080/guacamole (guacadmin/guacadmin)"
+
+  guac:stop:
+    desc: "Arrête Guacamole"
+    cmds:
+      - docker compose -f docker-compose.guacamole.yaml --env-file .env down
+
+  guac:tunnel:
+    desc: "Tunnel SSH vers Guacamole sur infra-postgres (0.0.0.0:18080 -> 157.136.249.205:8080)"
+    cmds:
+      - ssh -N -L 0.0.0.0:18080:127.0.0.1:8080 ubuntu@157.136.249.205
+
   control:
     desc: "Lance le control center"
     dir: control_center
