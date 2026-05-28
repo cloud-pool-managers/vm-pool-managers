@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -38,7 +37,7 @@ func handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	redirectURL := fmt.Sprintf(
-		"https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:public_key&state=%s",
+		"https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:user&state=%s",
 		githubClientID(),
 		url.QueryEscape(githubRedirectURL()),
 		state,
@@ -76,7 +75,8 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	keys, err := fetchGitHubSSHKeys(token)
+	// SSH keys are public — fetch without token using the public API
+	keys, err := fetchGitHubKeysPublic(login)
 	if err != nil {
 		log.Println("GitHub SSH keys fetch failed:", err)
 		keys = []string{}
@@ -213,17 +213,22 @@ func fetchGitHubSSHKeys(token string) ([]string, error) {
 }
 
 func fetchGitHubKeysPublic(login string) ([]string, error) {
-	resp, err := http.Get("https://github.com/" + login + ".keys")
+	req, _ := http.NewRequest("GET", "https://api.github.com/users/"+login+"/keys", nil)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	var keys []string
-	for _, line := range strings.Split(strings.TrimSpace(string(body)), "\n") {
-		if line != "" {
-			keys = append(keys, line)
+	var keys []struct {
+		Key string `json:"key"`
+	}
+	json.NewDecoder(resp.Body).Decode(&keys)
+	var result []string
+	for _, k := range keys {
+		if k.Key != "" {
+			result = append(result, k.Key)
 		}
 	}
-	return keys, nil
+	return result, nil
 }
