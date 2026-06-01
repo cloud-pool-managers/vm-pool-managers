@@ -21,8 +21,8 @@ if ! command -v nbgrader &>/dev/null; then
     pip install --quiet nbgrader 2>/dev/null || sudo pip3 install --quiet nbgrader
 fi
 
-# Create student assignment directories
-mkdir -p /home/vmuser/nbgrader/{assignments,submitted}
+# Create student assignment directories and mount NFS exchange
+mkdir -p /home/vmuser/nbgrader/{assignments,submitted,exchange}
 
 # Configure nbgrader in student mode
 mkdir -p /home/vmuser/.jupyter
@@ -30,6 +30,7 @@ cat > /home/vmuser/nbgrader/nbgrader_config.py << 'NBCFG'
 c = get_config()
 c.CourseDirectory.root = '/home/vmuser/nbgrader'
 c.CourseDirectory.course_id = 'course'
+c.Exchange.root = '/home/vmuser/nbgrader/exchange'
 NBCFG
 
 # Enable only the assignment list extension (student side)
@@ -37,10 +38,15 @@ jupyter nbextension install --user --py nbgrader --quiet 2>/dev/null || true
 jupyter nbextension enable --user --py nbgrader --quiet 2>/dev/null || true
 jupyter serverextension enable --user --py nbgrader --quiet 2>/dev/null || true
 
-# Create a systemd mount for submitted assignments (SFTP to instructor VM)
-# This mounts instructor:/nbgrader/submitted/$STUDENT_NAME/ → ~/nbgrader/submitted/
-# Requires rclone to be configured (done by the main rclone setup)
-mkdir -p /home/vmuser/nbgrader/submitted/$STUDENT_NAME
+# Install NFS client and mount the exchange directory
+sudo apt-get update -qq
+sudo apt-get install -y nfs-common
+
+# Retrieve the NFS Server IP. If not passed as an env var, we fallback to a placeholder.
+# In a real environment, this should be dynamically injected or loaded.
+NFS_SERVER_IP="${NFS_SERVER_IP:-157.136.249.205}"
+sudo mount -t nfs \${NFS_SERVER_IP}:/srv/nbgrader/exchange /home/vmuser/nbgrader/exchange
+echo "\${NFS_SERVER_IP}:/srv/nbgrader/exchange /home/vmuser/nbgrader/exchange nfs defaults 0 0" | sudo tee -a /etc/fstab
 
 echo "✅ Student nbgrader configured for $STUDENT_NAME"
 ENDSSH

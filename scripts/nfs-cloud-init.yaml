@@ -1,0 +1,12 @@
+#cloud-config
+package_update: true
+packages:
+  - nfs-kernel-server
+  - acl
+runcmd:
+  - mkdir -p /srv/nbgrader/exchange
+  - chmod -R 777 /srv/nbgrader/exchange
+  - chown nobody:nogroup /srv/nbgrader/exchange
+  - echo "/srv/nbgrader/exchange *(rw,sync,no_subtree_check,no_root_squash)" >> /etc/exports
+  - exportfs -a
+  - systemctl restart nfs-kernel-server

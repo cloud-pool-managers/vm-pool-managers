@@ -48,7 +48,34 @@ c.CourseDirectory.course_id = 'course'
 c.CourseDirectory.submitted_directory = 'submitted'
 c.CourseDirectory.autograded_directory = 'autograded'
 c.CourseDirectory.feedback_directory = 'feedback'
+c.Exchange.root = '/home/vmuser/nbgrader/exchange'
 NBCFG
+
+# Install NFS client
+sudo apt-get install -y nfs-common jq curl
+
+# Create a wrapper script to fetch metadata and start Jupyter
+sudo tee /usr/local/bin/start-jupyterlab.sh > /dev/null << 'WRAPPER'
+#!/bin/bash
+set -a
+# Mount NFS if NFS_SERVER_IP is provided in metadata or hardcoded
+# In a real environment, you might fetch this from metadata as well.
+NFS_SERVER_IP="157.136.249.205" # Default placeholder, will be updated by deploy script or user
+mkdir -p /home/vmuser/nbgrader/exchange
+sudo mount -t nfs ${NFS_SERVER_IP}:/srv/nbgrader/exchange /home/vmuser/nbgrader/exchange || true
+
+# Get metadata for pool_id and user_id to correctly set the Jupyter base_url
+POOL_ID=$(curl -s http://169.254.169.254/openstack/latest/meta_data.json | jq -r .meta.serverpool_id || echo "pool")
+USER_ID=$(curl -s http://169.254.169.254/openstack/latest/meta_data.json | jq -r .meta.user_id || echo "user")
+JUPYTER_BASE_URL="/api/jupyter-proxy/${POOL_ID}/${USER_ID}/"
+
+exec /home/vmuser/jupyter-env/bin/jupyter lab \
+  --no-browser --ip=0.0.0.0 --port=8888 \
+  --ServerApp.token='' --ServerApp.password='' \
+  --ServerApp.allow_origin=* --ServerApp.allow_remote_access=True \
+  --ServerApp.base_url=${JUPYTER_BASE_URL}
+WRAPPER
+sudo chmod +x /usr/local/bin/start-jupyterlab.sh
 
 # Create a systemd service to auto-start JupyterLab on boot
 sudo tee /etc/systemd/system/jupyterlab.service > /dev/null << 'SVC'
@@ -60,7 +87,7 @@ After=network.target
 Type=simple
 User=vmuser
 WorkingDirectory=/home/vmuser/nbgrader
-ExecStart=/home/vmuser/jupyter-env/bin/jupyter lab --no-browser --ip=0.0.0.0 --port=8888 --NotebookApp.token='' --NotebookApp.password=''
+ExecStart=/usr/local/bin/start-jupyterlab.sh
 Restart=always
 RestartSec=5
 

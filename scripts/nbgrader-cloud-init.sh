@@ -6,7 +6,13 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update -q
-apt-get install -y python3-pip python3-venv git sqlite3
+# Install NFS client and dependencies
+apt-get install -y python3-pip python3-venv git sqlite3 nfs-common jq curl
+
+# Get metadata for pool_id and user_id to correctly set the Jupyter base_url
+POOL_ID=$(curl -s http://169.254.169.254/openstack/latest/meta_data.json | jq -r .meta.serverpool_id)
+USER_ID=$(curl -s http://169.254.169.254/openstack/latest/meta_data.json | jq -r .meta.user_id)
+JUPYTER_BASE_URL="/api/jupyter-proxy/${POOL_ID}/${USER_ID}/"
 
 # Install in a virtualenv to avoid system package conflicts
 python3 -m venv /home/vmuser/jupyter-env
@@ -19,7 +25,14 @@ python3 -m venv /home/vmuser/jupyter-env
 /home/vmuser/jupyter-env/bin/jupyter serverextension enable --sys-prefix --py nbgrader --quiet || true
 
 # Create nbgrader directory structure
-mkdir -p /home/vmuser/nbgrader/{source,release,submitted,autograded,feedback}
+mkdir -p /home/vmuser/nbgrader/{source,release,submitted,autograded,feedback,exchange}
+
+# Mount the NFS exchange directory
+# Note: Ensure NFS_SERVER_IP is replaced with your actual NFS server IP if not injected dynamically
+NFS_SERVER_IP="157.136.249.205" # Default placeholder, will be updated by deploy script or user
+mount -t nfs ${NFS_SERVER_IP}:/srv/nbgrader/exchange /home/vmuser/nbgrader/exchange
+echo "${NFS_SERVER_IP}:/srv/nbgrader/exchange /home/vmuser/nbgrader/exchange nfs defaults 0 0" >> /etc/fstab
+
 chown -R vmuser:vmuser /home/vmuser/nbgrader /home/vmuser/jupyter-env
 
 # nbgrader config
@@ -27,10 +40,11 @@ cat > /home/vmuser/nbgrader/nbgrader_config.py << 'NBCFG'
 c = get_config()
 c.CourseDirectory.root = '/home/vmuser/nbgrader'
 c.CourseDirectory.course_id = 'course'
+c.Exchange.root = '/home/vmuser/nbgrader/exchange'
 NBCFG
 
 # JupyterLab systemd service
-cat > /etc/systemd/system/jupyterlab.service << 'SVC'
+cat > /etc/systemd/system/jupyterlab.service << SVC
 [Unit]
 Description=JupyterLab Instructor
 After=network.target
@@ -44,7 +58,8 @@ ExecStart=/home/vmuser/jupyter-env/bin/jupyter lab \
   --ServerApp.token='' \
   --ServerApp.password='' \
   --ServerApp.allow_origin=* \
-  --ServerApp.allow_remote_access=True
+  --ServerApp.allow_remote_access=True \
+  --ServerApp.base_url=${JUPYTER_BASE_URL}
 Restart=always
 RestartSec=5
 

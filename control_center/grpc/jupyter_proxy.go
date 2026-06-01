@@ -31,10 +31,7 @@ func handleJupyterProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	poolID := decodePathSegment(parts[0])
 	userID := decodePathSegment(parts[1])
-	rest := "/lab"
-	if len(parts) == 3 && parts[2] != "" {
-		rest = "/" + parts[2]
-	}
+
 
 	var server models.Server
 	if err := config.Database.
@@ -68,11 +65,10 @@ func handleJupyterProxy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "JupyterLab unreachable: "+err.Error(), http.StatusBadGateway)
 	}
 
-	// Rewrite path: strip the /api/jupyter-proxy/{pool}/{user} prefix
+	// Rewrite path: do not strip the prefix so it matches JupyterLab's base_url
 	r2 := r.Clone(r.Context())
 	r2.URL.Scheme = targetBase.Scheme
 	r2.URL.Host = targetBase.Host
-	r2.URL.Path = rest
 	r2.Host = targetBase.Host
 
 	// JupyterLab checks Origin — set it to match the target so it accepts the request
