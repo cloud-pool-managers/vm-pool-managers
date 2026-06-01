@@ -25,22 +25,22 @@ import CreateServerPoolModal from '$lib/components/CreateServerPoolModal.svelte'
 import AddSSHKeys from '$lib/components/AddSSHKeys.svelte';
 
 const token = $derived($authStore?.token ?? null);
-let selectedsp: string = '';
-let createspModal = false;
-let ListStudentModalOpen = false;
-let createError = '';
-let createSuccess = false;
+let selectedsp: string = $state('');
+let createspModal = $state(false);
+let ListStudentModalOpen = $state(false);
+let createError = $state('');
+let createSuccess = $state(false);
 
-let selectedNetwork = '';
-let selectedFlavor = '';
-let selectedConfigFile = '';
-let scheduleDay = '';
-let scheduleTime = '';
-let scheduleWindowHours: number | undefined = undefined;
-let offDays = { monday:false, tuesday:false, wednesday:false, thursday:false, friday:false, saturday:true, sunday:true };
-let selectedGroupImage: string | null = null;
-let selectedImage: string | null = null;
-let appPort = 0;
+let selectedNetwork = $state('');
+let selectedFlavor = $state('');
+let selectedConfigFile = $state('');
+let scheduleDay = $state('');
+let scheduleTime = $state('');
+let scheduleWindowHours: number | undefined = $state(undefined);
+let offDays = $state({ monday:false, tuesday:false, wednesday:false, thursday:false, friday:false, saturday:true, sunday:true });
+let selectedGroupImage: string | null = $state(null);
+let selectedImage: string | null = $state(null);
+let appPort = $state(0);
 
 onMount(() => {
   if (!token) window.location.href = '/';

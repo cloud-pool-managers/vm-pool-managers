@@ -6,10 +6,10 @@
   import { goto } from '$app/navigation';
   import type { Config } from '$lib/type';
 
-  let config_name = '';
-  let editorVisible = false;
-  let text = '';
-  let newconfigname = '';
+  let config_name = $state('');
+  let editorVisible = $state(false);
+  let text = $state('');
+  let newconfigname = $state('');
   const token = $derived($authStore?.token ?? null);
 
   onMount(() => {
