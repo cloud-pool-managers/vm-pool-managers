@@ -36,11 +36,14 @@ export async function returnPoolsWithKey(
     for await (const pool of stream) {
       pools.push({ pool_id: pool.poolId, user_id: pool.userId });
     }
-    return pools;
-  } catch (err) {
-    console.error("Erreur récupération pools: ", err);
-    throw err;
+  } catch (err: any) {
+    // If we already collected results, ignore the stream-close error
+    if (pools.length === 0) {
+      console.error("Erreur récupération pools: ", err);
+      throw err;
+    }
   }
+  return pools;
 }
 
 /**

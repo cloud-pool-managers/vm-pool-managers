@@ -5,6 +5,7 @@ import (
 	"control_center/internal/guacamole"
 	"control_center/models"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -64,6 +65,13 @@ func buildInventory() ([]InventoryPool, error) {
 	pools := make(map[string]*InventoryPool)
 	seen := make(map[string]bool)
 
+	// Collect all merged VMs first, then probe app ports in parallel.
+	type pendingProbe struct {
+		vm  models.VMInstance
+		key string
+	}
+	var pending []pendingProbe
+
 	for _, srv := range servers {
 		poolID := serverPoolID(srv)
 		userID := serverUserID(srv)
@@ -83,8 +91,23 @@ func buildInventory() ([]InventoryPool, error) {
 				VMs:    []InventoryVM{},
 			}
 		}
-		pools[key].VMs = append(pools[key].VMs, toInventoryVM(vm))
+		pending = append(pending, pendingProbe{vm: vm, key: key})
 		seen[vm.Name] = true
+	}
+
+	// Probe app ports in parallel (bounded to 500ms timeout).
+	var wg sync.WaitGroup
+	for i := range pending {
+		wg.Add(1)
+		go func(p *pendingProbe) {
+			defer wg.Done()
+			probeAppPort(&p.vm)
+		}(&pending[i])
+	}
+	wg.Wait()
+
+	for _, p := range pending {
+		pools[p.key].VMs = append(pools[p.key].VMs, toInventoryVM(p.vm))
 	}
 
 	// Registrar-only rows (VM created before servers sync).
@@ -166,6 +189,9 @@ func mergeInventoryVM(srv models.Server, reg models.VMInstance) models.VMInstanc
 		if reg.GuacConnectionID != "" {
 			vm.GuacConnectionID = reg.GuacConnectionID
 		}
+		if reg.AppPort > 0 {
+			vm.AppPort = reg.AppPort
+		}
 	}
 
 	if cached, ok := vmActivityCache.Load(srv.Name); ok {
@@ -175,6 +201,20 @@ func mergeInventoryVM(srv models.Server, reg models.VMInstance) models.VMInstanc
 	}
 
 	return vm
+}
+
+// probeAppPort checks if the app port is reachable and marks the VM as active.
+// Must be called outside of the main inventory loop (use in a goroutine or after merging).
+func probeAppPort(vm *models.VMInstance) {
+	if vm.ActivityStatus != "idle" || vm.AppPort <= 0 || vm.IP == "" {
+		return
+	}
+	addr := fmt.Sprintf("%s:%d", vm.IP, vm.AppPort)
+	conn, err := net.DialTimeout("tcp", addr, 400*time.Millisecond)
+	if err == nil {
+		conn.Close()
+		vm.ActivityStatus = "active"
+	}
 }
 
 func serverPoolID(srv models.Server) string {

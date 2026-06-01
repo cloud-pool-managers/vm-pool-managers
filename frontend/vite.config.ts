@@ -19,7 +19,6 @@ export default defineConfig({
 			'/dex': {
 				target: 'http://localhost:5556',
 				changeOrigin: true,
-				followRedirects: true,
 			},
 			'/guacamole': {
 				target: 'http://localhost:18080',

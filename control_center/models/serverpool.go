@@ -30,6 +30,8 @@ type Serverpool struct {
 	Status       string
 	OffDays      string `gorm:"type:text"`
 	AppPort      int    `gorm:"default:0"`
+	Role         string `gorm:"default:'student'"` // "student" or "instructor"
+	LinkedPoolID string `gorm:"default:''"`        // pool étudiant associé (si role=instructor)
 }
 
 func (sp *Serverpool) FromPb(pbs *pb.StreamRessourceResponse) error {

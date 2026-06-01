@@ -9,8 +9,10 @@ FROM caddy:latest
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 
-# Ajoute ton Caddyfile
+# Ajoute ton Caddyfile et le certificat TLS statique
 COPY Caddyfile /etc/caddy/Caddyfile
+COPY cert.pem /etc/caddy/cert.pem
+COPY key.pem /etc/caddy/key.pem
 
 EXPOSE 80
 EXPOSE 443

@@ -61,13 +61,37 @@ tasks:
         export DOTENV_PATH={{.DOTENV_PATH}}
         ./bin/app
 
+  colima:start:
+    desc: "Démarre Colima si pas déjà en cours"
+    cmds:
+      - colima status 2>/dev/null || colima start --cpu 2 --memory 4 --disk 20
+
+  up:
+    desc: "Redémarre tout : Caddy natif + Colima + Dex/GLAuth"
+    cmds:
+      - task caddy
+      - colima stop 2>/dev/null || true
+      - colima start --cpu 4 --memory 6 --disk 20
+      - docker start dex glauth 2>/dev/null || task auth
+      - echo "✅ Tous les services sont up"
+
   caddy:
-    desc: "Build et lance Caddy (port 443)"
+    desc: "Lance Caddy natif (port 443, sans Docker)"
+    cmds:
+      - pkill -f "caddy-grpc run" 2>/dev/null || true
+      - sleep 1
+      - sudo nohup {{.HOME}}/caddy-grpc run --config {{.ROOT_DIR}}/caddy/Caddyfile.native --adapter caddyfile > /tmp/caddy-native.log 2>&1 &
+      - sleep 2
+      - lsof -i :443 | grep LISTEN && echo "✅ Caddy natif démarré"
+
+  caddy:docker:
+    desc: "Build et lance Caddy via Docker (fallback)"
+    deps: [colima:start]
     dir: caddy
     cmds:
       - docker build -t my-caddy .
       - docker rm -f caddy 2>/dev/null || true
-      - docker run -d -p 443:443 --add-host=host.docker.internal:host-gateway --name caddy my-caddy
+      - docker run -d -p 443:443 --add-host=host.docker.internal:host-gateway --name caddy -v caddy_data:/data my-caddy
 
   frontend:
     desc: "Lance le frontend en dev"
@@ -83,6 +107,7 @@ tasks:
 
   auth:
     desc: "Lance GLAuth + Dex (Docker Compose)"
+    deps: [colima:start]
     cmds:
       - docker compose -f docker-compose.auth.yaml up -d
       - echo "GLAuth LDAP sur :3893 | Dex OIDC sur http://localhost:5556/dex"
@@ -94,6 +119,7 @@ tasks:
 
   guac:
     desc: "Lance Guacamole (guacd + guacamole-client + MySQL)"
+    deps: [colima:start]
     cmds:
       - docker compose -f docker-compose.guacamole.yaml --env-file .env up -d
       - echo "Guacamole sur http://localhost:8080/guacamole (guacadmin/guacadmin)"

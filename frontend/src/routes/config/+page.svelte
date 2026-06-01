@@ -1,7 +1,9 @@
 <script lang="ts">
   import { createConfig, updateConfig, deleteConfig } from '$lib/index';
   import { authStore, configs } from '$lib/store';
+  import { simpleMode } from '$lib/store/uiStore';
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import type { Config } from '$lib/type';
 
   let config_name = '';
@@ -10,7 +12,10 @@
   let newconfigname = '';
   const token = $derived($authStore?.token ?? null);
 
-  onMount(() => { if (!token) window.location.href = '/'; });
+  onMount(() => {
+    if (!token) window.location.href = '/';
+    if ($simpleMode) goto('/serverpool');
+  });
 
   function selectConfig(cfg: Config) {
     config_name = cfg.name;

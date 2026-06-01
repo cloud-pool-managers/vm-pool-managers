@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	grpcweb "github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
@@ -158,6 +159,14 @@ func Start_grpc(ctx context.Context) {
 	mux.HandleFunc("/api/github/public-keys", handleGitHubPublicKeys)
 	mux.HandleFunc("/api/github/login", handleGitHubLogin)
 	mux.HandleFunc("/auth/github/callback", handleGitHubCallback)
+	mux.HandleFunc("/api/nbgrader/assignments", handleNbgraderAssignments)
+	mux.HandleFunc("/api/nbgrader/collect", handleNbgraderCollect)
+	mux.HandleFunc("/api/nbgrader/autograde", handleNbgraderAutograde)
+	mux.HandleFunc("/api/nbgrader/grades", handleNbgraderGrades)
+	mux.HandleFunc("/api/nbgrader/release", handleNbgraderRelease)
+	mux.HandleFunc("/api/nbgrader/export-csv", handleNbgraderExportCSV)
+	mux.HandleFunc("/api/nbgrader/jupyter-url", handleNbgraderJupyterURL)
+	mux.HandleFunc("/api/jupyter-proxy/", handleJupyterProxy)
 	mux.HandleFunc("/vm-registrar", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "vm-registrar")
 	})
@@ -173,6 +182,7 @@ func Start_grpc(ctx context.Context) {
 			}
 			wrappedGrpc.ServeHTTP(w, r)
 		}),
+		ReadHeaderTimeout: 30 * time.Second,
 	}
 	go func() {
 		log.Println("Serveur gRPC-Web + REST API sur le port 50055")

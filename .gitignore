@@ -47,6 +47,10 @@ Thumbs.db
 # Caddy binary (build it from Dockerfile)
 caddy/caddy
 
+# Caddy TLS cert/key (auto-generated, contains private key)
+caddy/cert.pem
+caddy/key.pem
+
 # Auth configs (contain credentials)
 /auth/
 

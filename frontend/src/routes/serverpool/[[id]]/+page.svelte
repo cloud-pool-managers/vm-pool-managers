@@ -5,8 +5,18 @@ import {
 } from '$lib/index';
 import type { ServerPool, Server, CreatePoolRequest, DeletePoolRequest, RebuildServerRequest, Image } from '$lib/type';
 import { authStore, serverPools, servers, configs, images, flavors, networks } from '$lib/store';
+import { simpleMode } from '$lib/store/uiStore';
 import { onMount } from 'svelte';
 import { page } from '$app/state';
+
+// Inventory data for simple mode (more reliable than gRPC servers store)
+let inventoryPools: { pool_id: string; user_id: string; vms: { status: string; activity_status: string }[] }[] = $state([]);
+async function loadInventory() {
+  try {
+    const res = await fetch('/api/inventory');
+    if (res.ok) inventoryPools = await res.json();
+  } catch { /* ignore */ }
+}
 import { create } from '@bufbuild/protobuf';
 import { ListSSHPublicKeysRequestSchema, type DeletePoolResponse, type RebuildServerResponse } from '$lib/grpc/frontcontrol_pb';
 import { create as createProto } from '@bufbuild/protobuf';
@@ -14,7 +24,7 @@ import { TimestampSchema } from '@bufbuild/protobuf/wkt';
 import CreateServerPoolModal from '$lib/components/CreateServerPoolModal.svelte';
 import AddSSHKeys from '$lib/components/AddSSHKeys.svelte';
 
-let token: string | null = null;
+const token = $derived($authStore?.token ?? null);
 let selectedsp: string = '';
 let createspModal = false;
 let ListStudentModalOpen = false;
@@ -35,11 +45,11 @@ let appPort = 0;
 onMount(() => {
   if (!token) window.location.href = '/';
   selectedsp = page.params.id || '';
+  if ($simpleMode) loadInventory();
 });
 
-$: token = $authStore?.token ?? null;
-$: selectedPool = $serverPools.find(p => p.name === selectedsp);
-$: sortedFlavors = [...$flavors].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'}));
+let selectedPool = $derived($serverPools.find(p => p.name === selectedsp));
+let sortedFlavors = $derived([...$flavors].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'})));
 
 async function handleDeleteServerpool(sp: ServerPool) {
   if (!confirm(`Supprimer le serverpool ${sp.name} ?`)) return;
@@ -125,6 +135,100 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
 }
 </script>
 
+{#if $simpleMode}
+<div class="space-y-6 animate-fade-up">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">Mes cours</h1>
+      <p class="text-sm text-neutral-500 mt-1">Gérez les machines virtuelles de vos étudiants</p>
+    </div>
+    <button onclick={() => createspModal = true} class="btn btn-primary">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Créer un cours
+    </button>
+  </div>
+
+  {#if $serverPools.length === 0}
+    <div class="card flex flex-col items-center justify-center py-20 text-center">
+      <svg class="w-12 h-12 text-neutral-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+      </svg>
+      <p class="text-neutral-600 font-medium">Aucun cours créé</p>
+      <p class="text-neutral-400 text-sm mt-1">Cliquez sur "Créer un cours" pour démarrer</p>
+    </div>
+  {:else}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {#each $serverPools as sp}
+        {@const invPool = inventoryPools.find(p => p.pool_id === sp.name && p.user_id === sp.userId)}
+        {@const spVMs = invPool?.vms ?? []}
+        {@const activeCount = spVMs.filter(v => v.activity_status !== 'idle').length}
+        {@const readyCount = spVMs.filter(v => v.status === 'ready').length}
+        <div class="card p-5 space-y-4 hover:border-primary-200 transition-colors">
+          <div class="flex items-start justify-between">
+            <div>
+              <h2 class="text-base font-bold text-neutral-900">{sp.name}</h2>
+              <p class="text-xs text-neutral-400 mt-0.5">
+                {#if activeCount > 0}
+                  <span class="text-green-600 font-semibold">{activeCount} étudiant{activeCount > 1 ? 's' : ''} connecté{activeCount > 1 ? 's' : ''}</span>
+                  {#if readyCount > activeCount} · {readyCount - activeCount} en attente{/if}
+                {:else if readyCount > 0}
+                  {readyCount} machine{readyCount > 1 ? 's' : ''} prête{readyCount > 1 ? 's' : ''}
+                {:else}
+                  Aucune machine démarrée
+                {/if}
+              </p>
+            </div>
+            <span class="badge {activeCount > 0 ? 'badge-ready' : readyCount > 0 ? 'badge-starting' : 'badge-info'}">
+              {activeCount > 0 ? 'En cours' : readyCount > 0 ? 'Prêt' : 'Arrêté'}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            {#each {length: Math.min(sp.maxVm, 12)} as _, i}
+              <div class="h-2 flex-1 rounded-full {i < activeCount ? 'bg-green-400' : i < readyCount ? 'bg-primary-200' : 'bg-neutral-200'}"></div>
+            {/each}
+          </div>
+          <p class="text-xs text-neutral-400 -mt-2">{activeCount} / {sp.maxVm} places utilisées</p>
+
+          <div class="flex gap-2 pt-1">
+            <button
+              onclick={() => { selectedsp = sp.name; ListStudentModalOpen = true; }}
+              class="btn btn-primary text-xs flex-1"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              Étudiants
+            </button>
+            <button
+              onclick={() => handleCreateServer(sp)}
+              class="btn btn-success text-xs"
+              title="Démarrer une machine"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Démarrer
+            </button>
+            <button
+              onclick={() => handleDeleteServerpool(sp)}
+              class="btn btn-danger text-xs px-2.5"
+              title="Supprimer ce cours"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+</div>
+{:else}
 <div class="space-y-6 animate-fade-up">
 
   <!-- Header -->
@@ -241,6 +345,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
     </div>
   </div>
 </div>
+{/if}
 
 {#if createspModal}
   <CreateServerPoolModal

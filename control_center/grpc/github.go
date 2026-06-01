@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+var githubHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
 func randomState() string {
 	b := make([]byte, 16)
 	rand.Read(b)
@@ -25,21 +27,23 @@ func githubClientID() string     { return os.Getenv("GITHUB_CLIENT_ID") }
 func githubClientSecret() string { return os.Getenv("GITHUB_CLIENT_SECRET") }
 func githubRedirectURL() string  { return os.Getenv("GITHUB_REDIRECT_URL") }
 
+func githubConfigured() bool {
+	return githubClientID() != "" && githubClientSecret() != "" && githubRedirectURL() != ""
+}
+
 // handleGitHubLogin redirects the user to GitHub OAuth authorization.
 func handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
+	if !githubConfigured() {
+		http.Error(w, "GitHub OAuth not configured", http.StatusServiceUnavailable)
+		return
+	}
 	state := randomState()
-	http.SetCookie(w, &http.Cookie{
-		Name:     "github_oauth_state",
-		Value:    state,
-		Path:     "/",
-		MaxAge:   600,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	config.Database.Create(&models.GitHubOAuthState{State: state})
+	// Clean old states
+	config.Database.Where("created_at < ?", time.Now().Add(-10*time.Minute)).Delete(&models.GitHubOAuthState{})
 	redirectURL := fmt.Sprintf(
-		"https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:user&state=%s",
+		"https://github.com/login/oauth/authorize?client_id=%s&scope=read:user&state=%s",
 		githubClientID(),
-		url.QueryEscape(githubRedirectURL()),
 		state,
 	)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
@@ -48,12 +52,13 @@ func handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
 // handleGitHubCallback exchanges the OAuth code, fetches SSH keys,
 // stores them in the DB, and redirects to the frontend with the session ID.
 func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
-	stateCookie, err := r.Cookie("github_oauth_state")
-	if err != nil || stateCookie.Value != r.URL.Query().Get("state") {
+	stateParam := r.URL.Query().Get("state")
+	var oauthState models.GitHubOAuthState
+	if err := config.Database.First(&oauthState, "state = ?", stateParam).Error; err != nil {
 		http.Error(w, "invalid state", http.StatusBadRequest)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "github_oauth_state", MaxAge: -1, Path: "/"})
+	config.Database.Delete(&oauthState)
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -92,7 +97,7 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	// Clean sessions older than 1 hour
 	config.Database.Where("created_at < ?", time.Now().Add(-time.Hour)).Delete(&models.GitHubSession{})
 
-	http.Redirect(w, r, "/?github_session="+sessionID, http.StatusFound)
+	http.Redirect(w, r, "/student?github_session="+sessionID, http.StatusFound)
 }
 
 // handleGitHubSession returns the stored login + SSH keys for a session ID.
@@ -152,7 +157,7 @@ func handleGitHubStudents(w http.ResponseWriter, r *http.Request) {
 }
 
 func exchangeGitHubCode(code string) (string, error) {
-	resp, err := http.PostForm("https://github.com/login/oauth/access_token", url.Values{
+	resp, err := githubHTTPClient.PostForm("https://github.com/login/oauth/access_token", url.Values{
 		"client_id":     {githubClientID()},
 		"client_secret": {githubClientSecret()},
 		"code":          {code},
@@ -162,7 +167,10 @@ func exchangeGitHubCode(code string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
 	vals, err := url.ParseQuery(string(body))
 	if err != nil {
 		return "", err
@@ -175,10 +183,13 @@ func exchangeGitHubCode(code string) (string, error) {
 }
 
 func fetchGitHubLogin(token string) (string, error) {
-	req, _ := http.NewRequest("GET", "https://api.github.com/user", nil)
+	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
+	if err != nil {
+		return "", err
+	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := githubHTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -186,15 +197,23 @@ func fetchGitHubLogin(token string) (string, error) {
 	var user struct {
 		Login string `json:"login"`
 	}
-	json.NewDecoder(resp.Body).Decode(&user)
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return "", err
+	}
+	if user.Login == "" {
+		return "", fmt.Errorf("empty login in GitHub response")
+	}
 	return user.Login, nil
 }
 
 func fetchGitHubSSHKeys(token string) ([]string, error) {
-	req, _ := http.NewRequest("GET", "https://api.github.com/user/keys", nil)
+	req, err := http.NewRequest("GET", "https://api.github.com/user/keys", nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := githubHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +221,9 @@ func fetchGitHubSSHKeys(token string) ([]string, error) {
 	var keys []struct {
 		Key string `json:"key"`
 	}
-	json.NewDecoder(resp.Body).Decode(&keys)
+	if err := json.NewDecoder(resp.Body).Decode(&keys); err != nil {
+		return nil, err
+	}
 	var result []string
 	for _, k := range keys {
 		if k.Key != "" {
@@ -213,9 +234,12 @@ func fetchGitHubSSHKeys(token string) ([]string, error) {
 }
 
 func fetchGitHubKeysPublic(login string) ([]string, error) {
-	req, _ := http.NewRequest("GET", "https://api.github.com/users/"+login+"/keys", nil)
+	req, err := http.NewRequest("GET", "https://api.github.com/users/"+login+"/keys", nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := githubHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +247,9 @@ func fetchGitHubKeysPublic(login string) ([]string, error) {
 	var keys []struct {
 		Key string `json:"key"`
 	}
-	json.NewDecoder(resp.Body).Decode(&keys)
+	if err := json.NewDecoder(resp.Body).Decode(&keys); err != nil {
+		return nil, err
+	}
 	var result []string
 	for _, k := range keys {
 		if k.Key != "" {

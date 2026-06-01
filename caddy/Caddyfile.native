@@ -1,0 +1,60 @@
+{
+    order grpc_web before reverse_proxy
+}
+
+:443 {
+    tls /Users/maelan.jahier/Documents/vm-pool-managers/caddy/cert.pem /Users/maelan.jahier/Documents/vm-pool-managers/caddy/key.pem
+
+    # ---------- gRPC-Web ----------
+    handle_path /rpc/* {
+        grpc_web
+        reverse_proxy localhost:50051 {
+            transport http {
+                versions h2c
+            }
+        }
+    }
+
+    # ---------- Jupyter proxy ----------
+    handle /api/jupyter-proxy/* {
+        reverse_proxy localhost:50055 {
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    # ---------- REST API + GitHub OAuth ----------
+    handle /api/* {
+        reverse_proxy localhost:50055
+    }
+
+    handle /auth/callback {
+        reverse_proxy localhost:5173
+    }
+
+    handle /auth/* {
+        reverse_proxy localhost:50055
+    }
+
+    handle /vm-registrar {
+        reverse_proxy localhost:50055
+    }
+
+    # ---------- Dex OIDC ----------
+    handle /dex/* {
+        reverse_proxy localhost:5556
+    }
+
+    handle /theme/* {
+        reverse_proxy localhost:5556
+    }
+
+    # ---------- Guacamole ----------
+    handle /guacamole/* {
+        reverse_proxy localhost:18080
+    }
+
+    # ---------- Frontend ----------
+    handle {
+        reverse_proxy localhost:5173
+    }
+}

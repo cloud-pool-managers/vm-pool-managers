@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { authStore } from '$lib/store';
+  import { simpleMode } from '$lib/store/uiStore';
   import { browser } from '$app/environment';
 
   interface VMInstance {
@@ -54,6 +55,84 @@
 
 <svelte:head><title>Inventaire VM — CloudPoolManager</title></svelte:head>
 
+{#if $simpleMode}
+<div class="space-y-6 animate-fade-up">
+  <div class="flex items-start justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">Mes étudiants</h1>
+      <p class="text-sm text-neutral-500 mt-1">Suivez la connexion de vos étudiants en temps réel</p>
+    </div>
+    <button onclick={() => fetchInventory(true)} disabled={refreshing} class="btn btn-secondary text-xs px-3.5 py-2">
+      <svg class="w-3.5 h-3.5 {refreshing ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Actualiser
+    </button>
+  </div>
+
+  {#if loading}
+    <div class="flex justify-center py-20"><div class="w-8 h-8 rounded-full border-2 border-neutral-200 border-t-primary-700" style="animation: spinnerGlow 0.7s linear infinite;"></div></div>
+  {:else if error}
+    <div class="card px-4 py-3 border-red-200 bg-red-50 text-red-700 text-sm">{error}</div>
+  {:else if pools.length === 0}
+    <div class="card flex flex-col items-center justify-center py-20 text-center">
+      <p class="text-neutral-500 text-sm">Aucun cours actif pour le moment</p>
+    </div>
+  {:else}
+    <div class="space-y-4">
+      {#each pools as pool}
+        {@const activeVms = pool.vms.filter(v => v.activity_status !== 'idle')}
+        {@const readyVms = pool.vms.filter(v => v.status === 'ready')}
+        <div class="card overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+            <div>
+              <h2 class="text-sm font-bold text-neutral-900">{pool.pool_id}</h2>
+              <p class="text-xs text-neutral-400 mt-0.5">
+                <span class="{activeVms.length > 0 ? 'text-green-600 font-semibold' : 'text-neutral-400'}">
+                  {activeVms.length} étudiant{activeVms.length > 1 ? 's' : ''} connecté{activeVms.length > 1 ? 's' : ''}
+                </span>
+                · {readyVms.length} machine{readyVms.length > 1 ? 's' : ''} disponible{readyVms.length > 1 ? 's' : ''}
+              </p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              {#if activeVms.length > 0}
+                <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-60"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                <span class="text-xs text-green-600 font-semibold">En cours</span>
+              {:else}
+                <span class="inline-flex rounded-full h-2 w-2 bg-neutral-300"></span>
+                <span class="text-xs text-neutral-400">En attente</span>
+              {/if}
+            </div>
+          </div>
+          <div class="divide-y divide-neutral-50">
+            {#each pool.vms as vm}
+              <div class="flex items-center justify-between px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <span class="w-2 h-2 rounded-full flex-shrink-0 {vm.activity_status !== 'idle' ? 'bg-green-500' : vm.status === 'ready' ? 'bg-neutral-300' : 'bg-amber-400'}"></span>
+                  <span class="text-sm text-neutral-700">{vm.name}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  {#if vm.activity_status !== 'idle'}
+                    <span class="text-xs text-green-600 font-medium">Connecté</span>
+                  {:else if vm.status === 'ready'}
+                    <span class="text-xs text-neutral-400">En attente d'étudiant</span>
+                  {:else}
+                    <span class="text-xs text-amber-600">Démarrage…</span>
+                  {/if}
+                  {#if vm.guac_url}
+                    <a href={vm.guac_url} target="_blank" rel="noopener" class="btn btn-secondary text-xs px-2 py-1">Terminal</a>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+</div>
+{:else}
 <div class="space-y-7 animate-fade-up">
 
   <!-- Header -->
@@ -209,3 +288,4 @@
     {/if}
   {/if}
 </div>
+{/if}

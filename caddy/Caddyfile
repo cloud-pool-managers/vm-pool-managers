@@ -4,7 +4,7 @@
 }
 
 :443 {
-    tls internal
+    tls /etc/caddy/cert.pem /etc/caddy/key.pem
 
     # ---------- gRPC-Web ----------
     handle_path /rpc/* {
@@ -17,8 +17,18 @@
     }
 
     # ---------- REST API + vm-registrar binary + GitHub OAuth ----------
+    handle /api/jupyter-proxy/* {
+        reverse_proxy host.docker.internal:50055 {
+            header_up X-Forwarded-Proto https
+        }
+    }
+
     handle /api/* {
         reverse_proxy host.docker.internal:50055
+    }
+
+    handle /auth/callback {
+        reverse_proxy host.docker.internal:5173
     }
 
     handle /auth/* {
@@ -27,6 +37,17 @@
 
     handle /vm-registrar {
         reverse_proxy host.docker.internal:50055
+    }
+
+    # ---------- Dex OIDC (proxied so any IP works) ----------
+    handle /dex/* {
+        reverse_proxy host.docker.internal:5556
+    }
+
+    # Dex static assets (theme, logo) referenced by relative paths
+    handle /theme/* {
+        rewrite * /dex{uri}
+        reverse_proxy host.docker.internal:5556
     }
 
     # ---------- Guacamole ----------

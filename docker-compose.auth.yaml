@@ -3,7 +3,8 @@ services:
     image: ghcr.io/glauth/glauth:latest
     container_name: glauth
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "3893:3893"
     volumes:
       - ./auth/glauth.cfg:/app/config/config.cfg:ro
 
@@ -11,9 +12,11 @@ services:
     image: ghcr.io/dexidp/dex:v2.41.1
     container_name: dex
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "5556:5556"
     volumes:
       - ./auth/dex.yaml:/etc/dex/config.yaml:ro
+      - ./auth/web:/srv/dex/web/custom:ro
     command: ["dex", "serve", "/etc/dex/config.yaml"]
     depends_on:
       - glauth

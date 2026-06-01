@@ -35,7 +35,15 @@
     githubLoading = true;
     try {
       const res = await fetch('/api/github/students');
-      if (res.ok) githubStudents = await res.json() ?? [];
+      if (res.ok) {
+        const data: GitHubStudent[] = await res.json() ?? [];
+        const seen = new Map<string, GitHubStudent>();
+        for (const s of data) {
+          if (!s.keys || s.keys.length === 0) continue;
+          if (!seen.has(s.login)) seen.set(s.login, s);
+        }
+        githubStudents = Array.from(seen.values());
+      }
     } catch { /* ignore */ } finally { githubLoading = false; }
   }
 
@@ -160,7 +168,7 @@
         <div class="mb-4 px-3 py-2.5 rounded bg-red-50 border border-red-200 text-red-700 text-sm animate-fade-in">{error}</div>
       {/if}
 
-      {#if loading}
+      {#if loading && !addModal}
         <div class="flex items-center justify-center py-16">
           <div class="w-8 h-8 rounded-full border-2 border-neutral-200 border-t-primary-700" style="animation: spinnerGlow 0.7s linear infinite;"></div>
         </div>

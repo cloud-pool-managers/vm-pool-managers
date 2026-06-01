@@ -257,4 +257,113 @@
 
   /* Divider */
   .divider { border: none; border-top: 1px solid #e9ecef; }
+
+  /* ── Dark mode — palette profonde inspirée Linear/Vercel/GitHub ── */
+
+  /* Fond principal : #0d0f14 (presque noir, légèrement bleuté) */
+  /* Surface 1 : #13151f (cards, nav)                            */
+  /* Surface 2 : #1c1f2e (elevated, inputs, table headers)       */
+  /* Surface 3 : #252840 (hover states)                          */
+  /* Bordure : #2a2d40                                           */
+  /* Bordure focus : #4a7ab5                                     */
+  /* Texte principal : #e8eaf0                                   */
+  /* Texte secondaire : #7b8099                                  */
+
+  .dark body { background: #0d0f14; color: #e8eaf0; }
+
+  .dark .glass-nav {
+    background: rgba(19, 21, 31, 0.92);
+    border-bottom-color: #1e2133;
+    box-shadow: 0 1px 0 #1e2133;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dark .nav-stripe { background: linear-gradient(90deg, #003865 0%, #1a4f8f 100%); }
+
+  .dark .card {
+    background: #13151f;
+    border-color: #1e2133;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03);
+  }
+  .dark .card-elevated {
+    background: #1c1f2e;
+    border-color: #252840;
+  }
+
+  .dark .modal-box {
+    background: #13151f;
+    border-color: #252840;
+    border-top-color: #3a6ea8;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .dark .modal-overlay { background: rgba(0,0,0,0.75); }
+
+  .dark .field {
+    background: #1c1f2e;
+    border-color: #2a2d40;
+    color: #e8eaf0;
+  }
+  .dark .field:focus {
+    border-color: #4a7ab5;
+    box-shadow: 0 0 0 3px rgba(74,122,181,0.15);
+    background: #21243a;
+  }
+  .dark .field::placeholder { color: #4a4e65; }
+  .dark select.field option { background: #1c1f2e; }
+
+  .dark .btn-primary { background: #1a4f8f; }
+  .dark .btn-primary:hover:not(:disabled) { background: #215da3; box-shadow: 0 2px 8px rgba(26,79,143,0.4); }
+
+  .dark .btn-secondary {
+    background: #1c1f2e;
+    color: #b0b4cc;
+    border-color: #2a2d40;
+  }
+  .dark .btn-secondary:hover:not(:disabled) {
+    background: #252840;
+    border-color: #3a4060;
+    color: #e8eaf0;
+  }
+
+  .dark .btn-success {
+    background: #0d2b18;
+    color: #4ade80;
+    border-color: #14532d;
+  }
+  .dark .btn-success:hover:not(:disabled) { background: #14532d; }
+
+  .dark .btn-danger {
+    background: #2b0d0d;
+    color: #f87171;
+    border-color: #450a0a;
+  }
+  .dark .btn-danger:hover:not(:disabled) { background: #3d1010; }
+
+  .dark .data-table th {
+    background: #1c1f2e;
+    color: #7b8099;
+    border-bottom-color: #1e2133;
+    letter-spacing: 0.07em;
+  }
+  .dark .data-table td {
+    border-bottom-color: #1a1d2c;
+    color: #c5c9de;
+  }
+  .dark .data-table tr:hover td { background: #1c1f2e; }
+  .dark .data-table tr:last-child td { border-bottom: none; }
+
+  .dark .section-label { color: #5a5f7a; }
+  .dark .divider { border-top-color: #1e2133; }
+  .dark .gradient-heading { color: #6fa3d8; }
+
+  .dark .badge { border-width: 1px; }
+  .dark .badge-admin { background: #0f1f3d; color: #7eb3f5; border-color: #1a3a6b; }
+  .dark .badge-ready { background: #0a2018; color: #4ade80; border-color: #14532d; }
+  .dark .badge-starting { background: #201508; color: #fbbf24; border-color: #451a03; }
+  .dark .badge-error { background: #200a0a; color: #f87171; border-color: #450a0a; }
+  .dark .badge-info { background: #071b2e; color: #38bdf8; border-color: #0c4a6e; }
+
+  /* Scrollbar dark */
+  .dark ::-webkit-scrollbar-thumb { background: rgba(74,122,181,0.3); }
+  .dark ::-webkit-scrollbar-thumb:hover { background: rgba(74,122,181,0.5); }
 }

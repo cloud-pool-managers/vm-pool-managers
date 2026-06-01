@@ -97,9 +97,16 @@ func (s *Server) FromPb(pbs *pb.StreamRessourceResponse) {
 }
 
 func (s *Server) ToFrontControlPb() *frontcontrolpb.Server {
-	metadata := make(map[string]string, len(s.Metadata))
+	metadata := make(map[string]string, len(s.Metadata)+2)
 	for k, v := range s.Metadata {
 		metadata[k] = v
+	}
+	// Always expose serverpool_id and user_id in metadata for frontend filtering
+	if s.ServerpoolID != "" {
+		metadata["serverpool_id"] = s.ServerpoolID
+	}
+	if s.UserID != "" {
+		metadata["user_id"] = s.UserID
 	}
 
 	networkStr := ""

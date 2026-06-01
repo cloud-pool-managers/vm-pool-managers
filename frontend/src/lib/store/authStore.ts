@@ -47,7 +47,8 @@ function randomString(len = 43): string {
 
 function dexBase(): string {
   if (typeof window === 'undefined') return 'http://localhost:5556/dex';
-  return `http://${window.location.hostname}:5556/dex`;
+  // Use Caddy proxy so Dex is always reachable regardless of which IP/port the user connects from
+  return `${window.location.origin}/dex`;
 }
 
 // PKCE with 'plain' method — avoids crypto.subtle which is blocked on HTTP
@@ -100,7 +101,7 @@ export function login(token: string, email: string) {
 export function logout() {
   authStore.set(null);
   resetAll();
-  goto('/');
+  window.location.href = '/';
 }
 
 // Legacy tryLogin (kept for backward compat during transition)
