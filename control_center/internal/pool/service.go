@@ -75,7 +75,12 @@ func (s *Service) CreatePool(
 	poolData := pool.ToMap()
 	if pool.ConfigID != "" {
 		var cfgPool models.ConfigPool
-		if err := config.Database.Where("name = ?", pool.ConfigID).First(&cfgPool).Error; err == nil {
+		// Several rows can share a config name (a canonical 'system' row kept by
+		// the snapshot script + stale per-user copies). Always prefer 'system'
+		// so we never pick an outdated duplicate.
+		if err := config.Database.Where("name = ?", pool.ConfigID).
+			Order("CASE WHEN user_id = 'system' THEN 0 ELSE 1 END, id").
+			First(&cfgPool).Error; err == nil {
 			poolData["config_data"] = cfgPool.Data
 		}
 	}
