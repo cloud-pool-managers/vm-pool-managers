@@ -206,14 +206,30 @@ func mergeInventoryVM(srv models.Server, reg models.VMInstance) models.VMInstanc
 // probeAppPort checks if the app port is reachable and marks the VM as active.
 // Must be called outside of the main inventory loop (use in a goroutine or after merging).
 func probeAppPort(vm *models.VMInstance) {
-	if vm.ActivityStatus != "idle" || vm.AppPort <= 0 || vm.IP == "" {
+	if vm.IP == "" {
 		return
 	}
-	addr := fmt.Sprintf("%s:%d", vm.IP, vm.AppPort)
-	conn, err := net.DialTimeout("tcp", addr, 400*time.Millisecond)
-	if err == nil {
-		conn.Close()
-		vm.ActivityStatus = "active"
+	port := vm.AppPort
+	if port <= 0 {
+		port = 8888 // Jupyter default
+	}
+	// Ask Jupyter Server how many live connections/kernels it has: >0 means
+	// someone currently has the notebook open (or a kernel running) = "active".
+	// Only upgrades to active (never downgrades an SSH-active VM).
+	client := http.Client{Timeout: 800 * time.Millisecond}
+	resp, err := client.Get(fmt.Sprintf("http://%s:%d/api/status", vm.IP, port))
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	var st struct {
+		Connections int `json:"connections"`
+		Kernels     int `json:"kernels"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&st); err == nil {
+		if st.Connections > 0 || st.Kernels > 0 {
+			vm.ActivityStatus = "active"
+		}
 	}
 }
 

@@ -19,6 +19,8 @@
   let jupyterURL = $state('');      // proxy URL (for display)
   let jupyterDirectURL = $state(''); // direct VM URL (for iframe)
   let formgraderBaseURL = $state(''); // proxy URL for Formgrader
+  let frameSrc = $state('');          // current iframe URL (JupyterLab or Formgrader, via proxy)
+  let frameMode: 'lab' | 'formgrader' = $state('lab');
 
   let loadingAssignments = $state(false);
   let loadingGrades = $state(false);
@@ -27,6 +29,7 @@
   let autograding = $state(false);
   let actionOutput = $state('');
   let error = $state('');
+  let successMsg = $state('');
 
   // Confirmation modal state
   let confirmState = $state({
@@ -62,12 +65,30 @@
       );
       if (res.ok) {
         const data = await res.json();
-        jupyterURL = data.url ?? '';
+        jupyterURL = data.url ?? ''; // proxy base "/api/jupyter-proxy/<pool>/<user>/"
         jupyterDirectURL = (data.directUrl ?? '') + '/lab';
-        // Formgrader base URL should use the direct IP since base_url is not configured in Jupyter
-        formgraderBaseURL = (data.directUrl ?? '').replace(/\/$/, '').replace(/%40/g, '@');
+        // Everything (iframe, formgrader links, manual grading) goes through the
+        // same-origin HTTPS proxy now that it rewrites JupyterLab's URLs.
+        formgraderBaseURL = (jupyterURL ?? '').replace(/\/$/, '');
+        showInFrame('lab');
       }
     } catch { jupyterURL = ''; }
+  }
+
+  function showInFrame(mode: 'lab' | 'formgrader') {
+    if (!jupyterURL) return;
+    frameMode = mode;
+    frameSrc = jupyterURL + (mode === 'lab' ? 'lab' : 'formgrader');
+  }
+
+  function openFrameNewTab() {
+    if (frameSrc) window.open(frameSrc, '_blank', 'noopener');
+  }
+
+  function reloadFrame() {
+    const s = frameSrc;
+    frameSrc = '';
+    setTimeout(() => (frameSrc = s), 50);
   }
 
   async function loadAssignments() {
@@ -128,6 +149,7 @@
     setter(true);
     actionOutput = '';
     error = '';
+    successMsg = '';
     try {
       const params = new URLSearchParams({
         pool_id: selectedPool!.name,
@@ -140,6 +162,18 @@
       if (data.status === 'ok' || data.distributed !== undefined) {
         if (endpoint === 'collect' || endpoint === 'release') await loadAssignments();
         if (endpoint === 'autograde') await loadGrades();
+        // Confirmation message per action
+        const a = selectedAssignment ? ` « ${selectedAssignment} »` : '';
+        if (endpoint === 'release') {
+          successMsg = `Devoir${a} distribué à ${data.distributed ?? 0} étudiant(s) ✓`;
+        } else if (endpoint === 'collect') {
+          const n = (data.output ?? '').match(/Collected (\d+)/)?.[1] ?? '0';
+          successMsg = `${n} copie(s)${a} collectée(s) ✓`;
+        } else if (endpoint === 'autograde') {
+          successMsg = `Notation automatique${a} terminée ✓`;
+        } else {
+          successMsg = 'Opération terminée ✓';
+        }
       } else {
         error = data.output ?? data.message ?? `${endpoint} failed`;
       }
@@ -244,6 +278,12 @@
 
   {#if error}
     <div class="card px-4 py-2.5 border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">{error}</div>
+  {/if}
+  {#if successMsg}
+    <div class="card px-4 py-2.5 border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-700 dark:text-green-300 text-sm flex items-center justify-between gap-3 animate-fade-in">
+      <span class="font-medium">{successMsg}</span>
+      <button onclick={() => successMsg = ''} class="text-green-600/70 hover:text-green-800 dark:hover:text-green-200 shrink-0" aria-label="Fermer">✕</button>
+    </div>
   {/if}
 
   {#if selectedPool}
@@ -384,76 +424,52 @@
 
     <!-- JupyterLab iframe -->
     <div class="flex-1 card overflow-hidden flex flex-col min-w-0">
-      <div class="flex items-center justify-between px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 shrink-0">
-        <div class="flex items-center gap-2">
-          <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm0 2c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z"/>
-          </svg>
-          <span class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">JupyterLab</span>
-          {#if jupyterURL}
-            <span class="text-xs text-neutral-400 font-mono truncate max-w-48">{jupyterURL}</span>
-          {/if}
-        </div>
-        <div class="flex gap-2">
+      <div class="flex items-center justify-between px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 shrink-0 gap-2">
+        <!-- Bascule JupyterLab / Formgrader (s'affiche dans le cadre) -->
+        <div class="flex items-center gap-0.5 bg-neutral-200/60 dark:bg-neutral-700/60 rounded-lg p-0.5">
           <button
-            onclick={() => loadAssignments()}
-            class="p-1.5 rounded text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-neutral-700 transition-colors"
-            title="Rafraîchir la liste des assignments"
+            onclick={() => showInFrame('lab')}
+            disabled={!jupyterURL}
+            class="px-3 py-1 text-xs font-semibold rounded-md transition-colors {frameMode === 'lab' ? 'bg-white dark:bg-neutral-900 text-primary-700 dark:text-primary-300 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}"
+          >JupyterLab</button>
+          <button
+            onclick={() => showInFrame('formgrader')}
+            disabled={!jupyterURL}
+            class="px-3 py-1 text-xs font-semibold rounded-md transition-colors {frameMode === 'formgrader' ? 'bg-white dark:bg-neutral-900 text-primary-700 dark:text-primary-300 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}"
+          >Formgrader</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            onclick={reloadFrame}
+            disabled={!frameSrc}
+            class="p-1.5 rounded text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40"
+            title="Recharger"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
           </button>
+          <!-- Bouton mis en évidence : ouvrir dans un onglet séparé -->
           <button
-            onclick={openJupyterNewTab}
-            disabled={!jupyterDirectURL}
-            class="p-1.5 rounded text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-neutral-700 transition-colors"
-            title="Ouvrir dans un nouvel onglet"
+            onclick={openFrameNewTab}
+            disabled={!frameSrc}
+            class="btn btn-primary text-xs px-3 py-1.5 gap-1.5 disabled:opacity-40"
+            title="Ouvrir dans un onglet séparé"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
             </svg>
+            Ouvrir dans un onglet
           </button>
         </div>
       </div>
 
-      {#if jupyterDirectURL}
-        <!-- JupyterLab launch panel — iframe blocked by browser security, open in new tab instead -->
-        <div class="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
-          <div class="w-20 h-20 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center justify-center">
-            <svg class="w-10 h-10 text-amber-500" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="12" r="10" fill="#F37626" opacity="0.15"/>
-              <circle cx="12" cy="12" r="6" fill="#F37626"/>
-              <path d="M12 2 A10 10 0 0 1 22 12" stroke="#9D9D9D" stroke-width="2" fill="none"/>
-            </svg>
-          </div>
-          <div>
-            <p class="text-base font-bold text-neutral-800 dark:text-neutral-200">JupyterLab</p>
-            <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1 max-w-xs">
-              JupyterLab s'ouvre dans un onglet dédié.<br>
-              Créez vos assignments, puis revenez ici pour distribuer et noter.
-            </p>
-          </div>
-          <a
-            href={jupyterDirectURL}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn btn-primary text-sm px-6 py-3 gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-            </svg>
-            Ouvrir JupyterLab
-          </a>
-          <a
-            href="{formgraderBaseURL}/formgrader"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 underline"
-          >
-            Ouvrir Formgrader (gestion des assignments)
-          </a>
-        </div>
+      {#if jupyterURL && frameSrc}
+        <iframe
+          src={frameSrc}
+          title={frameMode === 'lab' ? 'JupyterLab' : 'Formgrader'}
+          class="flex-1 w-full border-0 bg-white"
+        ></iframe>
       {:else}
         <div class="flex-1 flex flex-col items-center justify-center text-neutral-400 text-center gap-3 p-8">
           <svg class="w-14 h-14 text-neutral-200 dark:text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">

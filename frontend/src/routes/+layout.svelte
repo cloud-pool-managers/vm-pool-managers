@@ -77,13 +77,16 @@
   const navLinks = $derived(() => {
     const auth = $authStore;
     const simple = $simpleMode;
-    const home = auth ? (auth.role === 'admin' ? '/serverpool' : '/student') : '/student';
-    const links = [{ href: home, label: simple ? 'Mes cours' : 'Accueil' }];
+    const links: { href: string; label: string }[] = [];
     if (auth?.role === 'admin') {
+      // '/serverpool' is the admin home — no separate "Accueil" tab (it pointed
+      // to the same page). In simple mode it's labelled "Mes cours".
       links.push({ href: '/inventory', label: simple ? 'Mes étudiants' : 'Inventaire' });
-      links.push({ href: '/serverpool', label: simple ? 'Cours' : 'Serverpools' });
+      links.push({ href: '/serverpool', label: simple ? 'Mes cours' : 'Serverpools' });
       if (!simple) links.push({ href: '/config', label: 'Configurations' });
       links.push({ href: '/grading', label: 'Notation' });
+    } else if (auth) {
+      links.push({ href: '/student', label: 'Mes cours' });
     }
     if (auth) links.push({ href: '/profile', label: 'Profil' });
     return links;

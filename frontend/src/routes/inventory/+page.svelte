@@ -217,7 +217,7 @@
                 <th>IP</th>
                 <th>Statut</th>
                 <th>Santé</th>
-                <th>Activité SSH</th>
+                <th>Activité</th>
                 <th>Terminal</th>
                 <th class="text-right">Dernière activité</th>
               </tr>
@@ -245,7 +245,7 @@
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
                           <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-sky-400"></span>
                         </span>
-                        SSH actif
+                        Sur Jupyter
                       </span>
                     {:else}
                       <span class="text-xs text-neutral-400">Inactif</span>
