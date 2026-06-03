@@ -85,6 +85,7 @@
       links.push({ href: '/serverpool', label: simple ? 'Mes cours' : 'Serverpools' });
       if (!simple) links.push({ href: '/config', label: 'Configurations' });
       links.push({ href: '/grading', label: 'Notation' });
+      links.push({ href: '/propose-image', label: 'Proposer une image' });
     } else if (auth) {
       links.push({ href: '/student', label: 'Mes cours' });
     }
