@@ -18,9 +18,7 @@
   let grades: Grade[] = $state([]);
   let jupyterURL = $state('');      // proxy URL (for display)
   let jupyterDirectURL = $state(''); // direct VM URL (for iframe)
-  let formgraderBaseURL = $state(''); // proxy URL for Formgrader
-  let frameSrc = $state('');          // current iframe URL (JupyterLab or Formgrader, via proxy)
-  let frameMode: 'lab' | 'formgrader' = $state('lab');
+  let formgraderBaseURL = $state(''); // direct URL for Formgrader (new tab)
 
   let loadingAssignments = $state(false);
   let loadingGrades = $state(false);
@@ -65,31 +63,32 @@
       );
       if (res.ok) {
         const data = await res.json();
-        jupyterURL = data.url ?? ''; // proxy base "/api/jupyter-proxy/<pool>/<user>/"
+        jupyterURL = data.url ?? '';
         jupyterDirectURL = (data.directUrl ?? '') + '/lab';
-        // Everything (iframe, formgrader links, manual grading) goes through the
-        // same-origin HTTPS proxy now that it rewrites JupyterLab's URLs.
-        formgraderBaseURL = (jupyterURL ?? '').replace(/\/$/, '');
-        showInFrame('lab');
+        // Direct VM URL for new-tab links (no proxy base_url configured).
+        formgraderBaseURL = (data.directUrl ?? '').replace(/\/$/, '').replace(/%40/g, '@');
       }
     } catch { jupyterURL = ''; }
   }
 
-  function showInFrame(mode: 'lab' | 'formgrader') {
-    if (!jupyterURL) return;
-    frameMode = mode;
-    frameSrc = jupyterURL + (mode === 'lab' ? 'lab' : 'formgrader');
+  function openFormgrader() {
+    if (formgraderBaseURL) window.open(`${formgraderBaseURL}/formgrader`, '_blank', 'noopener');
   }
 
-  function openFrameNewTab() {
-    if (frameSrc) window.open(frameSrc, '_blank', 'noopener');
-  }
-
-  function reloadFrame() {
-    const s = frameSrc;
-    frameSrc = '';
-    setTimeout(() => (frameSrc = s), 50);
-  }
+  // Aggregate stats for the dashboard (right panel).
+  let gradedCount = $derived(grades.length);
+  let manualCount = $derived(grades.filter(g => g.status === 'needs_manual_grade').length);
+  let avgScore = $derived(grades.length ? grades.reduce((a, g) => a + g.score, 0) / grades.length : 0);
+  // Score-percentage distribution in 5 buckets (0-20 … 80-100).
+  let distribution = $derived.by(() => {
+    const buckets = [0, 0, 0, 0, 0];
+    for (const g of grades) {
+      if (g.max_score <= 0) continue;
+      const pct = Math.max(0, Math.min(1, g.score / g.max_score));
+      buckets[Math.min(4, Math.floor(pct * 5))]++;
+    }
+    return buckets;
+  });
 
   async function loadAssignments() {
     if (!selectedPool) return;
@@ -210,9 +209,6 @@
     window.open(`/api/nbgrader/export-csv?${params}`, '_blank');
   }
 
-  function openJupyterNewTab() {
-    if (jupyterDirectURL) window.open(jupyterDirectURL, '_blank');
-  }
 
   function scoreColor(grade: Grade): string {
     if (grade.max_score === 0) return 'text-neutral-500';
@@ -422,54 +418,69 @@
       </div>
     </div>
 
-    <!-- JupyterLab iframe -->
+    <!-- Espace de travail : lancement + tableau de bord -->
     <div class="flex-1 card overflow-hidden flex flex-col min-w-0">
-      <div class="flex items-center justify-between px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 shrink-0 gap-2">
-        <!-- Bascule JupyterLab / Formgrader (s'affiche dans le cadre) -->
-        <div class="flex items-center gap-0.5 bg-neutral-200/60 dark:bg-neutral-700/60 rounded-lg p-0.5">
-          <button
-            onclick={() => showInFrame('lab')}
-            disabled={!jupyterURL}
-            class="px-3 py-1 text-xs font-semibold rounded-md transition-colors {frameMode === 'lab' ? 'bg-white dark:bg-neutral-900 text-primary-700 dark:text-primary-300 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}"
-          >JupyterLab</button>
-          <button
-            onclick={() => showInFrame('formgrader')}
-            disabled={!jupyterURL}
-            class="px-3 py-1 text-xs font-semibold rounded-md transition-colors {frameMode === 'formgrader' ? 'bg-white dark:bg-neutral-900 text-primary-700 dark:text-primary-300 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}"
-          >Formgrader</button>
-        </div>
-        <div class="flex items-center gap-2">
-          <button
-            onclick={reloadFrame}
-            disabled={!frameSrc}
-            class="p-1.5 rounded text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40"
-            title="Recharger"
-          >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-          </button>
-          <!-- Bouton mis en évidence : ouvrir dans un onglet séparé -->
-          <button
-            onclick={openFrameNewTab}
-            disabled={!frameSrc}
-            class="btn btn-primary text-xs px-3 py-1.5 gap-1.5 disabled:opacity-40"
-            title="Ouvrir dans un onglet séparé"
-          >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-            </svg>
-            Ouvrir dans un onglet
-          </button>
-        </div>
+      <div class="flex items-center justify-between px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 shrink-0">
+        <span class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Espace de travail</span>
+        {#if selectedPool}
+          <span class="text-xs text-neutral-400 font-mono truncate max-w-48">{selectedPool.name}</span>
+        {/if}
       </div>
 
-      {#if jupyterURL && frameSrc}
-        <iframe
-          src={frameSrc}
-          title={frameMode === 'lab' ? 'JupyterLab' : 'Formgrader'}
-          class="flex-1 w-full border-0 bg-white"
-        ></iframe>
+      {#if jupyterDirectURL}
+        <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+          <!-- Lancement (nouvel onglet) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a href={jupyterDirectURL} target="_blank" rel="noopener noreferrer" class="btn btn-primary justify-center gap-2 py-3">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              Ouvrir JupyterLab
+            </a>
+            <button onclick={openFormgrader} class="btn btn-secondary justify-center gap-2 py-3">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+              Ouvrir Formgrader
+            </button>
+          </div>
+          <p class="text-xs text-neutral-400 -mt-3">JupyterLab et Formgrader s'ouvrent dans un onglet dédié.</p>
+
+          {#if selectedAssignment && grades.length > 0}
+            <!-- Tableau de bord notes -->
+            <div>
+              <p class="section-label mb-3">Vue d'ensemble — {selectedAssignment}</p>
+              <div class="grid grid-cols-3 gap-3">
+                <div class="card p-3 text-center"><p class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{gradedCount}</p><p class="text-xs text-neutral-500">copies notées</p></div>
+                <div class="card p-3 text-center"><p class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{avgScore.toFixed(1)}</p><p class="text-xs text-neutral-500">moyenne</p></div>
+                <div class="card p-3 text-center"><p class="text-2xl font-bold tabular-nums {manualCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}">{manualCount}</p><p class="text-xs text-neutral-500">à corriger</p></div>
+              </div>
+            </div>
+            <!-- Distribution des notes -->
+            <div>
+              <p class="section-label mb-3">Distribution des notes</p>
+              <div class="flex items-end gap-2 h-40">
+                {#each distribution as count, i}
+                  {@const maxC = Math.max(1, ...distribution)}
+                  <div class="flex-1 flex flex-col items-center justify-end gap-1 h-full">
+                    <span class="text-xs text-neutral-500 tabular-nums">{count}</span>
+                    <div class="w-full rounded-t bg-primary-500/80 dark:bg-primary-400/80 transition-all" style="height:{Math.max(3, (count / maxC) * 100)}%"></div>
+                    <span class="text-[10px] text-neutral-400 tabular-nums">{i * 20}–{i * 20 + 20}</span>
+                  </div>
+                {/each}
+              </div>
+              <p class="text-[10px] text-neutral-400 text-center mt-1">% du barème</p>
+            </div>
+          {:else}
+            <!-- Guide du déroulé -->
+            <div class="flex-1">
+              <p class="section-label mb-3">Déroulé d'un devoir</p>
+              <ol class="space-y-2.5 text-sm text-neutral-600 dark:text-neutral-300">
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">1</span><span>Ouvrir <b>JupyterLab</b> → menu <b>Nbgrader → Create Assignment</b>, marquer les cellules, puis <b>Generate</b>.</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">2</span><span>Choisir l'assignment ci-dessus, puis <b>Distribuer aux étudiants</b>.</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">3</span><span>Les étudiants éditent <code class="text-xs">nbgrader/&lt;devoir&gt;</code> puis cliquent <b>Soumettre</b>.</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">4</span><span><b>Collecter les copies</b>, puis <b>Notation automatique</b>.</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">5</span><span><b>Correction manuelle</b> (Formgrader) si besoin, puis <b>Exporter CSV</b>.</span></li>
+              </ol>
+            </div>
+          {/if}
+        </div>
       {:else}
         <div class="flex-1 flex flex-col items-center justify-center text-neutral-400 text-center gap-3 p-8">
           <svg class="w-14 h-14 text-neutral-200 dark:text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -478,7 +489,7 @@
           <div>
             <p class="text-sm font-medium text-neutral-600 dark:text-neutral-400">JupyterLab non disponible</p>
             <p class="text-xs text-neutral-400 mt-1 max-w-xs">
-              La VM doit être démarrée avec AppPort=8888.
+              La VM enseignant doit être démarrée avec AppPort=8888.
             </p>
           </div>
         </div>
