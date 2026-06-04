@@ -320,7 +320,7 @@
         <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">VM attribuée</h1>
       </div>
       <p class="text-sm text-neutral-500 ml-6">
-        {#if vmAppPort > 0 && !appReady}Démarrage en cours…{:else}Votre environnement est prêt.{/if}
+        {#if (vmAppPort > 0 && !appReady) || (vmAppPort === 0 && !guacUrl)}Démarrage en cours…{:else}Votre environnement est prêt.{/if}
       </p>
     </div>
 
@@ -388,12 +388,20 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
-          Ouvrir le terminal web
+          Ouvrir le terminal web (Guacamole)
         </a>
+      {:else if vmAppPort === 0}
+        <!-- VM sans app (Ubuntu…) : la connexion Guacamole se prépare -->
+        <div class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-lg font-semibold text-base
+          bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 cursor-not-allowed select-none">
+          <span class="w-4 h-4 border-2 border-neutral-400/40 border-t-neutral-500 rounded-full shrink-0"
+            style="animation: spinnerGlow 0.8s linear infinite;"></span>
+          Préparation de l'accès terminal…
+        </div>
       {/if}
 
-      {#if vmAppPort > 0 || guacUrl}
-        <hr class="border-neutral-200"/>
+      {#if vmAppPort > 0 || guacUrl || vmAppPort === 0}
+        <hr class="border-neutral-200 dark:border-neutral-700"/>
       {/if}
 
       <div>

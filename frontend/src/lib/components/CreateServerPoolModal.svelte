@@ -227,12 +227,12 @@
                   id="app_port"
                   class="field w-36"
                   type="number"
-                  min="1" max="65535"
+                  min="0" max="65535"
                   bind:value={appPort}
-                  placeholder="ex: 8888"
+                  placeholder="0 = aucun"
                 />
                 <p class="text-xs text-neutral-400 leading-snug">
-                  Si l'image expose une app web (Jupyter = 8888), les étudiants verront un bouton d'accès direct.
+                  Laissez <b>0</b> si la VM n'expose pas d'app web (Ubuntu, accès terminal). Sinon le port (Jupyter = 8888) : les étudiants verront un bouton d'accès direct.
                 </p>
               </div>
             </div>
@@ -445,7 +445,7 @@
                       class="w-9 h-9 rounded text-xs font-bold transition-all
                         {offDays[key]
                           ? 'bg-primary-700 text-white border border-primary-800'
-                          : 'bg-white text-neutral-500 border border-neutral-300 hover:border-primary-400 hover:text-primary-600'}"
+                          : 'bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-600 hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500'}"
                       onclick={() => offDays[key] = !offDays[key]}
                     >{label}</button>
                   {/each}
