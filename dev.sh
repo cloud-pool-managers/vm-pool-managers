@@ -16,12 +16,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOGDIR="$ROOT/.devlogs"
 mkdir -p "$LOGDIR"
 CADDY_BIN="${CADDY_BIN:-$HOME/caddy-grpc}"
+GUAC_HOST="${GUAC_HOST:-ubuntu@157.136.249.205}"   # hôte du Guacamole distant (tunnel)
 
-SERVICES=(backend control frontend caddy)
+SERVICES=(backend control frontend caddy guac)
 
 # Port "santé" de chaque service (pour status / stop fiable)
 port_of() { case "$1" in
-  backend) echo 50052 ;; control) echo 50051 ;; frontend) echo 5173 ;; caddy) echo 443 ;; *) echo "" ;;
+  backend) echo 50052 ;; control) echo 50051 ;; frontend) echo 5173 ;; caddy) echo 443 ;; guac) echo 18080 ;; *) echo "" ;;
 esac; }
 
 c_grn=$'\033[32m'; c_red=$'\033[31m'; c_yel=$'\033[33m'; c_dim=$'\033[2m'; c_off=$'\033[0m'
@@ -59,6 +60,11 @@ start_one() {
       [ -x "$CADDY_BIN" ] || { echo "${c_red}✗ caddy introuvable: $CADDY_BIN${c_off}"; return 1; }
       sudo nohup "$CADDY_BIN" run --config "$ROOT/caddy/Caddyfile.native" --adapter caddyfile \
         >"$LOGDIR/caddy.log" 2>&1 & ;;
+    guac)
+      # Tunnel SSH vers le Guacamole distant : expose 0.0.0.0:18080 -> remote:8080
+      pkill -f "18080:127.0.0.1:8080" 2>/dev/null || true
+      nohup ssh -N -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes \
+        -L 0.0.0.0:18080:127.0.0.1:8080 "$GUAC_HOST" >"$LOGDIR/guac.log" 2>&1 & echo $! >"$LOGDIR/guac.pid" ;;
     auth)
       ( cd "$ROOT" && task auth >"$LOGDIR/auth.log" 2>&1 ) \
         && echo "${c_grn}✓ auth (docker)${c_off}" || echo "${c_yel}! auth: voir .devlogs/auth.log${c_off}"

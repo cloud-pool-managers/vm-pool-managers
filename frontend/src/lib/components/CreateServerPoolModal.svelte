@@ -115,9 +115,14 @@
     { key: 'sunday', label: 'Dim' },
   ];
 
+  // Jupyter snapshots don't expose min_disk, so without a default no flavor gets
+  // recommended for them. They run a scientific Docker stack → assume ~20 GB.
+  const DEFAULT_JUPYTER_DISK_GB = 20;
+
   function getImageDiskGb(img: Image): number {
     if (img.minDiskGigabytes > 0) return img.minDiskGigabytes;
     if (img.sizeBytes > 0n) return Math.ceil(Number(img.sizeBytes) / (1024 ** 3));
+    if (img.name.startsWith('jupyter-snapshot-')) return DEFAULT_JUPYTER_DISK_GB;
     return 0;
   }
 
@@ -159,12 +164,12 @@
   <div class="modal-overlay" role="dialog" aria-modal="true">
     <div class="modal-box modal-box-lg" style="max-height:90vh;overflow-y:auto;">
 
-      <div class="flex items-center justify-between mb-6 pb-5 border-b border-neutral-200">
+      <div class="flex items-center justify-between mb-6 pb-5 border-b border-neutral-200 dark:border-neutral-700">
         <div>
-          <h3 class="text-lg font-bold text-neutral-900" style="font-family: 'Source Sans 3', sans-serif;">Nouveau Serverpool</h3>
-          <p class="text-sm text-neutral-500 mt-0.5">Configurez un groupe de VMs pour vos étudiants</p>
+          <h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100" style="font-family: 'Source Sans 3', sans-serif;">Nouveau Serverpool</h3>
+          <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">Configurez un groupe de VMs pour vos étudiants</p>
         </div>
-        <button onclick={() => open = false} class="text-neutral-400 hover:text-neutral-700 transition-colors p-1 rounded hover:bg-neutral-100">
+        <button onclick={() => open = false} class="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
@@ -317,7 +322,7 @@
               {#if vdFlavors.length > 0}
                 <div>
                   <p class="section-label mb-2">Flavors vd</p>
-                  <div class="border border-neutral-200 rounded overflow-hidden divide-y divide-neutral-100">
+                  <div class="border border-neutral-200 dark:border-neutral-700 rounded overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800">
                     {#each vdFlavors as f}
                       {@const status = flavorStatus(f)}
                       <button
@@ -325,24 +330,24 @@
                         onclick={() => status !== 'incompatible' && (selectedFlavor = f.id)}
                         class="w-full text-left px-4 py-2.5 flex items-center gap-4 transition-colors
                           {selectedFlavor === f.id
-                            ? 'bg-primary-50'
+                            ? 'bg-primary-50 dark:bg-primary-900/30'
                             : status === 'incompatible'
-                              ? 'bg-neutral-50 cursor-not-allowed'
-                              : 'hover:bg-neutral-50 cursor-pointer'}"
+                              ? 'bg-neutral-50 dark:bg-neutral-800/40 cursor-not-allowed'
+                              : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer'}"
                       >
                         <!-- Selected indicator -->
                         <span class="w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center
-                          {selectedFlavor === f.id ? 'border-primary-700 bg-primary-700' : 'border-neutral-300'}">
+                          {selectedFlavor === f.id ? 'border-primary-700 bg-primary-700' : 'border-neutral-300 dark:border-neutral-600'}">
                           {#if selectedFlavor === f.id}
                             <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
                           {/if}
                         </span>
 
                         <!-- Name -->
-                        <span class="text-sm font-bold w-16 shrink-0 {status === 'incompatible' ? 'text-neutral-400' : 'text-neutral-900'}">{f.name}</span>
+                        <span class="text-sm font-bold w-16 shrink-0 {status === 'incompatible' ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-neutral-100'}">{f.name}</span>
 
                         <!-- Specs -->
-                        <span class="text-xs text-neutral-500 flex items-center gap-3">
+                        <span class="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-3">
                           <span title="Disque">{f.disk} GB</span>
                           <span class="text-neutral-300">·</span>
                           <span title="CPU">{f.vcpus} vCPU</span>
@@ -374,7 +379,7 @@
                     </svg>
                     Autres flavors ({otherFlavors.length})
                   </summary>
-                  <div class="mt-2 border border-neutral-200 rounded overflow-hidden divide-y divide-neutral-100">
+                  <div class="mt-2 border border-neutral-200 dark:border-neutral-700 rounded overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800">
                     {#each otherFlavors as f}
                       {@const status = flavorStatus(f)}
                       <button
@@ -382,14 +387,14 @@
                         onclick={() => status !== 'incompatible' && (selectedFlavor = f.id)}
                         class="w-full text-left px-4 py-2 flex items-center gap-4 transition-colors
                           {selectedFlavor === f.id
-                            ? 'bg-primary-50'
+                            ? 'bg-primary-50 dark:bg-primary-900/30'
                             : status === 'incompatible'
-                              ? 'bg-neutral-50 cursor-not-allowed'
-                              : 'hover:bg-neutral-50 cursor-pointer'}"
+                              ? 'bg-neutral-50 dark:bg-neutral-800/40 cursor-not-allowed'
+                              : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer'}"
                       >
                         <span class="w-3.5 h-3.5 rounded-full border-2 shrink-0
-                          {selectedFlavor === f.id ? 'border-primary-700 bg-primary-700' : 'border-neutral-300'}"></span>
-                        <span class="text-sm font-semibold w-32 shrink-0 truncate {status === 'incompatible' ? 'text-neutral-400' : 'text-neutral-800'}">{f.name}</span>
+                          {selectedFlavor === f.id ? 'border-primary-700 bg-primary-700' : 'border-neutral-300 dark:border-neutral-600'}"></span>
+                        <span class="text-sm font-semibold w-32 shrink-0 truncate {status === 'incompatible' ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-800 dark:text-neutral-200'}">{f.name}</span>
                         <span class="text-xs text-neutral-400">{f.disk} GB · {f.vcpus} vCPU · {formatRam(f.ram)}</span>
                         {#if status === 'incompatible'}
                           <span class="ml-auto text-xs text-red-400 shrink-0">✗ Disque insuffisant</span>

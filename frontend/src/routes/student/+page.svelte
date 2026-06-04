@@ -215,8 +215,13 @@
         {/if}
       {:else}
         <!-- GitHub login button -->
+        <!-- data-sveltekit-reload: /api/github/login is a server endpoint (302 to
+             GitHub), not a SvelteKit route — force a full navigation so the SPA
+             router doesn't intercept it (which made the button need several clicks). -->
         <a
           href="/api/github/login"
+          data-sveltekit-reload
+          rel="external"
           class="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-lg font-semibold text-sm
             bg-neutral-900 hover:bg-neutral-700 text-white transition-all"
         >
