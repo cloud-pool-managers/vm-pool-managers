@@ -4,7 +4,7 @@
   "tags": ["cloudpoolmanager"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 3,
+  "version": 4,
   "refresh": "30s",
   "time": { "from": "now-6h", "to": "now" },
   "panels": [
@@ -64,6 +64,35 @@
       "datasource": { "type": "prometheus" },
       "targets": [ { "expr": "cpm_github_sessions_24h", "refId": "A", "legendFormat": "sessions 24h" } ],
       "fieldConfig": { "defaults": { "custom": { "fillOpacity": 20 } } }
+    },
+    {
+      "id": 9, "type": "stat", "title": "Total VMs (toutes)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus" },
+      "targets": [ { "expr": "sum(cpm_servers)", "refId": "A", "instant": true } ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+    {
+      "id": 10, "type": "stat", "title": "Erreurs dans les logs (1 h)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 20 },
+      "datasource": { "type": "loki" },
+      "targets": [ { "expr": "sum(count_over_time({job=\"cloudpoolmanager\"} |~ \"(?i)error|panic|fatal\" [1h]))", "refId": "A", "queryType": "instant" } ],
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }
+    },
+    {
+      "id": 11, "type": "bargauge", "title": "Volume de logs par fichier (1 h)",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "loki" },
+      "targets": [ { "expr": "sum by (filename) (count_over_time({job=\"cloudpoolmanager\"} [1h]))", "refId": "A", "queryType": "instant", "legendFormat": "{{filename}}" } ],
+      "options": { "orientation": "horizontal", "displayMode": "gradient" }
+    },
+    {
+      "id": 12, "type": "logs", "title": "Logs récents des services",
+      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "loki" },
+      "targets": [ { "expr": "{job=\"cloudpoolmanager\"}", "refId": "A" } ],
+      "options": { "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true }
     }
   ]
 }
