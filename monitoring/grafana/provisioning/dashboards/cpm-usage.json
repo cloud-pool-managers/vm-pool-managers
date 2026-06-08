@@ -4,22 +4,22 @@
   "tags": ["cloudpoolmanager"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 3,
   "refresh": "30s",
-  "time": { "from": "now-7d", "to": "now" },
+  "time": { "from": "now-6h", "to": "now" },
   "panels": [
     {
       "id": 1, "type": "stat", "title": "Serverpools",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus" },
-      "targets": [ { "expr": "cpm_pools_total", "refId": "A" } ],
+      "targets": [ { "expr": "cpm_pools_total", "refId": "A", "instant": true } ],
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
     },
     {
       "id": 2, "type": "stat", "title": "VMs actives (étudiants connectés)",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
       "datasource": { "type": "prometheus" },
-      "targets": [ { "expr": "cpm_vms_active", "refId": "A" } ],
+      "targets": [ { "expr": "cpm_vms_active", "refId": "A", "instant": true } ],
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 } ] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }
     },
@@ -27,14 +27,14 @@
       "id": 3, "type": "stat", "title": "Étudiants",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
       "datasource": { "type": "prometheus" },
-      "targets": [ { "expr": "cpm_students_total", "refId": "A" } ],
+      "targets": [ { "expr": "cpm_students_total", "refId": "A", "instant": true } ],
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
     },
     {
       "id": 4, "type": "stat", "title": "Connexions GitHub (24 h)",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
       "datasource": { "type": "prometheus" },
-      "targets": [ { "expr": "cpm_github_sessions_24h", "refId": "A" } ],
+      "targets": [ { "expr": "cpm_github_sessions_24h", "refId": "A", "instant": true } ],
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
     },
     {
