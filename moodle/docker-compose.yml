@@ -1,0 +1,51 @@
+# Moodle local de développement (interface web complète + Web Services).
+# Sert à développer l'intégration CloudPoolManager↔Moodle sans le Moodle de l'école.
+#   cd moodle && cp .env.example .env   # renseigner les mots de passe
+#   docker compose up -d                # ~quelques minutes au 1er boot (installation Moodle)
+#   ../scripts/moodle-bootstrap.sh      # active les WS + crée cours/élèves/devoirs + token
+# UI : http://localhost:8081  (admin / MOODLE_ADMIN_PASSWORD)
+services:
+  moodle-db:
+    # Bitnami a déplacé les tags versionnés vers le namespace "bitnamilegacy" en 2025.
+    image: bitnamilegacy/mariadb:11.8.3
+    container_name: moodle-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MOODLE_DB_ROOT_PASSWORD:?définir MOODLE_DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: bitnami_moodle
+      MARIADB_USER: bn_moodle
+      MARIADB_PASSWORD: ${MOODLE_DB_PASSWORD:?définir MOODLE_DB_PASSWORD}
+      MARIADB_CHARACTER_SET: utf8mb4
+      MARIADB_COLLATE: utf8mb4_unicode_ci
+    volumes:
+      - moodle-db-data:/bitnami/mariadb
+
+  moodle:
+    image: bitnamilegacy/moodle:5.0.2
+    container_name: moodle
+    restart: unless-stopped
+    depends_on:
+      - moodle-db
+    ports:
+      - "8081:8080"
+    environment:
+      MOODLE_DATABASE_HOST: moodle-db
+      MOODLE_DATABASE_PORT_NUMBER: 3306
+      MOODLE_DATABASE_NAME: bitnami_moodle
+      MOODLE_DATABASE_USER: bn_moodle
+      MOODLE_DATABASE_PASSWORD: ${MOODLE_DB_PASSWORD:?définir MOODLE_DB_PASSWORD}
+      MOODLE_USERNAME: ${MOODLE_ADMIN_USER:-admin}
+      MOODLE_PASSWORD: ${MOODLE_ADMIN_PASSWORD:?définir MOODLE_ADMIN_PASSWORD}
+      MOODLE_EMAIL: admin@example.com
+      MOODLE_SITE_NAME: "CloudPoolManager — Moodle (dev)"
+      # wwwroot = l'URL d'accès (indispensable pour que les Web Services et le backend Go fonctionnent)
+      MOODLE_HOST: localhost:8081
+      ALLOW_EMPTY_PASSWORD: "no"
+    volumes:
+      - moodle-data:/bitnami/moodle
+      - moodledata-data:/bitnami/moodledata
+
+volumes:
+  moodle-db-data:
+  moodle-data:
+  moodledata-data:
