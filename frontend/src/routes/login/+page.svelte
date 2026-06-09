@@ -44,10 +44,10 @@
 
 <svelte:head><title>Connexion — CloudPoolManager</title></svelte:head>
 
-<div class="min-h-screen flex flex-col" style="background: #f8f9fa;">
+<div class="min-h-screen flex flex-col" style="background: #fbfbfd;">
 
   <!-- Barre bleue Polytechnique -->
-  <div style="height:4px; background:#003865; flex-shrink:0;"></div>
+  <div style="height:3px; background:#003865; flex-shrink:0;"></div>
 
   <!-- Header institutionnel -->
   <header class="bg-white border-b border-neutral-200" style="box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
@@ -66,8 +66,8 @@
     <div class="w-full max-w-md">
 
       <!-- Carte principale -->
-      <div class="bg-white border border-neutral-200 rounded-lg overflow-hidden animate-fade-up"
-           style="box-shadow: 0 4px 24px rgba(0,56,101,0.10); border-top: 3px solid #003865;">
+      <div class="bg-white border border-black/[0.06] rounded-3xl overflow-hidden animate-fade-up"
+           style="box-shadow: 0 10px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);">
 
         <!-- En-tête de carte -->
         <div class="px-8 pt-8 pb-6 text-center border-b border-neutral-100">
@@ -91,7 +91,7 @@
           <!-- Bouton OIDC principal -->
           <button
             onclick={startOIDCLogin}
-            class="w-full flex items-center gap-3 px-5 py-3.5 rounded font-semibold text-sm transition-all
+            class="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl font-semibold text-sm transition-all
               bg-primary-700 hover:bg-primary-600 text-white"
             style="box-shadow: 0 2px 8px rgba(0,56,101,0.20);"
           >
@@ -115,7 +115,7 @@
           <!-- GitHub login -->
           <a
             href="/api/github/login"
-            class="w-full flex items-center gap-3 px-5 py-3 rounded font-semibold text-sm transition-all
+            class="w-full flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all
               bg-neutral-900 hover:bg-neutral-700 text-white"
           >
             <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -130,7 +130,7 @@
             {#if !showMoodle}
               <button
                 onclick={() => showMoodle = true}
-                class="w-full flex items-center gap-3 px-5 py-3 rounded font-semibold text-sm transition-all
+                class="w-full flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all
                   bg-[#f98012] hover:bg-[#e06f0a] text-white"
               >
                 <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
@@ -138,13 +138,13 @@
                 <span class="text-xs text-white/60 font-normal">portail étudiant</span>
               </button>
             {:else}
-              <div class="space-y-2 p-3 rounded border border-[#f98012]/40 bg-[#f98012]/5">
+              <div class="space-y-2 p-3 rounded-xl border border-[#f98012]/40 bg-[#f98012]/5">
                 <input class="field text-sm" type="text" placeholder="Identifiant Moodle" bind:value={mUser} autocomplete="username" />
                 <input class="field text-sm" type="password" placeholder="Mot de passe" bind:value={mPass} autocomplete="current-password"
                   onkeydown={(e) => { if (e.key === 'Enter') loginMoodle(); }} />
                 {#if mErr}<p class="text-xs text-red-600">{mErr}</p>{/if}
                 <button onclick={loginMoodle} disabled={mLoading || !mUser.trim() || !mPass}
-                  class="w-full px-5 py-2.5 rounded font-semibold text-sm bg-[#f98012] hover:bg-[#e06f0a] text-white disabled:opacity-50">
+                  class="w-full px-5 py-2.5 rounded-xl font-semibold text-sm bg-[#f98012] hover:bg-[#e06f0a] text-white disabled:opacity-50">
                   {mLoading ? 'Connexion…' : 'Se connecter'}
                 </button>
               </div>
@@ -154,7 +154,7 @@
           <!-- Portail étudiant sans compte -->
           <a
             href="/"
-            class="w-full flex items-center gap-3 px-5 py-3 rounded font-semibold text-sm transition-all
+            class="w-full flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all
               bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50 hover:border-neutral-400"
           >
             <svg class="w-5 h-5 shrink-0 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

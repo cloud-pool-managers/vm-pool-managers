@@ -350,7 +350,7 @@
           href="/api/github/login"
           data-sveltekit-reload
           rel="external"
-          class="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-lg font-semibold text-sm
+          class="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-xl font-semibold text-sm
             bg-neutral-900 hover:bg-neutral-700 text-white transition-all"
         >
           <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -369,7 +369,7 @@
           {#if !showMoodleForm}
             <button
               onclick={() => showMoodleForm = true}
-              class="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-lg font-semibold text-sm
+              class="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-xl font-semibold text-sm
                 bg-[#f98012] hover:bg-[#e06f0a] text-white transition-all"
             >
               <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
@@ -494,7 +494,7 @@
             href="http://{vmIp}:{vmAppPort}/lab"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-lg font-semibold text-base
+            class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-xl font-semibold text-base
               bg-amber-500 hover:bg-amber-400 text-white transition-all shadow-sm hover:shadow-md"
           >
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -509,7 +509,7 @@
             <button
               onclick={submitWork}
               disabled={submitting}
-              class="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-lg font-semibold text-sm
+              class="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-xl font-semibold text-sm
                 bg-white border border-amber-300 text-amber-700 hover:bg-amber-50 transition-all disabled:opacity-50"
             >
               {#if submitting}
@@ -528,7 +528,7 @@
             {/if}
           </div>
         {:else}
-          <div class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-lg font-semibold text-base
+          <div class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-xl font-semibold text-base
             bg-neutral-200 text-neutral-500 cursor-not-allowed select-none">
             <span class="w-4 h-4 border-2 border-neutral-400/40 border-t-neutral-500 rounded-full shrink-0"
               style="animation: spinnerGlow 0.8s linear infinite;"></span>
@@ -542,7 +542,7 @@
           href={guacUrl}
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-lg font-semibold text-base
+          class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-xl font-semibold text-base
             bg-primary-700 hover:bg-primary-600 text-white transition-all shadow-sm hover:shadow-md"
         >
           <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -553,7 +553,7 @@
         </a>
       {:else if vmAppPort === 0}
         <!-- VM sans app (Ubuntu…) : la connexion Guacamole se prépare -->
-        <div class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-lg font-semibold text-base
+        <div class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-xl font-semibold text-base
           bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 cursor-not-allowed select-none">
           <span class="w-4 h-4 border-2 border-neutral-400/40 border-t-neutral-500 rounded-full shrink-0"
             style="animation: spinnerGlow 0.8s linear infinite;"></span>

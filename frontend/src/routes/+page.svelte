@@ -34,7 +34,7 @@
     <div class="w-full max-w-md">
 
       <!-- Carte principale -->
-      <div class="bg-white border border-neutral-200 rounded-lg overflow-hidden animate-fade-up"
+      <div class="bg-white border border-neutral-200 rounded-xl overflow-hidden animate-fade-up"
            style="box-shadow: 0 4px 24px rgba(0,56,101,0.10); border-top: 3px solid #003865;">
 
         <!-- En-tête de carte -->
