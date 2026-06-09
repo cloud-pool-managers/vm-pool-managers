@@ -90,6 +90,19 @@
   .animate-fade-in    { animation: fadeIn    0.18s ease-out forwards; }
   .animate-slide-right{ animation: slideRight 0.2s ease-out forwards; }
 
+  /* Préférence « réduire les animations » : coupe transitions/animations décoratives,
+     mais garde les indicateurs de chargement (spinners) lisibles. */
+  .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reduce-motion [style*="spinnerGlow"],
+  .reduce-motion .animate-spin {
+    animation-duration: 0.7s !important;
+    animation-iteration-count: infinite !important;
+  }
+
   /* Bandeau bleu institutionnel en haut de nav */
   .nav-stripe {
     height: 4px;

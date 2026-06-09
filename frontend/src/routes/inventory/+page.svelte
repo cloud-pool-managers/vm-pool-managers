@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { authStore } from '$lib/store';
-  import { simpleMode } from '$lib/store/uiStore';
+  import { simpleMode, refreshInterval } from '$lib/store/uiStore';
   import { browser } from '$app/environment';
 
   interface VMInstance {
@@ -9,6 +9,8 @@
     status: string; healthy: boolean; activity_status: string;
     registered_at: string; last_seen: string; raw_meta: Record<string, string>;
     guac_url?: string;
+    student?: string;        // étudiant attribué (par IP)
+    is_instructor?: boolean; // VM de l'enseignant
   }
   interface InventoryPool { pool_id: string; user_id: string; vms: VMInstance[]; }
 
@@ -17,7 +19,6 @@
   let error = $state('');
   let lastRefresh = $state('');
   let refreshing = $state(false);
-  let autoRefresh: ReturnType<typeof setInterval> | null = null;
 
   async function fetchInventory(silent = false) {
     if (!silent) loading = true; else refreshing = true;
@@ -35,8 +36,14 @@
     if (!browser) return;
     if (!$authStore || $authStore.role !== 'admin') { window.location.href = '/'; return; }
     fetchInventory();
-    autoRefresh = setInterval(() => fetchInventory(true), 15000);
-    return () => { if (autoRefresh) clearInterval(autoRefresh); };
+  });
+
+  // Auto-refresh : intervalle configurable (Paramètres). Se recrée si l'intervalle change.
+  $effect(() => {
+    if (!browser || !$authStore || $authStore.role !== 'admin') return;
+    const ms = Math.max(3, $refreshInterval || 15) * 1000;
+    const id = setInterval(() => fetchInventory(true), ms);
+    return () => clearInterval(id);
   });
 
   function timeSince(dateStr: string): string {
@@ -80,10 +87,10 @@
     </div>
   {:else}
     <div class="space-y-4">
-      {#each pools as pool}
+      {#each pools as pool, pi}
         {@const activeVms = pool.vms.filter(v => v.activity_status !== 'idle')}
         {@const readyVms = pool.vms.filter(v => v.status === 'ready')}
-        <div class="card overflow-hidden">
+        <div class="card overflow-hidden animate-fade-up" style="animation-delay:{pi*0.06}s">
           <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
             <div>
               <h2 class="text-sm font-bold text-neutral-900">{pool.pool_id}</h2>
@@ -107,14 +114,39 @@
           </div>
           <div class="divide-y divide-neutral-50">
             {#each pool.vms as vm}
-              <div class="flex items-center justify-between px-5 py-3">
-                <div class="flex items-center gap-3">
-                  <span class="w-2 h-2 rounded-full flex-shrink-0 {vm.activity_status !== 'idle' ? 'bg-green-500' : vm.status === 'ready' ? 'bg-neutral-300' : 'bg-amber-400'}"></span>
-                  <span class="text-sm text-neutral-700">{vm.name}</span>
-                </div>
-                <div class="flex items-center gap-3">
+              <div class="flex items-center justify-between px-5 py-3 transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.03]">
+                <div class="flex items-center gap-3 min-w-0">
                   {#if vm.activity_status !== 'idle'}
-                    <span class="text-xs text-green-600 font-medium">Connecté</span>
+                    <span class="relative flex h-2 w-2 flex-shrink-0">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-70"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                  {:else}
+                    <span class="w-2 h-2 rounded-full flex-shrink-0 {vm.status === 'ready' ? 'bg-neutral-300' : 'bg-amber-400'}"></span>
+                  {/if}
+                  <div class="min-w-0">
+                    {#if vm.activity_status !== 'idle'}
+                      {#if vm.student}
+                        <span class="text-sm font-medium text-neutral-800 dark:text-neutral-200">{vm.student}</span>
+                      {:else}
+                        <span class="text-sm font-medium text-primary-700 dark:text-primary-300">Connexion personnelle</span>
+                        <span class="text-xs text-neutral-400 ml-1">({vm.is_instructor ? 'enseignant' : 'prof/admin'})</span>
+                      {/if}
+                    {:else if vm.is_instructor}
+                      <span class="text-sm text-neutral-500">VM enseignant</span>
+                    {:else if vm.student}
+                      <span class="text-sm text-neutral-500">{vm.student}</span>
+                    {:else}
+                      <span class="text-sm text-neutral-400">Machine libre</span>
+                    {/if}
+                    <p class="text-[11px] text-neutral-400 font-mono truncate">{vm.name}</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 shrink-0">
+                  {#if vm.activity_status !== 'idle'}
+                    <span class="badge badge-ready">Connecté</span>
+                  {:else if vm.student}
+                    <span class="text-xs text-neutral-400">Hors ligne</span>
                   {:else if vm.status === 'ready'}
                     <span class="text-xs text-neutral-400">En attente d'étudiant</span>
                   {:else}
@@ -224,8 +256,17 @@
             </thead>
             <tbody>
               {#each pool.vms as vm}
-                <tr>
-                  <td><span class="font-mono text-xs text-neutral-700">{vm.name}</span></td>
+                <tr class="transition-colors">
+                  <td>
+                    <div class="flex flex-col gap-0.5">
+                      <span class="font-mono text-xs text-neutral-700 dark:text-neutral-300">{vm.name}</span>
+                      {#if vm.is_instructor}
+                        <span class="text-[10px] font-semibold text-primary-600 dark:text-primary-400">● VM enseignant</span>
+                      {:else if vm.student}
+                        <span class="text-[10px] text-neutral-500">👤 {vm.student}</span>
+                      {/if}
+                    </div>
+                  </td>
                   <td><span class="font-mono text-xs text-neutral-700">{vm.ip}</span></td>
                   <td>
                     <span class="badge {vm.status === 'ready' ? 'badge-ready' : vm.status === 'starting' ? 'badge-starting' : 'badge-error'}">

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { authStore, configs, serverPools, flavors, images, networks } from '$lib/store';
   import { logout } from '$lib/store/authStore';
-  import { simpleMode, darkMode } from '$lib/store/uiStore';
+  import { simpleMode, darkMode, reduceMotion, refreshInterval } from '$lib/store/uiStore';
   import { goto } from '$app/navigation';
   import { create } from '@bufbuild/protobuf';
   import { AddPersonalSSHKeyRequestSchema, type AddPersonalSSHKeyRequest, type AddPersonnalSSHKeyResponse } from '$lib/grpc/frontcontrol_pb';
@@ -76,6 +76,38 @@
             class="relative w-11 h-6 rounded-full transition-colors shrink-0 {$simpleMode ? 'bg-amber-500' : 'bg-neutral-300 dark:bg-neutral-600'}">
             <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {$simpleMode ? 'translate-x-5' : ''}"></span>
           </button>
+        </div>
+      {/if}
+      <!-- Réduire les animations -->
+      <div class="flex items-center justify-between py-3.5">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <div>
+            <p class="text-sm font-medium text-neutral-800 dark:text-neutral-200">Réduire les animations</p>
+            <p class="text-xs text-neutral-400">Interface plus sobre, transitions désactivées</p>
+          </div>
+        </div>
+        <button onclick={() => reduceMotion.update(v => !v)} role="switch" aria-checked={$reduceMotion} aria-label="Réduire les animations"
+          class="relative w-11 h-6 rounded-full transition-colors shrink-0 {$reduceMotion ? 'bg-primary-600' : 'bg-neutral-300 dark:bg-neutral-600'}">
+          <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {$reduceMotion ? 'translate-x-5' : ''}"></span>
+        </button>
+      </div>
+      {#if $authStore?.role === 'admin'}
+        <!-- Intervalle de rafraîchissement -->
+        <div class="flex items-center justify-between py-3.5">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <div>
+              <p class="text-sm font-medium text-neutral-800 dark:text-neutral-200">Rafraîchissement de l'inventaire</p>
+              <p class="text-xs text-neutral-400">Fréquence de mise à jour automatique</p>
+            </div>
+          </div>
+          <select bind:value={$refreshInterval} class="field text-sm w-auto py-1.5">
+            <option value={5}>5 s</option>
+            <option value={15}>15 s</option>
+            <option value={30}>30 s</option>
+            <option value={60}>1 min</option>
+          </select>
         </div>
       {/if}
       <!-- Compte -->

@@ -13,7 +13,7 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { page } from '$app/state';
-  import { simpleMode, darkMode } from '$lib/store/uiStore';
+  import { simpleMode, darkMode, reduceMotion } from '$lib/store/uiStore';
 
   let { children } = $props();
   let userStreamController: AbortController | null = null;
@@ -75,6 +75,11 @@
       document.documentElement.style.setProperty('--page-bg', '#f8f9fa');
       document.documentElement.style.setProperty('--page-color', '#212529');
     }
+  });
+
+  $effect(() => {
+    if (!browser) return;
+    document.documentElement.classList.toggle('reduce-motion', $reduceMotion);
   });
 
   let mobileOpen = $state(false);

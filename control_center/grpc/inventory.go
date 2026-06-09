@@ -23,7 +23,9 @@ var guacClient *guacamole.Client
 // InventoryVM wraps VMInstance with a derived Guacamole terminal URL.
 type InventoryVM struct {
 	models.VMInstance
-	GuacURL string `json:"guac_url,omitempty"`
+	GuacURL      string `json:"guac_url,omitempty"`
+	Student      string `json:"student,omitempty"`       // étudiant attribué (par IP), si VM étudiante
+	IsInstructor bool   `json:"is_instructor,omitempty"` // VM de l'enseignant (la plus ancienne du pool)
 }
 
 // InventoryPool groups VMs by serverpool for the admin dashboard.
@@ -62,6 +64,32 @@ func buildInventory() ([]InventoryPool, error) {
 		return nil, err
 	}
 
+	// IP -> nom de l'étudiant attribué (pour afficher qui est connecté sur quelle VM).
+	studentByIP := map[string]string{}
+	{
+		type srow struct{ IP, Name string }
+		var srows []srow
+		config.Database.Model(&models.Student{}).Where("ip <> ''").Select("ip", "name").Scan(&srows)
+		for _, s := range srows {
+			if s.IP != "" {
+				studentByIP[s.IP] = s.Name
+			}
+		}
+	}
+	// VM instructeur de chaque pool = la plus ancienne (created_at), cohérent avec attribvm/nbgrader.
+	instructorID := map[string]string{}
+	oldest := map[string]time.Time{}
+	for _, srv := range servers {
+		k := serverPoolID(srv) + ":" + serverUserID(srv)
+		if k == ":" {
+			continue
+		}
+		if t, ok := oldest[k]; !ok || srv.CreatedAt.Before(t) {
+			oldest[k] = srv.CreatedAt
+			instructorID[k] = srv.ID
+		}
+	}
+
 	pools := make(map[string]*InventoryPool)
 	seen := make(map[string]bool)
 
@@ -69,6 +97,7 @@ func buildInventory() ([]InventoryPool, error) {
 	type pendingProbe struct {
 		vm  models.VMInstance
 		key string
+		srv models.Server
 	}
 	var pending []pendingProbe
 
@@ -91,7 +120,7 @@ func buildInventory() ([]InventoryPool, error) {
 				VMs:    []InventoryVM{},
 			}
 		}
-		pending = append(pending, pendingProbe{vm: vm, key: key})
+		pending = append(pending, pendingProbe{vm: vm, key: key, srv: srv})
 		seen[vm.Name] = true
 	}
 
@@ -107,7 +136,14 @@ func buildInventory() ([]InventoryPool, error) {
 	wg.Wait()
 
 	for _, p := range pending {
-		pools[p.key].VMs = append(pools[p.key].VMs, toInventoryVM(p.vm))
+		ivm := toInventoryVM(p.vm)
+		if name, ok := studentByIP[p.srv.IP_Address]; ok {
+			ivm.Student = name
+		}
+		if instructorID[p.key] == p.srv.ID {
+			ivm.IsInstructor = true
+		}
+		pools[p.key].VMs = append(pools[p.key].VMs, ivm)
 	}
 
 	// Registrar-only rows (VM created before servers sync).
@@ -133,7 +169,11 @@ func buildInventory() ([]InventoryPool, error) {
 				VMs:    []InventoryVM{},
 			}
 		}
-		pools[key].VMs = append(pools[key].VMs, toInventoryVM(vm))
+		ivm := toInventoryVM(vm)
+		if name, ok := studentByIP[vm.IP]; ok {
+			ivm.Student = name
+		}
+		pools[key].VMs = append(pools[key].VMs, ivm)
 	}
 
 	result := make([]InventoryPool, 0, len(pools))
