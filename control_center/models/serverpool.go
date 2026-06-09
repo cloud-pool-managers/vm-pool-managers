@@ -32,6 +32,7 @@ type Serverpool struct {
 	AppPort      int    `gorm:"default:0"`
 	Role         string `gorm:"default:'student'"` // "student" or "instructor"
 	LinkedPoolID string `gorm:"default:''"`        // pool étudiant associé (si role=instructor)
+	MoodleCourseID int  `gorm:"default:0"`         // cours Moodle lié (0 = aucun), renseigné à l'import
 }
 
 func (sp *Serverpool) FromPb(pbs *pb.StreamRessourceResponse) error {

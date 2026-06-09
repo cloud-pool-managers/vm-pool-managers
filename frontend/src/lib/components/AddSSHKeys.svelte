@@ -13,7 +13,7 @@
     poolname,
   }: { open: boolean; poolname: string } = $props();
 
-  type AddMode = 'form' | 'raw' | 'github';
+  type AddMode = 'form' | 'raw' | 'github' | 'moodle';
 
   let addModal = $state(false);
   let loading = $state(false);
@@ -69,6 +69,67 @@
       githubSelected = new Set();
       addModal = false;
     } catch { error = "Erreur lors de l'ajout."; } finally { loading = false; }
+  }
+
+  // Moodle mode state
+  interface MoodleCourse { id: number; shortname: string; fullname: string }
+  interface MoodleStudent { moodle_id: number; email: string; fullname: string; is_teacher: boolean }
+  let moodleConfigured = $state(false);
+  let moodleCourses = $state<MoodleCourse[]>([]);
+  let moodleCourseId = $state<number | null>(null);
+  let moodleStudents = $state<MoodleStudent[]>([]);
+  let moodleSelected = $state<Set<string>>(new Set());
+  let moodleLoading = $state(false);
+  let modes = $derived<[AddMode, string][]>(
+    moodleConfigured
+      ? [['form', 'Formulaire'], ['raw', 'Import texte'], ['github', 'GitHub'], ['moodle', 'Moodle']]
+      : [['form', 'Formulaire'], ['raw', 'Import texte'], ['github', 'GitHub']]
+  );
+
+  async function checkMoodle() {
+    try {
+      const r = await fetch('/api/moodle/status');
+      if (r.ok) moodleConfigured = !!(await r.json()).configured;
+    } catch { /* ignore */ }
+  }
+  async function loadMoodleCourses() {
+    moodleLoading = true;
+    try {
+      const r = await fetch('/api/moodle/courses');
+      if (r.ok) moodleCourses = (await r.json()).courses ?? [];
+    } catch { /* ignore */ } finally { moodleLoading = false; }
+  }
+  async function loadMoodleEnrolments(courseId: number) {
+    moodleLoading = true; moodleStudents = []; moodleSelected = new Set();
+    try {
+      const r = await fetch(`/api/moodle/enrolments?course_id=${courseId}`);
+      if (r.ok) {
+        const list: MoodleStudent[] = ((await r.json()).students ?? []).filter((s: MoodleStudent) => !s.is_teacher);
+        moodleStudents = list;
+        moodleSelected = new Set(list.map(s => s.email));
+      }
+    } catch { /* ignore */ } finally { moodleLoading = false; }
+  }
+  function toggleMoodleStudent(email: string) {
+    const s = new Set(moodleSelected);
+    if (s.has(email)) s.delete(email); else s.add(email);
+    moodleSelected = s;
+  }
+  async function handleImportMoodle() {
+    if (moodleCourseId == null) { error = 'Choisissez un cours.'; return; }
+    const emails = Array.from(moodleSelected);
+    if (!emails.length) { error = 'Sélectionnez au moins un étudiant.'; return; }
+    try {
+      loading = true; error = null;
+      const r = await fetch('/api/moodle/import', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pool_id: poolname, user_id: $authStore?.email, course_id: moodleCourseId, emails }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? 'erreur');
+      await handleListStudents();
+      moodleSelected = new Set();
+      addModal = false;
+    } catch { error = "Erreur lors de l'import depuis Moodle."; } finally { loading = false; }
   }
 
   interface User { name: string; sshKey: string; ip: string; }
@@ -143,8 +204,9 @@
     addModal = false;
   }
 
-  $effect(() => { if (open) handleListStudents(); });
+  $effect(() => { if (open) { handleListStudents(); checkMoodle(); } });
   $effect(() => { if (addModal) { loadGitHubStudents(); } });
+  $effect(() => { if (addModal && addMode === 'moodle' && moodleCourses.length === 0) loadMoodleCourses(); });
   $effect(() => { rawMode = addMode === 'raw'; if (rawMode) newStudents = [{ firstName: '', lastName: '', sshKey: '' }]; });
 </script>
 
@@ -238,7 +300,7 @@
 
       <!-- Mode toggle -->
       <div class="flex gap-1 mb-5 p-1 bg-neutral-100 rounded border border-neutral-200 w-fit">
-        {#each ([['form','Formulaire'],['raw','Import texte'],['github','GitHub']] as const) as [mode, label]}
+        {#each modes as [mode, label]}
           <button
             onclick={() => addMode = mode}
             class="px-4 py-1.5 rounded text-sm font-semibold transition-all {addMode === mode ? 'bg-white text-primary-700 shadow-sm border border-neutral-200' : 'text-neutral-500 hover:text-neutral-700'}"
@@ -296,6 +358,47 @@
             </button>
           </div>
         {/if}
+      {:else if addMode === 'moodle'}
+        <div class="space-y-3">
+          <div>
+            <label class="section-label block mb-1">Cours Moodle</label>
+            <select
+              class="field text-sm"
+              bind:value={moodleCourseId}
+              onchange={() => { if (moodleCourseId != null) loadMoodleEnrolments(moodleCourseId); }}
+            >
+              <option value={null} disabled selected>— Choisir un cours —</option>
+              {#each moodleCourses as c}
+                <option value={c.id}>{c.shortname} — {c.fullname}</option>
+              {/each}
+            </select>
+            <p class="text-xs text-neutral-400 mt-1">Les étudiants importés se connecteront via Moodle (clé SSH non requise).</p>
+          </div>
+
+          {#if moodleLoading}
+            <div class="flex items-center justify-center py-10">
+              <div class="w-6 h-6 rounded-full border-2 border-neutral-200 border-t-primary-700" style="animation: spinnerGlow 0.7s linear infinite;"></div>
+            </div>
+          {:else if moodleStudents.length > 0}
+            <div class="space-y-1 max-h-60 overflow-y-auto pr-1">
+              {#each moodleStudents as s}
+                <label class="flex items-center gap-2 px-3 py-2 rounded border cursor-pointer transition-colors {moodleSelected.has(s.email) ? 'border-primary-300 bg-primary-50' : 'border-neutral-200 bg-neutral-50'}">
+                  <input type="checkbox" checked={moodleSelected.has(s.email)} onchange={() => toggleMoodleStudent(s.email)} class="w-4 h-4 accent-primary-700" />
+                  <span class="text-sm font-semibold text-neutral-800">{s.fullname}</span>
+                  <span class="text-xs text-neutral-400 font-mono ml-auto">{s.email}</span>
+                </label>
+              {/each}
+            </div>
+            <button onclick={handleImportMoodle} disabled={loading || moodleSelected.size === 0} class="btn btn-primary text-sm w-full">
+              {#if loading}
+                <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
+              {/if}
+              Importer {moodleSelected.size} étudiant{moodleSelected.size > 1 ? 's' : ''}
+            </button>
+          {:else if moodleCourseId != null}
+            <p class="text-sm text-neutral-400 py-6 text-center">Aucun étudiant dans ce cours.</p>
+          {/if}
+        </div>
       {:else if rawMode}
         <div class="space-y-3">
           <label class="section-label block mb-1">Un étudiant par ligne : <code class="text-primary-700 font-mono">prenom.nom;cle_ssh</code></label>

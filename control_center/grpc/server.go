@@ -171,6 +171,10 @@ func Start_grpc(ctx context.Context) {
 	mux.HandleFunc("/api/nbgrader/export-csv", handleNbgraderExportCSV)
 	mux.HandleFunc("/api/nbgrader/jupyter-url", handleNbgraderJupyterURL)
 	mux.HandleFunc("/api/nbgrader/submission-url", handleNbgraderSubmissionURL)
+	mux.HandleFunc("/api/moodle/status", handleMoodleStatus)
+	mux.HandleFunc("/api/moodle/courses", handleMoodleCourses)
+	mux.HandleFunc("/api/moodle/enrolments", handleMoodleEnrolments)
+	mux.HandleFunc("/api/moodle/import", handleMoodleImport)
 	mux.HandleFunc("/api/image-proposals", handleImageProposals)
 	mux.HandleFunc("/api/jupyter-proxy/", handleJupyterProxy)
 	mux.HandleFunc("/vm-registrar", func(w http.ResponseWriter, r *http.Request) {

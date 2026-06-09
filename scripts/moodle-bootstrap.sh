@@ -29,20 +29,22 @@ fi
 TOKEN="$(grep '^TOKEN=' <<<"$OUT" | head -1 | cut -d= -f2)"
 if [ -z "$TOKEN" ]; then echo "✗ Token introuvable dans la sortie."; exit 1; fi
 
-# ── Reporter MOODLE_URL / MOODLE_TOKEN dans le .env racine (idempotent) ──
-ENV="$ROOT/.env"
-touch "$ENV"
-upsert() { # clé valeur
-  local k="$1" v="$2"
-  if grep -qE "^${k}=" "$ENV"; then
-    # remplace la valeur existante (compatible macOS/BSD sed)
-    sed -i '' -E "s|^${k}=.*|${k}=${v}|" "$ENV" 2>/dev/null || sed -i -E "s|^${k}=.*|${k}=${v}|" "$ENV"
+# ── Reporter MOODLE_URL / MOODLE_TOKEN dans les .env (idempotent) ──
+# Le control center charge control_center/.env en priorité (et ne lit ../.env que si absent),
+# donc on écrit dans les DEUX : racine (commodité) + control_center/.env (réellement chargé).
+upsert() { # fichier clé valeur
+  local f="$1" k="$2" v="$3"
+  touch "$f"
+  if grep -qE "^${k}=" "$f"; then
+    sed -i '' -E "s|^${k}=.*|${k}=${v}|" "$f" 2>/dev/null || sed -i -E "s|^${k}=.*|${k}=${v}|" "$f"
   else
-    printf '\n%s=%s\n' "$k" "$v" >> "$ENV"
+    printf '\n%s=%s\n' "$k" "$v" >> "$f"
   fi
 }
-upsert "MOODLE_URL" "$MOODLE_URL"
-upsert "MOODLE_TOKEN" "$TOKEN"
+for ENV in "$ROOT/.env" "$ROOT/control_center/.env"; do
+  upsert "$ENV" "MOODLE_URL" "$MOODLE_URL"
+  upsert "$ENV" "MOODLE_TOKEN" "$TOKEN"
+done
 
 echo ""
 echo "✓ Moodle prêt. MOODLE_URL et MOODLE_TOKEN écrits dans .env"
