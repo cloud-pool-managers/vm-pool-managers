@@ -263,7 +263,7 @@
 
   {#if !vmIp}
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-primary-800 mb-2" style="font-family: 'Source Sans 3', sans-serif; letter-spacing: -0.01em;">
+      <h1 class="text-3xl font-bold text-primary-800 mb-2">
         Portail étudiant
       </h1>
       <p class="text-sm text-neutral-500 leading-relaxed">
@@ -478,7 +478,7 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60"></span>
           <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
         </span>
-        <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">VM attribuée</h1>
+        <h1 class="text-3xl font-bold text-primary-800">VM attribuée</h1>
       </div>
       <p class="text-sm text-neutral-500 ml-6">
         {#if (vmAppPort > 0 && !appReady) || (vmAppPort === 0 && !guacUrl)}Démarrage en cours…{:else}Votre environnement est prêt.{/if}

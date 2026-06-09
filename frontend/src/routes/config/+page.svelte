@@ -51,7 +51,7 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">Configurations</h1>
+      <h1 class="text-3xl font-bold text-primary-800">Configurations</h1>
       <p class="text-sm text-neutral-500 mt-1">Scripts cloud-init pour l'initialisation des VMs</p>
     </div>
     <button onclick={newConfig} class="btn btn-primary">

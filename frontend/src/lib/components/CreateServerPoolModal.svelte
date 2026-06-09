@@ -166,7 +166,7 @@
 
       <div class="flex items-center justify-between mb-6 pb-5 border-b border-neutral-200 dark:border-neutral-700">
         <div>
-          <h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100" style="font-family: 'Source Sans 3', sans-serif;">Nouveau Serverpool</h3>
+          <h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100">Nouveau Serverpool</h3>
           <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">Configurez un groupe de VMs pour vos étudiants</p>
         </div>
         <button onclick={() => open = false} class="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">

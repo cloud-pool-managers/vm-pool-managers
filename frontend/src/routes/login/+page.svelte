@@ -77,7 +77,7 @@
                 d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </div>
-          <h1 class="text-xl font-bold text-neutral-900" style="font-family:'Source Sans 3',sans-serif;">
+          <h1 class="text-xl font-bold text-neutral-900">
             Accès à la plateforme
           </h1>
           <p class="text-sm text-neutral-500 mt-1">

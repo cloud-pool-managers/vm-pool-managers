@@ -72,8 +72,8 @@
       document.documentElement.style.setProperty('--page-color', '#e9ecef');
     } else {
       document.documentElement.classList.remove('dark');
-      document.documentElement.style.setProperty('--page-bg', '#f8f9fa');
-      document.documentElement.style.setProperty('--page-color', '#212529');
+      document.documentElement.style.setProperty('--page-bg', '#fbfbfd');
+      document.documentElement.style.setProperty('--page-color', '#1d1d1f');
     }
   });
 
@@ -133,7 +133,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 </svelte:head>
 
-<div class="min-h-screen flex flex-col" style="background: var(--page-bg, #f8f9fa); font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif; color: var(--page-color, #212529);">
+<div class="min-h-screen flex flex-col" style="background: var(--page-bg, #fbfbfd); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif; color: var(--page-color, #1d1d1f);">
 
 {#if page.url?.pathname !== '/'}
   <!-- Barre bleue Polytechnique -->

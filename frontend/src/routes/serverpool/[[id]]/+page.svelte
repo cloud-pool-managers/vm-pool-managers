@@ -140,7 +140,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
 
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">Mes cours</h1>
+      <h1 class="text-3xl font-bold text-primary-800">Mes cours</h1>
       <p class="text-sm text-neutral-500 mt-1">Gérez les machines virtuelles de vos étudiants</p>
     </div>
     <button onclick={() => createspModal = true} class="btn btn-primary">
@@ -234,7 +234,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">Serverpools</h1>
+      <h1 class="text-3xl font-bold text-primary-800">Serverpools</h1>
       <p class="text-sm text-neutral-500 mt-1">Gestion des groupes de machines virtuelles</p>
     </div>
     <button onclick={() => createspModal = true} class="btn btn-primary">

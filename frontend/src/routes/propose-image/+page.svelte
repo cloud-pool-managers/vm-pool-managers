@@ -91,7 +91,7 @@
 <svelte:head><title>Proposer une image — CloudPoolManager</title></svelte:head>
 
 <div class="max-w-3xl mx-auto px-6 py-8 animate-fade-up">
-  <h1 class="text-2xl font-bold text-primary-800 dark:text-primary-300" style="font-family:'Source Sans 3',sans-serif;">Proposer une image</h1>
+  <h1 class="text-2xl font-bold text-primary-800 dark:text-primary-300">Proposer une image</h1>
   <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
     Proposez une image d’environnement (repo2docker) à partir d’un dépôt GitHub. L’administrateur la construira et l’ajoutera aux images disponibles.
   </p>

@@ -304,7 +304,7 @@
   <!-- Header + pool selector -->
   <div class="flex items-center gap-4 flex-wrap">
     <div>
-      <h1 class="text-2xl font-bold text-primary-800 dark:text-primary-300" style="font-family:'Source Sans 3',sans-serif;">Notation</h1>
+      <h1 class="text-2xl font-bold text-primary-800 dark:text-primary-300">Notation</h1>
     </div>
 
     <select

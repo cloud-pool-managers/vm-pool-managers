@@ -66,7 +66,7 @@
 <div class="space-y-6 animate-fade-up">
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">Mes étudiants</h1>
+      <h1 class="text-3xl font-bold text-primary-800">Mes étudiants</h1>
       <p class="text-sm text-neutral-500 mt-1">Suivez la connexion de vos étudiants en temps réel</p>
     </div>
     <button onclick={() => fetchInventory(true)} disabled={refreshing} class="btn btn-secondary text-xs px-3.5 py-2">
@@ -168,7 +168,7 @@
   <!-- Header -->
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800" style="font-family: 'Source Sans 3', sans-serif;">Inventaire</h1>
+      <h1 class="text-3xl font-bold text-primary-800">Inventaire</h1>
       <p class="text-sm text-neutral-500 mt-1">Supervision en temps réel des instances provisionnées</p>
     </div>
     <div class="flex items-center gap-3">

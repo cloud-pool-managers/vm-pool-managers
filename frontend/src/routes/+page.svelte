@@ -1,21 +1,53 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { authStore, startOIDCLogin } from '$lib/store/authStore';
+  import { moodleStudentStore } from '$lib/store/moodleStudentStore';
   import logoX from '$lib/assets/logo_polytechnique_crop.png';
   import { browser } from '$app/environment';
+  import { onMount } from 'svelte';
 
   // If already logged in, redirect away
   if (browser && $authStore) {
     goto($authStore.role === 'admin' ? '/serverpool' : '/student');
   }
+
+  let moodleConfigured = $state(false);
+  let showMoodle = $state(false);
+  let mUser = $state('');
+  let mPass = $state('');
+  let mLoading = $state(false);
+  let mErr = $state('');
+
+  onMount(async () => {
+    try {
+      const r = await fetch('/api/moodle/status');
+      if (r.ok) moodleConfigured = !!(await r.json()).configured;
+    } catch { /* ignore */ }
+  });
+
+  async function loginMoodle() {
+    if (!mUser.trim() || !mPass) return;
+    mLoading = true; mErr = '';
+    try {
+      const r = await fetch('/api/moodle/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: mUser.trim(), password: mPass }),
+      });
+      if (!r.ok) { mErr = 'Identifiants Moodle invalides.'; return; }
+      const d = await r.json();
+      moodleStudentStore.set({ email: d.email ?? '', fullname: d.fullname ?? '' });
+      goto('/student');
+    } catch { mErr = 'Erreur de connexion Moodle.'; }
+    finally { mLoading = false; }
+  }
 </script>
 
 <svelte:head><title>Connexion — CloudPoolManager</title></svelte:head>
 
-<div class="min-h-screen flex flex-col" style="background: #f8f9fa;">
+<div class="min-h-screen flex flex-col" style="background: #fbfbfd;">
 
   <!-- Barre bleue Polytechnique -->
-  <div style="height:4px; background:#003865; flex-shrink:0;"></div>
+  <div style="height:3px; background:#003865; flex-shrink:0;"></div>
 
   <!-- Header institutionnel -->
   <header class="bg-white border-b border-neutral-200" style="box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
@@ -34,8 +66,8 @@
     <div class="w-full max-w-md">
 
       <!-- Carte principale -->
-      <div class="bg-white border border-neutral-200 rounded-xl overflow-hidden animate-fade-up"
-           style="box-shadow: 0 4px 24px rgba(0,56,101,0.10); border-top: 3px solid #003865;">
+      <div class="bg-white border border-black/[0.06] rounded-3xl overflow-hidden animate-fade-up"
+           style="box-shadow: 0 10px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);">
 
         <!-- En-tête de carte -->
         <div class="px-8 pt-8 pb-6 text-center border-b border-neutral-100">
@@ -45,7 +77,7 @@
                 d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </div>
-          <h1 class="text-xl font-bold text-neutral-900" style="font-family:'Source Sans 3',sans-serif;">
+          <h1 class="text-xl font-bold text-neutral-900">
             Accès à la plateforme
           </h1>
           <p class="text-sm text-neutral-500 mt-1">
@@ -59,7 +91,7 @@
           <!-- Bouton OIDC principal -->
           <button
             onclick={startOIDCLogin}
-            class="w-full flex items-center gap-3 px-5 py-3.5 rounded font-semibold text-sm transition-all
+            class="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl font-semibold text-sm transition-all
               bg-primary-700 hover:bg-primary-600 text-white"
             style="box-shadow: 0 2px 8px rgba(0,56,101,0.20);"
           >
@@ -83,7 +115,7 @@
           <!-- GitHub login -->
           <a
             href="/api/github/login"
-            class="w-full flex items-center gap-3 px-5 py-3 rounded font-semibold text-sm transition-all
+            class="w-full flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all
               bg-neutral-900 hover:bg-neutral-700 text-white"
           >
             <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -93,10 +125,35 @@
             <span class="text-xs text-white/50 font-normal">portail étudiant</span>
           </a>
 
+          <!-- Moodle login -->
+          {#if moodleConfigured}
+            {#if !showMoodle}
+              <button
+                onclick={() => showMoodle = true}
+                class="w-full flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all bg-[#f98012] hover:bg-[#e06f0a] text-white"
+              >
+                <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
+                <span class="flex-1 text-left">Se connecter avec Moodle</span>
+                <span class="text-xs text-white/60 font-normal">portail étudiant</span>
+              </button>
+            {:else}
+              <div class="space-y-2 p-3 rounded-xl border border-[#f98012]/40 bg-[#f98012]/5 animate-fade-in">
+                <input class="field text-sm" type="text" placeholder="Identifiant Moodle" bind:value={mUser} autocomplete="username" />
+                <input class="field text-sm" type="password" placeholder="Mot de passe" bind:value={mPass} autocomplete="current-password"
+                  onkeydown={(e) => { if (e.key === 'Enter') loginMoodle(); }} />
+                {#if mErr}<p class="text-xs text-red-600">{mErr}</p>{/if}
+                <button onclick={loginMoodle} disabled={mLoading || !mUser.trim() || !mPass}
+                  class="w-full px-5 py-2.5 rounded-xl font-semibold text-sm bg-[#f98012] hover:bg-[#e06f0a] text-white disabled:opacity-50">
+                  {mLoading ? 'Connexion…' : 'Se connecter'}
+                </button>
+              </div>
+            {/if}
+          {/if}
+
           <!-- Portail étudiant sans compte -->
           <a
             href="/student"
-            class="w-full flex items-center gap-3 px-5 py-3 rounded font-semibold text-sm transition-all
+            class="w-full flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all
               bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50 hover:border-neutral-400"
           >
             <svg class="w-5 h-5 shrink-0 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

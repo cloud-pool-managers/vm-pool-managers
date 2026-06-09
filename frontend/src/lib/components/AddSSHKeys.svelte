@@ -216,7 +216,7 @@
     <div class="modal-box" style="max-width:520px;">
       <div class="flex items-center justify-between mb-5">
         <div>
-          <h3 class="text-base font-bold text-neutral-900" style="font-family: 'Source Sans 3', sans-serif;">Étudiants</h3>
+          <h3 class="text-base font-bold text-neutral-900">Étudiants</h3>
           <p class="text-xs text-neutral-500 mt-0.5">{poolname}</p>
         </div>
         <button onclick={() => open = false} class="text-neutral-400 hover:text-neutral-700 transition-colors p-1 rounded hover:bg-neutral-100">
@@ -290,7 +290,7 @@
   <div class="modal-overlay" style="z-index:60;" role="dialog" aria-modal="true">
     <div class="modal-box" style="max-width:600px;">
       <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold text-neutral-900" style="font-family: 'Source Sans 3', sans-serif;">Ajouter des étudiants</h3>
+        <h3 class="text-base font-bold text-neutral-900">Ajouter des étudiants</h3>
         <button onclick={() => addModal = false} class="text-neutral-400 hover:text-neutral-700 transition-colors p-1 rounded hover:bg-neutral-100">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
