@@ -23,10 +23,23 @@
 
   let githubLoading = $state(false);
 
+  // Moodle login state
+  let moodleConfigured = $state(false);
+  let moodleEmail = $state("");
+  let showMoodleForm = $state(false);
+  let moodleUser = $state("");
+  let moodlePass = $state("");
+  let moodleLoading = $state(false);
+
   let githubLogin = $derived($githubStore?.login ?? null);
   let githubKeys = $derived($githubStore?.keys ?? []);
 
   onMount(async () => {
+    try {
+      const sr = await fetch('/api/moodle/status');
+      if (sr.ok) moodleConfigured = !!(await sr.json()).configured;
+    } catch { /* ignore */ }
+
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('github_session');
     if (sessionId) {
@@ -128,6 +141,32 @@
     if (availablePools.length === 0) noCoursFound = true;
   }
 
+  async function loginMoodle() {
+    if (!moodleUser.trim() || !moodlePass) return;
+    moodleLoading = true; errorMsg = ""; noCoursFound = false;
+    availablePools = []; selectedPool = null; vmIp = "";
+    try {
+      const r = await fetch('/api/moodle/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: moodleUser.trim(), password: moodlePass }),
+      });
+      if (!r.ok) { errorMsg = "Identifiants Moodle invalides."; return; }
+      const data = await r.json();
+      moodleEmail = data.email ?? "";
+      moodlePass = "";
+      const pr = await fetch(`/api/moodle/my-pools?email=${encodeURIComponent(moodleEmail)}`);
+      const pd = await pr.json().catch(() => ({ pools: [] }));
+      availablePools = pd.pools ?? [];
+      if (!availablePools.length) noCoursFound = true;
+    } catch { errorMsg = "Erreur de connexion Moodle."; }
+    finally { moodleLoading = false; }
+  }
+
+  function disconnectMoodle() {
+    moodleEmail = ""; showMoodleForm = false; moodleUser = ""; moodlePass = "";
+    availablePools = []; noCoursFound = false;
+  }
+
   function computeUsername(poolId: string): string {
     let name = ("student_" + poolId).split("@")[0].toLowerCase();
     name = name.replace(/[^a-z0-9_.-]/g, "");
@@ -140,15 +179,28 @@
     appReady = false; probing = false;
     if (probeInterval) { clearInterval(probeInterval); probeInterval = null; }
     try {
-      const result = await attribVMinPool(pool.pool_id, pool.user_id, sshkey);
-      vmIp = result.ip;
-      vmUser = result.username || computeUsername(pool.pool_id);
-      vmAppPort = result.appPort ?? 0;
-      fetch(`/api/guac-url?ip=${encodeURIComponent(result.ip)}`)
+      let ip = "", port = 0, user = "";
+      if (moodleEmail) {
+        // Attribution par identité Moodle, sans clé SSH (accès navigateur + Guacamole).
+        const r = await fetch('/api/moodle/attrib-vm', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pool_id: pool.pool_id, user_id: pool.user_id, email: moodleEmail }),
+        });
+        const d = await r.json();
+        if (!d.success) { assignError = d.error || "Erreur lors de l'attribution."; return; }
+        ip = d.ip; port = d.app_port ?? 0; user = "";
+      } else {
+        const result = await attribVMinPool(pool.pool_id, pool.user_id, sshkey);
+        ip = result.ip; user = result.username || computeUsername(pool.pool_id); port = result.appPort ?? 0;
+      }
+      vmIp = ip;
+      vmUser = user;
+      vmAppPort = port;
+      fetch(`/api/guac-url?ip=${encodeURIComponent(ip)}`)
         .then(r => r.json())
         .then(data => { if (data.url) guacUrl = data.url; })
         .catch(() => {});
-      if (vmAppPort > 0) startProbing(result.ip, vmAppPort);
+      if (vmAppPort > 0) startProbing(ip, vmAppPort);
     } catch (err: any) {
       assignError = err?.message || "Erreur lors de l'attribution de la VM.";
     } finally { loading = false; }
@@ -180,6 +232,17 @@
 
     <div class="card p-6 space-y-5">
 
+      {#if moodleEmail}
+        <!-- Moodle connected banner -->
+        <div class="flex items-center gap-3 px-3 py-2.5 rounded bg-blue-50 dark:bg-[#0a1a2e] border border-blue-200 dark:border-[#1e3a5f]">
+          <svg class="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-blue-800 dark:text-blue-400">Connecté via Moodle — <span class="font-mono">{moodleEmail}</span></p>
+            <p class="text-xs text-blue-600 mt-0.5">Aucune clé SSH requise : accès via JupyterLab et le terminal web.</p>
+          </div>
+          <button onclick={disconnectMoodle} class="text-blue-500 hover:text-blue-700 text-xs">Déconnecter</button>
+        </div>
+      {:else}
       {#if githubLogin}
         <!-- GitHub connected banner -->
         <div class="flex items-center gap-3 px-3 py-2.5 rounded bg-green-50 dark:bg-[#0a2018] border border-green-200 dark:border-[#14532d]">
@@ -236,6 +299,38 @@
           <span class="text-xs text-neutral-400">ou</span>
           <hr class="flex-1 border-neutral-200">
         </div>
+
+        {#if moodleConfigured}
+          {#if !showMoodleForm}
+            <button
+              onclick={() => showMoodleForm = true}
+              class="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-lg font-semibold text-sm
+                bg-[#f98012] hover:bg-[#e06f0a] text-white transition-all"
+            >
+              <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
+              Se connecter avec Moodle
+            </button>
+          {:else}
+            <div class="space-y-2 p-3 rounded border border-neutral-200 bg-neutral-50">
+              <p class="section-label">Connexion Moodle</p>
+              <input class="field text-sm" type="text" placeholder="Identifiant Moodle" bind:value={moodleUser} autocomplete="username" />
+              <input class="field text-sm" type="password" placeholder="Mot de passe" bind:value={moodlePass} autocomplete="current-password"
+                onkeydown={(e) => { if (e.key === 'Enter') loginMoodle(); }} />
+              <button onclick={loginMoodle} disabled={moodleLoading || !moodleUser.trim() || !moodlePass} class="btn btn-primary w-full text-sm">
+                {#if moodleLoading}
+                  <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
+                {/if}
+                Se connecter
+              </button>
+            </div>
+          {/if}
+
+          <div class="flex items-center gap-3">
+            <hr class="flex-1 border-neutral-200">
+            <span class="text-xs text-neutral-400">ou clé SSH</span>
+            <hr class="flex-1 border-neutral-200">
+          </div>
+        {/if}
       {/if}
 
       {#if !githubLogin || githubKeys.length === 0 || githubKeys.length > 1}
@@ -266,6 +361,7 @@
 
       {#if errorMsg && availablePools.length === 0}
         <div class="px-3 py-2.5 rounded bg-red-50 border border-red-200 text-red-700 text-sm animate-fade-in">{errorMsg}</div>
+      {/if}
       {/if}
     </div>
 
@@ -400,9 +496,8 @@
         </div>
       {/if}
 
-      {#if vmAppPort > 0 || guacUrl || vmAppPort === 0}
-        <hr class="border-neutral-200 dark:border-neutral-700"/>
-      {/if}
+      {#if vmUser}
+      <hr class="border-neutral-200 dark:border-neutral-700"/>
 
       <div>
         <p class="section-label mb-2.5 block">Connexion SSH</p>
@@ -435,10 +530,12 @@
           <code class="font-mono text-neutral-500">ssh -i ~/.ssh/id_ed25519 {vmUser}@{vmIp}</code>
         </p>
       </div>
+      {/if}
 
       <button
         onclick={() => {
         vmIp = ""; vmUser = ""; vmAppPort = 0; guacUrl = ""; availablePools = []; sshkey = "";
+        moodleEmail = ""; showMoodleForm = false;
         appReady = false; probing = false;
         if (probeInterval) { clearInterval(probeInterval); probeInterval = null; }
       }}
