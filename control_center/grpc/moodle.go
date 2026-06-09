@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"control_center/config"
+	"control_center/internal/attribvm"
 	"control_center/internal/moodle"
 	"control_center/models"
 )
@@ -176,5 +178,115 @@ func handleMoodleImport(w http.ResponseWriter, r *http.Request) {
 
 	writeJSONMoodle(w, http.StatusOK, map[string]any{
 		"imported": imported, "skipped": skipped, "course_id": req.CourseID,
+	})
+}
+
+// POST /api/moodle/login {username, password} — valide les identifiants Moodle,
+// crée une session légère et renvoie {session_id, email, fullname, role}.
+func handleMoodleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONMoodle(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST requis"})
+		return
+	}
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Username == "" || req.Password == "" {
+		writeJSONMoodle(w, http.StatusBadRequest, map[string]string{"error": "identifiant et mot de passe requis"})
+		return
+	}
+	c, err := moodle.New()
+	if err != nil {
+		writeJSONMoodle(w, http.StatusServiceUnavailable, map[string]string{"error": err.Error()})
+		return
+	}
+	// 1) Valide les identifiants : un token renvoyé = identifiants corrects.
+	if _, err := c.LoginToken(req.Username, req.Password, "moodle_mobile_app"); err != nil {
+		writeJSONMoodle(w, http.StatusUnauthorized, map[string]string{"error": "identifiants Moodle invalides"})
+		return
+	}
+	// 2) Récupère l'identité via le token de service (le token utilisateur n'a pas accès à l'email).
+	u, err := c.UserByUsername(req.Username)
+	if err != nil || u.Email == "" {
+		writeJSONMoodle(w, http.StatusBadGateway, map[string]string{"error": "profil Moodle introuvable"})
+		return
+	}
+	// Login Moodle = flux étudiant (les enseignants/admins utilisent OIDC).
+	role := "student"
+
+	sessionID := randomState()
+	config.Database.Create(&models.MoodleSession{
+		ID: sessionID, Email: u.Email, FullName: u.FullName, MoodleUserID: u.ID, Role: role,
+	})
+	// Purge des sessions de plus de 24 h.
+	config.Database.Where("created_at < ?", time.Now().Add(-24*time.Hour)).Delete(&models.MoodleSession{})
+
+	writeJSONMoodle(w, http.StatusOK, map[string]any{
+		"session_id": sessionID, "email": u.Email, "fullname": u.FullName, "role": role,
+	})
+}
+
+// GET /api/moodle/session?id= — renvoie l'identité d'une session Moodle.
+func handleMoodleSession(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeJSONMoodle(w, http.StatusBadRequest, map[string]string{"error": "id manquant"})
+		return
+	}
+	var sess models.MoodleSession
+	if err := config.Database.First(&sess, "id = ?", id).Error; err != nil {
+		writeJSONMoodle(w, http.StatusNotFound, map[string]string{"error": "session introuvable"})
+		return
+	}
+	writeJSONMoodle(w, http.StatusOK, map[string]any{
+		"email": sess.Email, "fullname": sess.FullName, "role": sess.Role,
+	})
+}
+
+// GET /api/moodle/my-pools?email= — pools où cet email (Moodle) est inscrit.
+func handleMoodleMyPools(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		writeJSONMoodle(w, http.StatusBadRequest, map[string]string{"error": "email manquant"})
+		return
+	}
+	type poolRow struct {
+		PoolID string `json:"pool_id"`
+		UserID string `json:"user_id"`
+	}
+	var pools []poolRow
+	config.Database.Raw(`
+		SELECT DISTINCT sp.serverpool_id AS pool_id, sp.user_id AS user_id
+		FROM serverpools sp
+		JOIN list_students ls ON ls.pool_id = sp.id
+		JOIN students st ON st.list_id = ls.id
+		WHERE LOWER(st.moodle_email) = LOWER(?) AND sp.serverpool_id <> ''`, email).Scan(&pools)
+	writeJSONMoodle(w, http.StatusOK, map[string]any{"pools": pools})
+}
+
+// POST /api/moodle/attrib-vm {pool_id, user_id, email} — attribue une VM sans clé SSH.
+func handleMoodleAttribVM(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONMoodle(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST requis"})
+		return
+	}
+	var req struct {
+		PoolID string `json:"pool_id"`
+		UserID string `json:"user_id"`
+		Email  string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONMoodle(w, http.StatusBadRequest, map[string]string{"error": "JSON invalide"})
+		return
+	}
+	svc := attribvm.New(config.Database)
+	ip, appPort, err := svc.AttribVMByEmail(req.PoolID, req.UserID, req.Email)
+	if err != nil {
+		writeJSONMoodle(w, http.StatusOK, map[string]any{"success": false, "error": err.Error()})
+		return
+	}
+	writeJSONMoodle(w, http.StatusOK, map[string]any{
+		"success": true, "ip": ip, "app_port": appPort,
 	})
 }

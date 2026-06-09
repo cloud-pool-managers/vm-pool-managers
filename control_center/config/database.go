@@ -69,6 +69,7 @@ func Start_DB(ctx context.Context) {
 		&models.GitHubSession{},
 		&models.GitHubOAuthState{},
 		&models.ImageProposal{},
+		&models.MoodleSession{},
 	)
 
 	syncSequences(Database)

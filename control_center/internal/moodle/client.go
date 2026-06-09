@@ -75,11 +75,43 @@ func (c *Client) call(fn string, params url.Values) ([]byte, error) {
 // ─── Identité / auth ────────────────────────────────────────────────────────
 
 type SiteInfo struct {
-	SiteName string `json:"sitename"`
-	Username string `json:"username"`
-	UserID   int    `json:"userid"`
+	SiteName        string `json:"sitename"`
+	Username        string `json:"username"`
+	UserID          int    `json:"userid"`
+	FullName        string `json:"fullname"`
+	Release         string `json:"release"`
+	UserIsSiteAdmin bool   `json:"userissiteadmin"`
+}
+
+type MoodleUserInfo struct {
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
 	FullName string `json:"fullname"`
-	Release  string `json:"release"`
+}
+
+// userByField interroge core_user_get_users_by_field avec le token de SERVICE (admin),
+// qui peut lire l'email de n'importe quel utilisateur (le token utilisateur, lui, ne le peut pas).
+func (c *Client) userByField(field, value string) (*MoodleUserInfo, error) {
+	v := url.Values{}
+	v.Set("field", field)
+	v.Set("values[0]", value)
+	body, err := c.call("core_user_get_users_by_field", v)
+	if err != nil {
+		return nil, err
+	}
+	var users []MoodleUserInfo
+	if err := json.Unmarshal(body, &users); err != nil {
+		return nil, fmt.Errorf("user_by_%s: %w", field, err)
+	}
+	if len(users) == 0 {
+		return nil, fmt.Errorf("utilisateur introuvable (%s=%s)", field, value)
+	}
+	return &users[0], nil
+}
+
+// UserByUsername renvoie l'identité d'un utilisateur à partir de son login.
+func (c *Client) UserByUsername(username string) (*MoodleUserInfo, error) {
+	return c.userByField("username", username)
 }
 
 // SiteInfo via le token de service (sanity check).

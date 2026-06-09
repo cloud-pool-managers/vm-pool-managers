@@ -12,6 +12,9 @@ global $DB, $CFG;
 
 // ── 1. Activer les Web Services + protocole REST ────────────────────────────
 set_config('enablewebservices', 1);
+// Service mobile : permet à n'importe quel utilisateur (élève) d'obtenir un token via
+// login/token.php (validation des identifiants pour le "login via Moodle").
+set_config('enablemobilewebservice', 1);
 $protocols = (string)get_config('core', 'webserviceprotocols');
 $list = array_filter(array_map('trim', explode(',', $protocols)));
 if (!in_array('rest', $list)) { $list[] = 'rest'; }
@@ -124,6 +127,10 @@ foreach ($courses as $c) {
     foreach ($students as $s) { enrol_in($c->id, $s->id, 'student'); }
     enrol_in($c->id, $teacher->id, 'editingteacher');
 }
+
+// ── 7. S'assurer que le service mobile est activé (login/token.php des élèves) ──
+$DB->set_field('external_services', 'enabled', 1, ['shortname' => 'moodle_mobile_app']);
+purge_all_caches();
 
 // ── Résumé machine-lisible ──────────────────────────────────────────────────
 echo "TOKEN=$token\n";

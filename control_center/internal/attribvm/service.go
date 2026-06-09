@@ -205,6 +205,75 @@ func (s *Service) AttribVMinPool(
 	}, nil
 }
 
+// AttribVMByEmail attribue une VM à un étudiant identifié par son email Moodle,
+// SANS exiger de clé SSH : l'accès se fait via JupyterLab (navigateur) et le terminal
+// Guacamole (clé gérée côté plateforme). L'étudiant doit avoir été importé dans le pool.
+// Renvoie l'IP attribuée et le port applicatif.
+func (s *Service) AttribVMByEmail(poolID, userID, email string) (string, int32, error) {
+	if poolID == "" || userID == "" || email == "" {
+		return "", 0, fmt.Errorf("pool_id, user_id et email requis")
+	}
+
+	var pool models.Serverpool
+	if err := s.DB.Where("serverpool_id = ? AND user_id = ?", poolID, userID).First(&pool).Error; err != nil {
+		return "", 0, fmt.Errorf("pool introuvable")
+	}
+
+	// Étudiant pré-importé depuis Moodle, identifié par MoodleEmail dans ce pool.
+	var student models.Student
+	err := s.DB.
+		Joins("JOIN list_students ON list_students.id = students.list_id").
+		Where("LOWER(students.moodle_email) = LOWER(?) AND list_students.pool_id = ?", email, pool.ID).
+		First(&student).Error
+	if err != nil {
+		return "", 0, fmt.Errorf("vous n'êtes pas inscrit à ce cours")
+	}
+
+	// Déjà attribuée → on renvoie la même VM.
+	if student.IP != "" {
+		return student.IP, int32(pool.AppPort), nil
+	}
+
+	var server models.Server
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		// Exclure la VM instructeur (la plus ancienne) — cohérent avec AttribVMinPool.
+		var instrServer models.Server
+		tx.Where("serverpool_id = ? AND user_id = ?", poolID, userID).Order("created_at ASC").First(&instrServer)
+
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("serverpool_id = ? AND user_id = ? AND locked = false AND name <> ? AND id <> ?",
+				poolID, userID,
+				fmt.Sprintf("%s-%s-NFS", userID, poolID), instrServer.ID).
+			Order("id").First(&server).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return status.Error(codes.ResourceExhausted, "no available server")
+			}
+			return err
+		}
+		if err := tx.Model(&server).Update("locked", true).Error; err != nil {
+			return err
+		}
+		return tx.Model(&student).Update("ip", server.IP_Address).Error
+	})
+	if err != nil {
+		log.Printf("[attribvm] attribution Moodle échouée (pool %s/%s, %s): %v", poolID, userID, email, err)
+		if status.Code(err) == codes.ResourceExhausted {
+			return "", 0, fmt.Errorf("aucune VM disponible")
+		}
+		return "", 0, fmt.Errorf("attribution impossible")
+	}
+
+	// Si l'étudiant a (plus tard) renseigné une clé SSH, on l'injecte ; sinon on s'arrête là
+	// (accès navigateur/Guacamole, pas besoin de clé).
+	if student.SshKey != "" {
+		if err := s.installSSHKey(&server, &student); err != nil {
+			log.Printf("[attribvm] injection clé (Moodle) échouée sur %s: %v", server.IP_Address, err)
+		}
+	}
+
+	return server.IP_Address, int32(pool.AppPort), nil
+}
+
 func (s *Service) installSSHKey(server *models.Server, student *models.Student) error {
 	signer, err := sshinject.LoadPrivateKey(os.Getenv("SSH_PRIVATE_KEY_PATH"))
 	if err != nil {

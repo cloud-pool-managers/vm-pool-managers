@@ -17,6 +17,9 @@ if ! curl -s -o /dev/null --max-time 8 "$MOODLE_URL/login/index.php"; then
   exit 1
 fi
 
+echo "→ Correction des permissions moodledata (dev) pour login/token.php…"
+docker compose exec -T -u root moodle chmod -R a+rwX /bitnami/moodledata >/dev/null 2>&1 || true
+
 echo "→ Exécution du bootstrap dans le conteneur (API Moodle)…"
 docker compose cp bootstrap.php moodle:/tmp/cpm-bootstrap.php >/dev/null
 OUT="$(docker compose exec -T moodle php /tmp/cpm-bootstrap.php)"
