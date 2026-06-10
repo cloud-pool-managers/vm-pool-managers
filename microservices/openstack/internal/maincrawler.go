@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime/debug"
 	"os"
 	"strconv"
 	"strings"
@@ -108,7 +109,15 @@ func Monitor(c context.Context) {
 			return
 
 		case <-ticker.C:
-			CheckAndCreate()
+			// Garde-fou : un panic dans une itération est journalisé sans arrêter le crawler.
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[recover] panic dans le crawler: %v\n%s", r, debug.Stack())
+					}
+				}()
+				CheckAndCreate()
+			}()
 		}
 	}
 }
@@ -122,16 +131,15 @@ func CheckAndCreate() {
 	)
 
 	config.DBmu.Lock()
+	defer config.DBmu.Unlock() // libéré même en cas de panic (évite tout deadlock)
 	res_servs := config.Database.Find(&servs)
 	if res_servs.Error != nil {
 		log.Println(res_servs.Error)
-		config.DBmu.Unlock()
 		return
 	}
 	res_pools := config.Database.Find(&pools)
 	if res_pools.Error != nil {
 		log.Println(res_pools.Error)
-		config.DBmu.Unlock()
 		return
 	}
 
@@ -256,7 +264,6 @@ func CheckAndCreate() {
 			jobs.IncrementPending(base_p.ID)
 		}
 	}
-	config.DBmu.Unlock()
 }
 
 // serverisinpool tests pool membership by the canonical (serverpool_id, user_id)

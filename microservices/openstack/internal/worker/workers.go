@@ -4,8 +4,9 @@ import (
 	"PoolManagerVM/backend/internal/jobs"
 	"PoolManagerVM/backend/models"
 	"context"
-	
+
 	"log"
+	"runtime/debug"
 	"sync"
 )
 
@@ -48,6 +49,12 @@ func worker(id int, wg *sync.WaitGroup, ctx context.Context) {
 }
 
 func processJob(workerID int, job models.Job) {
+	// Garde-fou : un job qui panique est journalisé sans tuer le worker (ni le process).
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[recover] panic dans le job %v (worker %d): %v\n%s", job.Type, workerID, r, debug.Stack())
+		}
+	}()
 	switch job.Type {
 	case models.CreateVM:
 		jobs.CreateVM(workerID, job)
