@@ -72,6 +72,13 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
+// shArg entoure une valeur de guillemets doubles pour l'utiliser comme argument/chemin
+// shell À L'INTÉRIEUR d'une commande passée à `bash -c '...'` (dockerExec). Indispensable
+// pour les noms d'assignment contenant des espaces (ex: "Devoir corps").
+func shArg(s string) string {
+	return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
+}
+
 // runSSHOutput runs a command via SSH and returns its stdout as a string.
 func runSSHOutput(client *ssh.Client, cmd string) (string, error) {
 	session, err := client.NewSession()
@@ -191,12 +198,14 @@ func handleNbgraderCollect(w http.ResponseWriter, r *http.Request) {
 			defer studentClient.Close()
 
 			// Get files from student's submitted_copies/<assignment> or fallback to nbgrader/<assignment>
-			fileListInner := fmt.Sprintf(`find /home/vmuser/nbgrader/submitted_copies/%s -type f 2>/dev/null | sed "s|/home/vmuser/nbgrader/submitted_copies/%s/||" || find /home/vmuser/nbgrader/%s -type f 2>/dev/null | sed "s|/home/vmuser/nbgrader/%s/||" || echo ""`, assignment, assignment, assignment, assignment)
+			scDir := fmt.Sprintf("/home/vmuser/nbgrader/submitted_copies/%s", assignment)
+			nbDir := fmt.Sprintf("/home/vmuser/nbgrader/%s", assignment)
+			fileListInner := fmt.Sprintf(`find %s -type f 2>/dev/null | sed "s|%s/||" || find %s -type f 2>/dev/null | sed "s|%s/||" || echo ""`, shArg(scDir), scDir, shArg(nbDir), nbDir)
 			fileList, err := runSSHOutput(studentClient, fileListInner)
 			if err != nil || fileList == "" { return }
 
 			// Create submitted directory on instructor
-			mkdirCmd := dockerExec(fmt.Sprintf("mkdir -p /home/jovyan/nbgrader/submitted/%s/%s", s.Name, assignment))
+			mkdirCmd := dockerExec("mkdir -p " + shArg(fmt.Sprintf("/home/jovyan/nbgrader/submitted/%s/%s", s.Name, assignment)))
 			runSSHOutput(instrClient, mkdirCmd)
 			
 			// Add student to nbgrader DB if not exists
@@ -209,7 +218,7 @@ func handleNbgraderCollect(w http.ResponseWriter, r *http.Request) {
 				if relFile == "" { continue }
 				
 				// Read from student
-				catCmd := fmt.Sprintf("cat /home/vmuser/nbgrader/submitted_copies/%s/%s 2>/dev/null || cat /home/vmuser/nbgrader/%s/%s", assignment, relFile, assignment, relFile)
+				catCmd := fmt.Sprintf("cat %s 2>/dev/null || cat %s", shArg(fmt.Sprintf("/home/vmuser/nbgrader/submitted_copies/%s/%s", assignment, relFile)), shArg(fmt.Sprintf("/home/vmuser/nbgrader/%s/%s", assignment, relFile)))
 				content, readErr := runSSHOutput(studentClient, catCmd)
 				if readErr != nil { continue }
 				
@@ -270,7 +279,7 @@ func handleNbgraderAutograde(w http.ResponseWriter, r *http.Request) {
 	}
 	defer client.Close()
 
-	cmd := dockerExec(fmt.Sprintf("cd /home/jovyan/nbgrader && nbgrader autograde %s", assignment))
+	cmd := dockerExec(fmt.Sprintf("cd /home/jovyan/nbgrader && nbgrader autograde %s", shArg(assignment)))
 	out, err := runSSHOutput(client, cmd)
 	if err != nil {
 		log.Printf("[nbgrader] autograde error: %v", err)
@@ -589,7 +598,8 @@ func handleNbgraderRelease(w http.ResponseWriter, r *http.Request) {
 	// Générer la version distribuable AVANT de distribuer : si l'enseignant a seulement
 	// créé/marqué les cellules sans cliquer "Generate", release/<a> serait vide.
 	// generate_assignment (peuple release/) puis release_assignment (ancien nom: release).
-	releaseInner := fmt.Sprintf("cd /home/jovyan/nbgrader && (nbgrader generate_assignment %s --force 2>&1 || nbgrader assign %s --force 2>&1); nbgrader release_assignment %s 2>&1 || nbgrader release %s 2>&1", assignment, assignment, assignment, assignment)
+	qa := shArg(assignment)
+	releaseInner := fmt.Sprintf("cd /home/jovyan/nbgrader && (nbgrader generate_assignment %s --force 2>&1 || nbgrader assign %s --force 2>&1); nbgrader release_assignment %s 2>&1 || nbgrader release %s 2>&1", qa, qa, qa, qa)
 	releaseOut, err := runSSHOutput(instrClient, dockerExec(releaseInner))
 	if err != nil {
 		log.Printf("[nbgrader] release command error: %v", err)
@@ -597,7 +607,8 @@ func handleNbgraderRelease(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Read released files from instructor VM
-	fileListInner := fmt.Sprintf(`find /home/jovyan/nbgrader/release/%s -type f 2>/dev/null | sed "s|/home/jovyan/nbgrader/release/%s/||" || echo ""`, assignment, assignment)
+	relDir := fmt.Sprintf("/home/jovyan/nbgrader/release/%s", assignment)
+	fileListInner := fmt.Sprintf(`find %s -type f 2>/dev/null | sed "s|%s/||" || echo ""`, shArg(relDir), relDir)
 	fileList, err := runSSHOutput(instrClient, dockerExec(fileListInner))
 	if err != nil || fileList == "" {
 		w.Header().Set("Content-Type", "application/json")
@@ -673,7 +684,7 @@ func handleNbgraderRelease(w http.ResponseWriter, r *http.Request) {
 				}
 				// Read file from instructor VM
 				// Read from Docker container via SSH pipe
-				catCmd := dockerExec(fmt.Sprintf("cat /home/jovyan/nbgrader/release/%s/%s", assignment, relFile))
+				catCmd := dockerExec("cat " + shArg(fmt.Sprintf("/home/jovyan/nbgrader/release/%s/%s", assignment, relFile)))
 				content, readErr := func() ([]byte, error) {
 					out, e := runSSHOutput(instrClient, catCmd)
 					return []byte(out), e
