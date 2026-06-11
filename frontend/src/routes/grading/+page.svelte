@@ -59,7 +59,7 @@
   async function loadJupyterURL() {
     if (!selectedPool) return;
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/nbgrader/jupyter-url?pool_id=${encodeURIComponent(selectedPool.name)}&user_id=${encodeURIComponent(selectedPool.userId)}`
       );
       if (res.ok) {
@@ -90,7 +90,7 @@
     if (!selectedPool) return;
     loadingAssignments = true;
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/nbgrader/assignments?pool_id=${encodeURIComponent(selectedPool.name)}&user_id=${encodeURIComponent(selectedPool.userId)}`
       );
       if (!res.ok) throw new Error(await res.text());
@@ -108,7 +108,7 @@
     loadingGrades = true;
     error = '';
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/nbgrader/grades?pool_id=${encodeURIComponent(selectedPool.name)}&user_id=${encodeURIComponent(selectedPool.userId)}&assignment=${encodeURIComponent(selectedAssignment)}`
       );
       if (!res.ok) throw new Error(await res.text());
@@ -129,7 +129,7 @@
     if (!selectedPool || !selectedAssignment) return;
     let url = `${formgraderBaseURL}/formgrader/manage_submissions/${encodeURIComponent(selectedAssignment)}`;
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/nbgrader/submission-url?pool_id=${encodeURIComponent(selectedPool.name)}&user_id=${encodeURIComponent(selectedPool.userId)}&assignment=${encodeURIComponent(selectedAssignment)}&student=${encodeURIComponent(student)}`
       );
       if (res.ok) {
