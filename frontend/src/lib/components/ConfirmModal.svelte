@@ -1,12 +1,13 @@
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
+  import { _ } from 'svelte-i18n';
 
   let {
     show = $bindable(false),
-    title = 'Confirmation',
-    message = 'Êtes-vous sûr ?',
-    confirmText = 'Confirmer',
-    cancelText = 'Annuler',
+    title = $_('confirm.title'),
+    message = $_('confirm.message'),
+    confirmText = $_('confirm.confirmText'),
+    cancelText = $_('confirm.cancelText'),
     danger = false,
     onConfirm
   }: {

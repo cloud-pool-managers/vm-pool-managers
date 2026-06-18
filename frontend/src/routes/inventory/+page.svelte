@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { _ } from 'svelte-i18n';
   import { apiFetch } from '$lib/api';
   import { authStore } from '$lib/store';
   import ConfirmModal from '$lib/components/ConfirmModal.svelte';
@@ -19,14 +20,14 @@
   // Un seul badge d'état clair, basé sur l'état Nova réel.
   function powerBadge(ps?: string): { label: string; cls: string } {
     switch (ps) {
-      case 'ACTIVE': return { label: 'Allumée', cls: 'bg-green-100 text-green-700 border-green-200' };
-      case 'SHUTOFF': return { label: 'Éteinte', cls: 'bg-neutral-100 text-neutral-500 border-neutral-200' };
+      case 'ACTIVE': return { label: $_('inventory.powerActive'), cls: 'bg-green-100 text-green-700 border-green-200' };
+      case 'SHUTOFF': return { label: $_('inventory.powerShutoff'), cls: 'bg-neutral-100 text-neutral-500 border-neutral-200' };
       case 'SUSPENDED':
-      case 'PAUSED': return { label: 'Suspendue', cls: 'bg-amber-100 text-amber-700 border-amber-200' };
+      case 'PAUSED': return { label: $_('inventory.powerSuspended'), cls: 'bg-amber-100 text-amber-700 border-amber-200' };
       case 'REBOOT':
-      case 'HARD_REBOOT': return { label: 'Redémarrage…', cls: 'bg-sky-100 text-sky-700 border-sky-200' };
-      case 'BUILD': return { label: 'Création…', cls: 'bg-sky-100 text-sky-700 border-sky-200' };
-      case 'ERROR': return { label: 'Erreur', cls: 'bg-red-100 text-red-700 border-red-200' };
+      case 'HARD_REBOOT': return { label: $_('inventory.powerRebooting'), cls: 'bg-sky-100 text-sky-700 border-sky-200' };
+      case 'BUILD': return { label: $_('inventory.powerBuilding'), cls: 'bg-sky-100 text-sky-700 border-sky-200' };
+      case 'ERROR': return { label: $_('inventory.powerError'), cls: 'bg-red-100 text-red-700 border-red-200' };
       default: return { label: ps || '—', cls: 'bg-neutral-100 text-neutral-500 border-neutral-200' };
     }
   }
@@ -47,7 +48,7 @@
       pools = await res.json();
       lastRefresh = new Date().toLocaleTimeString('fr-FR');
       error = '';
-    } catch { error = "Impossible de charger l'inventaire"; }
+    } catch { error = $_('inventory.errLoadInventory'); }
     finally { loading = false; refreshing = false; }
   }
 
@@ -62,33 +63,33 @@
     vmMsgTimer = setTimeout(() => { vmMsg = null; }, 7000);
   }
 
-  const ACTION_OK: Record<string, string> = {
-    start: 'VM démarrée.', stop: 'VM arrêtée.', reboot: 'Redémarrage lancé.',
-    suspend: 'VM suspendue.', resume: 'VM reprise.',
-  };
+  const ACTION_OK = (): Record<string, string> => ({
+    start: $_('inventory.actionOkStart'), stop: $_('inventory.actionOkStop'), reboot: $_('inventory.actionOkReboot'),
+    suspend: $_('inventory.actionOkSuspend'), resume: $_('inventory.actionOkResume'),
+  });
   // Traduit les conflits OpenStack (409 task_state/vm_state) en messages clairs.
   function friendlyVMError(raw: string, action: string): string {
     const s = (raw || '').toLowerCase();
-    if (action === 'start' && s.includes('vm_state active')) return 'La VM est déjà démarrée.';
-    if (action === 'stop' && (s.includes('vm_state stopped') || s.includes('shutoff'))) return 'La VM est déjà arrêtée.';
+    if (action === 'start' && s.includes('vm_state active')) return $_('inventory.errAlreadyStarted');
+    if (action === 'stop' && (s.includes('vm_state stopped') || s.includes('shutoff'))) return $_('inventory.errAlreadyStopped');
     if (s.includes('task_state') || s.includes('reboot') || s.includes('powering') || s.includes('409') || s.includes('conflict')) {
-      return 'Une action est déjà en cours sur cette VM — patiente quelques secondes puis réessaie.';
+      return $_('inventory.errActionInProgress');
     }
-    return "Action impossible dans l'état actuel de la VM.";
+    return $_('inventory.errActionImpossibleState');
   }
 
   // Confirmation avant les actions disruptives (arrêter / redémarrer).
   let confirmState = $state<{ show: boolean; title: string; message: string; confirmText: string; danger: boolean; onConfirm: () => void }>(
-    { show: false, title: '', message: '', confirmText: 'Confirmer', danger: false, onConfirm: () => {} }
+    { show: false, title: '', message: '', confirmText: $_('inventory.confirm'), danger: false, onConfirm: () => {} }
   );
   function requestVmAction(vm: VMInstance, action: string) {
     if (action === 'stop' || action === 'reboot') {
-      const verbe = action === 'stop' ? 'arrêter' : 'redémarrer';
+      const verbe = action === 'stop' ? $_('inventory.verbStop') : $_('inventory.verbReboot');
       confirmState = {
         show: true,
-        title: (action === 'stop' ? 'Arrêter' : 'Redémarrer') + ' la machine',
-        message: `Voulez-vous vraiment ${verbe} la machine « ${vm.name} » ? Les sessions en cours seront interrompues.`,
-        confirmText: action === 'stop' ? 'Arrêter' : 'Redémarrer',
+        title: (action === 'stop' ? $_('inventory.actionStop') : $_('inventory.actionReboot')) + $_('inventory.theMachineSuffix'),
+        message: $_('inventory.confirmActionMsgPrefix') + verbe + $_('inventory.confirmActionMsgMid') + vm.name + $_('inventory.confirmActionMsgSuffix'),
+        confirmText: action === 'stop' ? $_('inventory.actionStop') : $_('inventory.actionReboot'),
         danger: true,
         onConfirm: () => vmAction(vm, action),
       };
@@ -101,9 +102,9 @@
   function requestVmRebuild(vm: VMInstance) {
     confirmState = {
       show: true,
-      title: 'Réinitialiser la machine',
-      message: `Réinitialiser « ${vm.name} » ? La VM sera réinstallée sur son image d'origine et toutes les données présentes sur la machine seront perdues.`,
-      confirmText: 'Réinitialiser',
+      title: $_('inventory.rebuildTitle'),
+      message: $_('inventory.rebuildMsgPrefix') + vm.name + $_('inventory.rebuildMsgSuffix'),
+      confirmText: $_('inventory.actionReset'),
       danger: true,
       onConfirm: () => vmRebuild(vm),
     };
@@ -118,14 +119,14 @@
       });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
-        showVmMsg('err', 'Réinitialisation échouée : ' + (e.error || `HTTP ${res.status}`));
+        showVmMsg('err', $_('inventory.rebuildFailedPrefix') + (e.error || `HTTP ${res.status}`));
         actingId = null;
       } else {
-        showVmMsg('ok', 'Réinitialisation lancée — la VM est en cours de réinstallation.');
+        showVmMsg('ok', $_('inventory.rebuildLaunched'));
         setTimeout(() => { fetchInventory(true); actingId = null; }, 2500);
       }
     } catch {
-      showVmMsg('err', 'Réinitialisation impossible : service injoignable.');
+      showVmMsg('err', $_('inventory.rebuildUnreachable'));
       actingId = null;
     }
   }
@@ -143,12 +144,12 @@
         showVmMsg('err', friendlyVMError(e.error || '', action));
         actingId = null;
       } else {
-        showVmMsg('ok', ACTION_OK[action] || 'Action effectuée.');
+        showVmMsg('ok', ACTION_OK()[action] || $_('inventory.actionDone'));
         // On garde la VM verrouillée le temps de la transition, puis on rafraîchit.
         setTimeout(() => { fetchInventory(true); actingId = null; }, 2500);
       }
     } catch {
-      showVmMsg('err', 'Action impossible : service injoignable.');
+      showVmMsg('err', $_('inventory.actionUnreachable'));
       actingId = null;
     }
   }
@@ -171,9 +172,9 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: annMessage, active: annActive }),
       });
-      if (r.ok) { const d = await r.json(); annActive = !!d.active; showVmMsg('ok', 'Annonce enregistrée.'); }
-      else showVmMsg('err', "Échec de l'enregistrement de l'annonce.");
-    } catch { showVmMsg('err', "Échec de l'enregistrement."); }
+      if (r.ok) { const d = await r.json(); annActive = !!d.active; showVmMsg('ok', $_('inventory.annSaved')); }
+      else showVmMsg('err', $_('inventory.annSaveFailed'));
+    } catch { showVmMsg('err', $_('inventory.saveFailed')); }
     finally { annSaving = false; }
   }
 
@@ -192,9 +193,9 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pool_id: p.pool_id, user_id: p.user_id, label: editLabel, tags: editTags }),
       });
-      if (r.ok) { editingPool = null; showVmMsg('ok', 'Pool mis à jour.'); fetchInventory(true); }
-      else showVmMsg('err', 'Échec de la mise à jour du pool.');
-    } catch { showVmMsg('err', 'Échec de la mise à jour.'); }
+      if (r.ok) { editingPool = null; showVmMsg('ok', $_('inventory.poolUpdated')); fetchInventory(true); }
+      else showVmMsg('err', $_('inventory.poolUpdateFailed'));
+    } catch { showVmMsg('err', $_('inventory.updateFailed')); }
   }
 
   onMount(() => {
@@ -237,22 +238,22 @@
   const activeVMs = $derived(pools.reduce((a, p) => a + p.vms.filter(v => v.activity_status !== 'idle').length, 0));
 </script>
 
-<svelte:head><title>Inventaire VM — CloudPoolManager</title></svelte:head>
+<svelte:head><title>{$_('inventory.pageTitle')}</title></svelte:head>
 
 {#snippet actionButtons(vm: VMInstance)}
   {#if vm.id}
     {#if vm.power_state === 'SHUTOFF'}
-      <button onclick={() => requestVmAction(vm,'start')} disabled={actingId===vm.id} title="Démarrer" class="btn btn-secondary text-xs px-2 py-1" aria-label="Démarrer">▶</button>
+      <button onclick={() => requestVmAction(vm,'start')} disabled={actingId===vm.id} title={$_('inventory.actionStart')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionStart')}>▶</button>
     {:else if vm.power_state === 'SUSPENDED' || vm.power_state === 'PAUSED'}
-      <button onclick={() => requestVmAction(vm,'resume')} disabled={actingId===vm.id} title="Reprendre" class="btn btn-secondary text-xs px-2 py-1" aria-label="Reprendre">▶</button>
+      <button onclick={() => requestVmAction(vm,'resume')} disabled={actingId===vm.id} title={$_('inventory.actionResume')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionResume')}>▶</button>
     {:else if vm.power_state === 'ACTIVE'}
-      <button onclick={() => requestVmAction(vm,'stop')} disabled={actingId===vm.id} title="Arrêter" class="btn btn-secondary text-xs px-2 py-1" aria-label="Arrêter">⏹</button>
-      <button onclick={() => requestVmAction(vm,'reboot')} disabled={actingId===vm.id} title="Redémarrer" class="btn btn-secondary text-xs px-2 py-1" aria-label="Redémarrer">↻</button>
+      <button onclick={() => requestVmAction(vm,'stop')} disabled={actingId===vm.id} title={$_('inventory.actionStop')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionStop')}>⏹</button>
+      <button onclick={() => requestVmAction(vm,'reboot')} disabled={actingId===vm.id} title={$_('inventory.actionReboot')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionReboot')}>↻</button>
     {:else}
-      <button onclick={() => requestVmAction(vm,'start')} disabled={actingId===vm.id} title="Démarrer" class="btn btn-secondary text-xs px-2 py-1" aria-label="Démarrer">▶</button>
-      <button onclick={() => requestVmAction(vm,'stop')} disabled={actingId===vm.id} title="Arrêter" class="btn btn-secondary text-xs px-2 py-1" aria-label="Arrêter">⏹</button>
+      <button onclick={() => requestVmAction(vm,'start')} disabled={actingId===vm.id} title={$_('inventory.actionStart')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionStart')}>▶</button>
+      <button onclick={() => requestVmAction(vm,'stop')} disabled={actingId===vm.id} title={$_('inventory.actionStop')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionStop')}>⏹</button>
     {/if}
-    <button onclick={() => requestVmRebuild(vm)} disabled={actingId===vm.id} title="Réinitialiser (réinstalle l'OS, efface les données)" class="btn btn-secondary text-xs px-2 py-1 !text-red-600" aria-label="Réinitialiser">⟲</button>
+    <button onclick={() => requestVmRebuild(vm)} disabled={actingId===vm.id} title={$_('inventory.resetTitle')} class="btn btn-secondary text-xs px-2 py-1 !text-red-600" aria-label={$_('inventory.actionReset')}>⟲</button>
   {/if}
 {/snippet}
 
@@ -270,24 +271,24 @@
       {/if}
     </svg>
     <span class="flex-1">{vmMsg.text}</span>
-    <button onclick={() => (vmMsg = null)} class="opacity-80 hover:opacity-100 shrink-0" aria-label="Fermer">✕</button>
+    <button onclick={() => (vmMsg = null)} class="opacity-80 hover:opacity-100 shrink-0" aria-label={$_('inventory.close')}>✕</button>
   </div>
 {/if}
 
 <div class="max-w-7xl mx-auto mb-4">
   <div class="card px-5 py-4">
     <button onclick={() => (annOpen = !annOpen)} class="flex items-center justify-between w-full text-left">
-      <span class="text-sm font-semibold text-neutral-800">📣 Annonce étudiants {#if annActive}<span class="badge badge-ready ml-2">active</span>{/if}</span>
-      <span class="text-neutral-400 text-xs">{annOpen ? '▲ replier' : '▼ gérer'}</span>
+      <span class="text-sm font-semibold text-neutral-800">📣 {$_('inventory.announcementTitle')} {#if annActive}<span class="badge badge-ready ml-2">{$_('inventory.active')}</span>{/if}</span>
+      <span class="text-neutral-400 text-xs">{annOpen ? $_('inventory.collapse') : $_('inventory.manage')}</span>
     </button>
     {#if annOpen}
       <div class="mt-3 space-y-3">
-        <textarea class="field text-sm" rows="2" placeholder="Message affiché en bandeau à tous (ex. maintenance prévue jeudi 14h…)" bind:value={annMessage}></textarea>
+        <textarea class="field text-sm" rows="2" placeholder={$_('inventory.announcementPlaceholder')} bind:value={annMessage}></textarea>
         <div class="flex items-center justify-between">
           <label class="flex items-center gap-2 text-sm text-neutral-600">
-            <input type="checkbox" bind:checked={annActive} class="w-4 h-4 accent-primary-700" /> Afficher l'annonce
+            <input type="checkbox" bind:checked={annActive} class="w-4 h-4 accent-primary-700" /> {$_('inventory.showAnnouncement')}
           </label>
-          <button onclick={saveAnnouncement} disabled={annSaving} class="btn btn-primary text-sm">Enregistrer</button>
+          <button onclick={saveAnnouncement} disabled={annSaving} class="btn btn-primary text-sm">{$_('inventory.save')}</button>
         </div>
       </div>
     {/if}
@@ -298,14 +299,14 @@
 <div class="space-y-6 animate-fade-up">
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800">Mes étudiants</h1>
-      <p class="text-sm text-neutral-500 mt-1">Suivez la connexion de vos étudiants en temps réel</p>
+      <h1 class="text-3xl font-bold text-primary-800">{$_('inventory.myStudents')}</h1>
+      <p class="text-sm text-neutral-500 mt-1">{$_('inventory.myStudentsSubtitle')}</p>
     </div>
     <button onclick={() => fetchInventory(true)} disabled={refreshing} class="btn btn-secondary text-xs px-3.5 py-2">
       <svg class="w-3.5 h-3.5 {refreshing ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
       </svg>
-      Actualiser
+      {$_('inventory.refresh')}
     </button>
   </div>
 
@@ -315,11 +316,11 @@
     <div class="card px-4 py-3 border-red-200 bg-red-50 text-red-700 text-sm">{error}</div>
   {:else if pools.length === 0}
     <div class="card flex flex-col items-center justify-center py-20 text-center">
-      <p class="text-neutral-500 text-sm">Aucun cours actif pour le moment</p>
+      <p class="text-neutral-500 text-sm">{$_('inventory.noActiveCourse')}</p>
     </div>
   {:else}
     {#if pools.length > 1}
-      <input class="field text-sm mb-3" type="text" placeholder="Filtrer les cours (nom, enseignant, étudiant…)" bind:value={poolSearch} />
+      <input class="field text-sm mb-3" type="text" placeholder={$_('inventory.filterCourses')} bind:value={poolSearch} />
     {/if}
     <div class="space-y-4">
       {#each filteredPools as pool, pi}
@@ -340,26 +341,26 @@
               </div>
               <p class="text-xs text-neutral-400 mt-0.5">
                 <span class="{connectedStudents.length > 0 ? 'text-green-600 font-semibold' : 'text-neutral-400'}">
-                  {connectedStudents.length} étudiant{connectedStudents.length > 1 ? 's' : ''} connecté{connectedStudents.length > 1 ? 's' : ''}
+                  {connectedStudents.length} {connectedStudents.length > 1 ? $_('inventory.studentsConnected') : $_('inventory.studentConnected')}
                 </span>
-                · {readyVms.length} machine{readyVms.length > 1 ? 's' : ''} disponible{readyVms.length > 1 ? 's' : ''}
+                · {readyVms.length} {readyVms.length > 1 ? $_('inventory.machinesAvailable') : $_('inventory.machineAvailable')}
               </p>
             </div>
             <div class="flex items-center gap-1.5">
               {#if activeVms.length > 0}
                 <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-60"></span>
                 <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                <span class="text-xs text-green-600 font-semibold">En cours</span>
+                <span class="text-xs text-green-600 font-semibold">{$_('inventory.inProgress')}</span>
               {:else}
                 <span class="inline-flex rounded-full h-2 w-2 bg-neutral-300"></span>
-                <span class="text-xs text-neutral-400">En attente</span>
+                <span class="text-xs text-neutral-400">{$_('inventory.waiting')}</span>
               {/if}
             </div>
           </div>
           <div class="divide-y divide-neutral-50">
             {#each pool.vms as vm}
               {@const connected = vm.activity_status !== 'idle'}
-              {@const label = vm.student ? vm.student : connected ? 'Connexion personnelle (enseignant)' : vm.is_instructor ? 'VM enseignant (réservée)' : vm.status === 'ready' ? 'Machine libre' : 'Démarrage…'}
+              {@const label = vm.student ? vm.student : connected ? $_('inventory.personalConnectionInstructor') : vm.is_instructor ? $_('inventory.instructorVmReserved') : vm.status === 'ready' ? $_('inventory.freeMachine') : $_('inventory.startingUp')}
               <div class="flex items-center justify-between gap-3 px-5 py-3 transition-colors {connected ? 'bg-green-50/70 dark:bg-green-900/10' : 'hover:bg-neutral-50 dark:hover:bg-white/[0.03]'}">
                 <div class="flex items-center gap-3 min-w-0">
                   <!-- Avatar : initiale de l'étudiant, ou icône ; vert vif si connecté -->
@@ -383,18 +384,18 @@
                 </div>
                 <div class="flex items-center gap-3 shrink-0">
                   {#if connected}
-                    <span class="badge badge-ready">● En ligne</span>
+                    <span class="badge badge-ready">● {$_('inventory.online')}</span>
                   {:else if vm.student}
-                    <span class="text-xs text-neutral-400">Hors ligne</span>
+                    <span class="text-xs text-neutral-400">{$_('inventory.offline')}</span>
                   {:else if vm.is_instructor}
-                    <span class="text-xs text-neutral-400">Réservée</span>
+                    <span class="text-xs text-neutral-400">{$_('inventory.reserved')}</span>
                   {:else if vm.status === 'ready'}
-                    <span class="text-xs text-neutral-400">En attente</span>
+                    <span class="text-xs text-neutral-400">{$_('inventory.waiting')}</span>
                   {:else}
-                    <span class="text-xs text-amber-600">Démarrage…</span>
+                    <span class="text-xs text-amber-600">{$_('inventory.startingUp')}</span>
                   {/if}
                   {#if vm.guac_url}
-                    <a href={vm.guac_url} target="_blank" rel="noopener" class="btn btn-secondary text-xs px-2 py-1">Terminal</a>
+                    <a href={vm.guac_url} target="_blank" rel="noopener" class="btn btn-secondary text-xs px-2 py-1">{$_('inventory.terminal')}</a>
                   {/if}
                   {@render actionButtons(vm)}
                 </div>
@@ -412,12 +413,12 @@
   <!-- Header -->
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800">Inventaire</h1>
-      <p class="text-sm text-neutral-500 mt-1">Supervision en temps réel des instances provisionnées</p>
+      <h1 class="text-3xl font-bold text-primary-800">{$_('inventory.title')}</h1>
+      <p class="text-sm text-neutral-500 mt-1">{$_('inventory.subtitle')}</p>
     </div>
     <div class="flex items-center gap-3">
       {#if lastRefresh}
-        <span class="text-xs text-neutral-400">Maj {lastRefresh}</span>
+        <span class="text-xs text-neutral-400">{$_('inventory.updatedAt')} {lastRefresh}</span>
       {/if}
       <button
         onclick={() => fetchInventory(true)}
@@ -428,7 +429,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
-        Actualiser
+        {$_('inventory.refresh')}
       </button>
     </div>
   </div>
@@ -437,10 +438,10 @@
   {#if !loading && !error}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       {#each [
-        { label: 'Pools',       value: pools.length,                   accent: 'stat-accent-indigo',  color: 'text-primary-700' },
-        { label: 'VMs total',   value: totalVMs,                       accent: 'stat-accent-violet',  color: 'text-primary-500' },
-        { label: 'Santé',       value: `${healthyVMs}/${totalVMs}`,    accent: 'stat-accent-emerald', color: 'text-green-600'   },
-        { label: 'Actives SSH', value: activeVMs,                      accent: 'stat-accent-amber',   color: 'text-amber-600'   },
+        { label: $_('inventory.statPools'),      value: pools.length,                   accent: 'stat-accent-indigo',  color: 'text-primary-700' },
+        { label: $_('inventory.statTotalVms'),   value: totalVMs,                       accent: 'stat-accent-violet',  color: 'text-primary-500' },
+        { label: $_('inventory.statHealth'),     value: `${healthyVMs}/${totalVMs}`,    accent: 'stat-accent-emerald', color: 'text-green-600'   },
+        { label: $_('inventory.statActiveSsh'),  value: activeVMs,                      accent: 'stat-accent-amber',   color: 'text-amber-600'   },
       ] as stat, i}
         <div class="card card-interactive p-5 animate-fade-up" style="animation-delay:{i*0.05}s">
           <p class="section-label mb-2">{stat.label}</p>
@@ -454,7 +455,7 @@
   {#if loading}
     <div class="flex flex-col items-center justify-center py-24 gap-4">
       <div class="w-9 h-9 rounded-full border-2 border-neutral-200 border-t-primary-700" style="animation: spinnerGlow 0.7s linear infinite;"></div>
-      <p class="text-sm text-neutral-500">Chargement de l'inventaire…</p>
+      <p class="text-sm text-neutral-500">{$_('inventory.loadingInventory')}</p>
     </div>
   {/if}
 
@@ -466,7 +467,7 @@
   <!-- Pool sections -->
   {#if !loading && !error}
     {#if pools.length > 1}
-      <input class="field text-sm mb-4" type="text" placeholder="Filtrer les pools (nom, enseignant, étudiant, cours…)" bind:value={poolSearch} />
+      <input class="field text-sm mb-4" type="text" placeholder={$_('inventory.filterPools')} bind:value={poolSearch} />
     {/if}
     {#each filteredPools as pool, pi}
       <div class="card overflow-hidden animate-fade-up" style="animation-delay:{pi*0.06}s">
@@ -488,7 +489,7 @@
             {#each tagList(pool.tags) as tag}
               <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 border border-neutral-200">{tag}</span>
             {/each}
-            <button onclick={() => startEditPool(pool)} title="Renommer / étiqueter" aria-label="Modifier le pool" class="text-neutral-400 hover:text-primary-700 text-xs">✎</button>
+            <button onclick={() => startEditPool(pool)} title={$_('inventory.renameTag')} aria-label={$_('inventory.editPool')} class="text-neutral-400 hover:text-primary-700 text-xs">✎</button>
           </div>
           <span class="text-xs text-neutral-400 tabular-nums">{pool.vms.length} VM{pool.vms.length > 1 ? 's' : ''}</span>
         </div>
@@ -496,15 +497,15 @@
         {#if editingPool === pool.pool_id + ':' + pool.user_id}
           <div class="px-5 py-3 bg-neutral-50/60 border-b border-neutral-200 flex flex-wrap items-end gap-2">
             <div class="flex-1 min-w-[160px]">
-              <label class="block text-[11px] text-neutral-500 mb-1">Nom d'affichage</label>
+              <label class="block text-[11px] text-neutral-500 mb-1">{$_('inventory.displayName')}</label>
               <input class="field text-sm" type="text" placeholder={pool.pool_id} bind:value={editLabel} />
             </div>
             <div class="flex-1 min-w-[160px]">
-              <label class="block text-[11px] text-neutral-500 mb-1">Étiquettes (séparées par des virgules)</label>
-              <input class="field text-sm" type="text" placeholder="ex. TP, L1, semestre 2" bind:value={editTags} />
+              <label class="block text-[11px] text-neutral-500 mb-1">{$_('inventory.tagsLabel')}</label>
+              <input class="field text-sm" type="text" placeholder={$_('inventory.tagsPlaceholder')} bind:value={editTags} />
             </div>
-            <button onclick={() => savePoolMeta(pool)} class="btn btn-primary text-sm">Enregistrer</button>
-            <button onclick={() => (editingPool = null)} class="btn btn-secondary text-sm">Annuler</button>
+            <button onclick={() => savePoolMeta(pool)} class="btn btn-primary text-sm">{$_('inventory.save')}</button>
+            <button onclick={() => (editingPool = null)} class="btn btn-secondary text-sm">{$_('inventory.cancel')}</button>
           </div>
         {/if}
 
@@ -513,13 +514,13 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>IP</th>
-                <th>Statut</th>
-                <th>Santé</th>
-                <th>Activité</th>
-                <th>Terminal</th>
-                <th class="text-right">Dernière activité</th>
+                <th>{$_('inventory.colName')}</th>
+                <th>{$_('inventory.colIp')}</th>
+                <th>{$_('inventory.colStatus')}</th>
+                <th>{$_('inventory.colHealth')}</th>
+                <th>{$_('inventory.colActivity')}</th>
+                <th>{$_('inventory.terminal')}</th>
+                <th class="text-right">{$_('inventory.colLastActivity')}</th>
               </tr>
             </thead>
             <tbody>
@@ -542,11 +543,11 @@
                         {#if vm.student}
                           <span class="text-xs font-semibold truncate {connected ? 'text-green-700 dark:text-green-400' : 'text-neutral-700 dark:text-neutral-300'}">{vm.student}</span>
                         {:else if vm.is_instructor}
-                          <span class="text-xs font-semibold text-primary-600 dark:text-primary-400">{connected ? 'Connexion personnelle' : 'VM enseignant'}</span>
+                          <span class="text-xs font-semibold text-primary-600 dark:text-primary-400">{connected ? $_('inventory.personalConnection') : $_('inventory.instructorVm')}</span>
                         {:else if connected}
-                          <span class="text-xs font-semibold text-primary-600 dark:text-primary-400">Connexion personnelle</span>
+                          <span class="text-xs font-semibold text-primary-600 dark:text-primary-400">{$_('inventory.personalConnection')}</span>
                         {:else}
-                          <span class="text-xs text-neutral-400">Machine libre</span>
+                          <span class="text-xs text-neutral-400">{$_('inventory.freeMachine')}</span>
                         {/if}
                         <span class="font-mono text-[10px] text-neutral-400 truncate">{vm.name}</span>
                       </div>
@@ -564,7 +565,7 @@
                   <td>
                     <div class="flex items-center gap-1.5">
                       <span class="w-1.5 h-1.5 rounded-full {vm.healthy ? 'bg-green-500' : 'bg-red-500'}"></span>
-                      <span class="text-xs font-medium {vm.healthy ? 'text-green-700' : 'text-red-700'}">{vm.healthy ? 'OK' : 'KO'}</span>
+                      <span class="text-xs font-medium {vm.healthy ? 'text-green-700' : 'text-red-700'}">{vm.healthy ? $_('inventory.healthOk') : $_('inventory.healthKo')}</span>
                     </div>
                   </td>
                   <td>
@@ -574,10 +575,10 @@
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
                           <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-sky-400"></span>
                         </span>
-                        Sur Jupyter
+                        {$_('inventory.onJupyter')}
                       </span>
                     {:else}
-                      <span class="text-xs text-neutral-400">Inactif</span>
+                      <span class="text-xs text-neutral-400">{$_('inventory.inactive')}</span>
                     {/if}
                   </td>
                   <td>
@@ -588,7 +589,7 @@
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
-                        Terminal
+                        {$_('inventory.terminal')}
                       </a>
                     {:else}
                       <span class="text-xs text-neutral-400">—</span>
@@ -596,7 +597,7 @@
                     <div class="flex gap-1 mt-1">{@render actionButtons(vm)}</div>
                   </td>
                   <td class="text-right">
-                    <span class="text-xs text-neutral-400 tabular-nums">il y a {timeSince(vm.last_seen)}</span>
+                    <span class="text-xs text-neutral-400 tabular-nums">{$_('inventory.ago')} {timeSince(vm.last_seen)}</span>
                   </td>
                 </tr>
               {/each}
@@ -612,8 +613,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
             d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
-        <p class="text-neutral-500 text-sm font-medium">Aucune VM provisionnée pour le moment</p>
-        <p class="text-neutral-400 text-xs mt-1">Les instances apparaîtront ici une fois démarrées</p>
+        <p class="text-neutral-500 text-sm font-medium">{$_('inventory.noVmProvisioned')}</p>
+        <p class="text-neutral-400 text-xs mt-1">{$_('inventory.instancesWillAppear')}</p>
       </div>
     {/if}
   {/if}

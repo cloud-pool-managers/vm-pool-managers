@@ -4,6 +4,7 @@
   import { simpleMode } from '$lib/store/uiStore';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { _ } from 'svelte-i18n';
   import type { Config } from '$lib/type';
 
   let config_name = $state('');
@@ -44,21 +45,21 @@
   const isNew = $derived(config_name !== newconfigname || config_name === '');
 </script>
 
-<svelte:head><title>Configurations — CloudPoolManager</title></svelte:head>
+<svelte:head><title>{$_('config.pageTitle')}</title></svelte:head>
 
 <div class="space-y-6 animate-fade-up">
 
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800">Configurations</h1>
-      <p class="text-sm text-neutral-500 mt-1">Scripts cloud-init pour l'initialisation des VMs</p>
+      <h1 class="text-3xl font-bold text-primary-800">{$_('config.heading')}</h1>
+      <p class="text-sm text-neutral-500 mt-1">{$_('config.subtitle')}</p>
     </div>
     <button onclick={newConfig} class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
-      Nouvelle configuration
+      {$_('config.newConfig')}
     </button>
   </div>
 
@@ -82,7 +83,7 @@
         </button>
       {/each}
       {#if $configs.length === 0}
-        <p class="text-xs text-neutral-400 px-3 py-2">Aucune configuration</p>
+        <p class="text-xs text-neutral-400 px-3 py-2">{$_('config.emptyList')}</p>
       {/if}
     </div>
 
@@ -91,20 +92,20 @@
       {#if editorVisible}
         <div class="card p-6 space-y-5 animate-fade-in">
           <div>
-            <label class="section-label mb-2 block">Nom de la configuration</label>
+            <label class="section-label mb-2 block">{$_('config.nameLabel')}</label>
             <input
               class="field"
               type="text"
-              placeholder="ex: setup_python_env"
+              placeholder={$_('config.namePlaceholder')}
               bind:value={newconfigname}
             />
           </div>
 
           <div>
-            <label class="section-label mb-2 block">Script bash (cloud-init)</label>
+            <label class="section-label mb-2 block">{$_('config.scriptLabel')}</label>
             <textarea
               class="field font-mono text-xs resize-none leading-relaxed"
-              placeholder="#!/bin/bash&#10;apt-get update..."
+              placeholder={$_('config.scriptPlaceholder')}
               rows={20}
               bind:value={text}
             ></textarea>
@@ -122,14 +123,14 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
                 </svg>
-                Enregistrer
+                {$_('config.save')}
               </button>
             {:else}
               <button onclick={handleUpdate} class="btn btn-success text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                Mettre à jour
+                {$_('config.update')}
               </button>
             {/if}
             <div class="flex-1"></div>
@@ -138,7 +139,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
-                Supprimer
+                {$_('config.delete')}
               </button>
             {/if}
           </div>
@@ -149,8 +150,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
-          <p class="text-neutral-600 text-sm font-medium">Aucune configuration sélectionnée</p>
-          <p class="text-neutral-400 text-xs mt-1 max-w-xs">Sélectionnez un script dans la liste ou créez-en un nouveau</p>
+          <p class="text-neutral-600 text-sm font-medium">{$_('config.noneSelected')}</p>
+          <p class="text-neutral-400 text-xs mt-1 max-w-xs">{$_('config.noneSelectedHint')}</p>
         </div>
       {/if}
     </div>

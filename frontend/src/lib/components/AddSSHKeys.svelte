@@ -8,6 +8,7 @@
   import { addStudents, listStudents, deleteStudent } from '$lib/index';
   import { create } from '@bufbuild/protobuf';
   import { authStore } from '$lib/store';
+  import { _ } from 'svelte-i18n';
 
   let {
     open = $bindable(),
@@ -56,12 +57,12 @@
 
   async function handleAddGitHub() {
     const toAdd = githubStudents.filter(s => githubSelected.has(s.login));
-    if (!toAdd.length) { error = 'Sélectionnez au moins un étudiant.'; return; }
+    if (!toAdd.length) { error = $_('sshKeys.errorSelectAtLeastOne'); return; }
     const students = toAdd.map(s => {
       const keyIdx = githubKeyChoice[s.login] ?? 0;
       return { name: `${(githubFirstNames[s.login] ?? '').trim()}.${(githubLastNames[s.login] ?? '').trim()}`.toLowerCase(), sshKey: s.keys[keyIdx] ?? '' };
     }).filter(s => s.name !== '.' && s.sshKey);
-    if (!students.length) { error = 'Renseignez prénom et nom pour les étudiants sélectionnés.'; return; }
+    if (!students.length) { error = $_('sshKeys.errorMissingFirstLastName'); return; }
     const req: AddStudentRequest = create(AddStudentRequestSchema, { user: $authStore?.email, poolname, students });
     try {
       loading = true; error = null;
@@ -69,7 +70,7 @@
       await handleListStudents();
       githubSelected = new Set();
       addModal = false;
-    } catch { error = "Erreur lors de l'ajout."; } finally { loading = false; }
+    } catch { error = $_('sshKeys.errorAdd'); } finally { loading = false; }
   }
 
   // Moodle mode state
@@ -82,9 +83,9 @@
   let moodleSelected = $state<Set<string>>(new Set());
   let moodleLoading = $state(false);
   let modes = $derived<[AddMode, string][]>([
-    ['form', 'Formulaire'], ['raw', 'Import texte'], ['github', 'GitHub'],
+    ['form', $_('sshKeys.modeForm')], ['raw', $_('sshKeys.modeRawImport')], ['github', 'GitHub'],
     ...(moodleConfigured ? ([['moodle', 'Moodle']] as [AddMode, string][]) : []),
-    ['xcours', "Cours de l'X"],
+    ['xcours', $_('sshKeys.modeXcours')],
   ]);
 
   async function checkMoodle() {
@@ -117,9 +118,9 @@
     moodleSelected = s;
   }
   async function handleImportMoodle() {
-    if (moodleCourseId == null) { error = 'Choisissez un cours.'; return; }
+    if (moodleCourseId == null) { error = $_('sshKeys.errorChooseCourse'); return; }
     const emails = Array.from(moodleSelected);
-    if (!emails.length) { error = 'Sélectionnez au moins un étudiant.'; return; }
+    if (!emails.length) { error = $_('sshKeys.errorSelectAtLeastOne'); return; }
     try {
       loading = true; error = null;
       const r = await apiFetch('/api/moodle/import', {
@@ -130,7 +131,7 @@
       await handleListStudents();
       moodleSelected = new Set();
       addModal = false;
-    } catch { error = "Erreur lors de l'import depuis Moodle."; } finally { loading = false; }
+    } catch { error = $_('sshKeys.errorImportMoodle'); } finally { loading = false; }
   }
 
   // Cours de l'X (endpoints DSI) : catalogue public + affectations (token DSI requis).
@@ -168,8 +169,8 @@
       if (xcoursDep.trim()) q.set('dep', xcoursDep.trim().toUpperCase());
       const r = await apiFetch('/api/xcours/catalogue' + (q.toString() ? '?' + q.toString() : ''));
       if (r.ok) xcoursCourses = (await r.json()).courses ?? [];
-      else xcoursError = 'Catalogue indisponible.';
-    } catch { xcoursError = 'Catalogue indisponible.'; } finally { xcoursLoading = false; }
+      else xcoursError = $_('sshKeys.errorCatalogueUnavailable');
+    } catch { xcoursError = $_('sshKeys.errorCatalogueUnavailable'); } finally { xcoursLoading = false; }
   }
   async function selectXCours(id: string) {
     xcoursCourseId = id; xcoursMembers = []; xcoursSelected = new Set();
@@ -177,11 +178,11 @@
     try {
       const r = await apiFetch(`/api/xcours/members?id=${encodeURIComponent(id)}`);
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) { xcoursError = data.error ?? 'Affectations indisponibles (token DSI requis).'; return; }
+      if (!r.ok) { xcoursError = data.error ?? $_('sshKeys.errorAssignmentsUnavailableDsi'); return; }
       const students: XMember[] = (data.members ?? []).filter((m: XMember) => m.role !== 'editingteacher');
       xcoursMembers = students;
       xcoursSelected = new Set(students.map(m => m.username));
-    } catch { xcoursError = 'Affectations indisponibles.'; } finally { xcoursLoading = false; }
+    } catch { xcoursError = $_('sshKeys.errorAssignmentsUnavailable'); } finally { xcoursLoading = false; }
   }
   function toggleXCoursStudent(username: string) {
     const s = new Set(xcoursSelected);
@@ -189,9 +190,9 @@
     xcoursSelected = s;
   }
   async function handleImportXCours() {
-    if (!xcoursCourseId) { error = 'Choisissez un cours.'; return; }
+    if (!xcoursCourseId) { error = $_('sshKeys.errorChooseCourse'); return; }
     const usernames = Array.from(xcoursSelected);
-    if (!usernames.length) { error = 'Sélectionnez au moins un étudiant.'; return; }
+    if (!usernames.length) { error = $_('sshKeys.errorSelectAtLeastOne'); return; }
     try {
       loading = true; error = null;
       const r = await apiFetch('/api/xcours/import', {
@@ -202,7 +203,7 @@
       await handleListStudents();
       xcoursSelected = new Set();
       addModal = false;
-    } catch { error = "Erreur lors de l'import du cours de l'X."; } finally { loading = false; }
+    } catch { error = $_('sshKeys.errorImportXcours'); } finally { loading = false; }
   }
 
   interface User { name: string; sshKey: string; ip: string; }
@@ -227,12 +228,12 @@
       loading = true; error = null;
       const res: ListStudentsResponse = await listStudents(req);
       users = res.students.map(s => ({ name: s.name, sshKey: s.sshKey, ip: s.ip }));
-    } catch { error = 'Erreur lors du chargement des étudiants.'; }
+    } catch { error = $_('sshKeys.errorLoadStudents'); }
     finally { loading = false; }
   }
 
   async function handleDeleteStudent(name: string) {
-    if (!confirm(`Supprimer l'étudiant ${name} ?`)) return;
+    if (!confirm($_('sshKeys.confirmDeleteStudent') + ' ' + name + ' ?')) return;
     const req: DeleteStudentRequest = create(DeleteStudentRequestSchema, {
       user: $authStore?.email, poolname, studentName: name,
     });
@@ -240,13 +241,13 @@
       loading = true; error = null;
       await deleteStudent(req);
       await handleListStudents();
-    } catch { error = "Erreur lors de la suppression."; }
+    } catch { error = $_('sshKeys.errorDelete'); }
     finally { loading = false; }
   }
 
   async function handleAdd() {
     const valid = newStudents.filter(s => s.firstName.trim() && s.lastName.trim() && s.sshKey.trim());
-    if (!valid.length) { error = 'Aucun étudiant valide à ajouter.'; return; }
+    if (!valid.length) { error = $_('sshKeys.errorNoValidStudent'); return; }
     const req: AddStudentRequest = create(AddStudentRequestSchema, {
       user: $authStore?.email, poolname,
       students: valid.map(s => ({ name: buildLogin(s), sshKey: s.sshKey })),
@@ -257,7 +258,7 @@
       await handleListStudents();
       newStudents = [{ firstName: '', lastName: '', sshKey: '' }];
       addModal = false;
-    } catch { error = "Erreur lors de l'ajout."; }
+    } catch { error = $_('sshKeys.errorAdd'); }
     finally { loading = false; }
   }
 
@@ -275,7 +276,7 @@
       const lastName = dotIdx !== -1 ? loginRaw.slice(dotIdx + 1) : '';
       parsed.push({ firstName, lastName, sshKey });
     }
-    if (!parsed.length) { error = 'Aucun étudiant valide (format: prenom.nom;cle_ssh)'; return; }
+    if (!parsed.length) { error = $_('sshKeys.errorNoValidStudentRaw'); return; }
     newStudents = parsed;
     await handleAdd();
     rawInput = '';
@@ -296,7 +297,7 @@
     <div class="modal-box" style="max-width:520px;">
       <div class="flex items-center justify-between mb-5">
         <div>
-          <h3 class="text-base font-bold text-neutral-900">Étudiants</h3>
+          <h3 class="text-base font-bold text-neutral-900">{$_('sshKeys.studentsTitle')}</h3>
           <p class="text-xs text-neutral-500 mt-0.5">{poolname}</p>
         </div>
         <button onclick={() => open = false} class="text-neutral-400 hover:text-neutral-700 transition-colors p-1 rounded hover:bg-neutral-100">
@@ -319,11 +320,11 @@
           <svg class="w-10 h-10 mb-3 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
-          <p class="text-sm">Aucun étudiant enregistré</p>
+          <p class="text-sm">{$_('sshKeys.noStudentRegistered')}</p>
         </div>
       {:else}
         {#if users.length > 4}
-          <input class="field text-sm mb-3" type="text" placeholder="Rechercher un étudiant…" bind:value={studentSearch} />
+          <input class="field text-sm mb-3" type="text" placeholder={$_('sshKeys.searchStudentPlaceholder')} bind:value={studentSearch} />
         {/if}
         <div class="space-y-1 max-h-72 overflow-y-auto pr-1 mb-4">
           {#each filteredUsers as user, i}
@@ -339,14 +340,14 @@
               </div>
               <div class="flex items-center gap-2">
                 {#if user.ip}
-                  <span class="badge badge-ready">Attribué</span>
+                  <span class="badge badge-ready">{$_('sshKeys.statusAssigned')}</span>
                 {:else}
-                  <span class="badge badge-starting">En attente</span>
+                  <span class="badge badge-starting">{$_('sshKeys.statusPending')}</span>
                 {/if}
                 <button
                   onclick={() => handleDeleteStudent(user.name)}
                   class="p-1.5 rounded text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Supprimer"
+                  title={$_('sshKeys.deleteTitle')}
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -356,7 +357,7 @@
             </div>
           {/each}
           {#if filteredUsers.length === 0}
-            <p class="text-sm text-neutral-400 py-6 text-center">Aucun étudiant ne correspond à « {studentSearch} ».</p>
+            <p class="text-sm text-neutral-400 py-6 text-center">{$_('sshKeys.noStudentMatch')} « {studentSearch} ».</p>
           {/if}
         </div>
       {/if}
@@ -365,7 +366,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Ajouter des étudiants
+        {$_('sshKeys.addStudents')}
       </button>
     </div>
   </div>
@@ -376,7 +377,7 @@
   <div class="modal-overlay" style="z-index:60;" role="dialog" aria-modal="true">
     <div class="modal-box" style="max-width:600px;">
       <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold text-neutral-900">Ajouter des étudiants</h3>
+        <h3 class="text-base font-bold text-neutral-900">{$_('sshKeys.addStudents')}</h3>
         <button onclick={() => addModal = false} class="text-neutral-400 hover:text-neutral-700 transition-colors p-1 rounded hover:bg-neutral-100">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -404,8 +405,8 @@
             <svg class="w-8 h-8 mb-2 text-neutral-300" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
             </svg>
-            <p class="text-sm">Aucun étudiant connecté via GitHub</p>
-            <p class="text-xs text-neutral-400 mt-1">Les étudiants doivent se connecter avec leur compte GitHub sur le portail.</p>
+            <p class="text-sm">{$_('sshKeys.noGithubStudent')}</p>
+            <p class="text-xs text-neutral-400 mt-1">{$_('sshKeys.githubLoginHint')}</p>
           </div>
         {:else}
           <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -417,17 +418,17 @@
                     <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
                   </svg>
                   <span class="text-sm font-semibold text-neutral-800 font-mono">{gh.login}</span>
-                  <span class="text-xs text-neutral-400">{gh.keys.length} clé{gh.keys.length > 1 ? 's' : ''}</span>
+                  <span class="text-xs text-neutral-400">{gh.keys.length} {gh.keys.length > 1 ? $_('sshKeys.keysPlural') : $_('sshKeys.keySingular')}</span>
                 </div>
                 {#if githubSelected.has(gh.login)}
                   <div class="flex gap-2 mt-1">
-                    <input class="field flex-1 text-xs" type="text" placeholder="Prénom" bind:value={githubFirstNames[gh.login]} />
-                    <input class="field flex-1 text-xs" type="text" placeholder="Nom" bind:value={githubLastNames[gh.login]} />
+                    <input class="field flex-1 text-xs" type="text" placeholder={$_('sshKeys.firstNamePlaceholder')} bind:value={githubFirstNames[gh.login]} />
+                    <input class="field flex-1 text-xs" type="text" placeholder={$_('sshKeys.lastNamePlaceholder')} bind:value={githubLastNames[gh.login]} />
                   </div>
                   {#if gh.keys.length > 1}
                     <select class="field text-xs mt-2 font-mono" bind:value={githubKeyChoice[gh.login]}>
                       {#each gh.keys as key, i}
-                        <option value={i}>Clé {i+1} — {key.slice(0,40)}…</option>
+                        <option value={i}>{$_('sshKeys.keyLabel')} {i+1} — {key.slice(0,40)}…</option>
                       {/each}
                     </select>
                   {/if}
@@ -440,25 +441,25 @@
               {#if loading}
                 <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
               {/if}
-              Ajouter les sélectionnés
+              {$_('sshKeys.addSelected')}
             </button>
           </div>
         {/if}
       {:else if addMode === 'moodle'}
         <div class="space-y-3">
           <div>
-            <label class="section-label block mb-1">Cours Moodle</label>
+            <label class="section-label block mb-1">{$_('sshKeys.moodleCourseLabel')}</label>
             <select
               class="field text-sm"
               bind:value={moodleCourseId}
               onchange={() => { if (moodleCourseId != null) loadMoodleEnrolments(moodleCourseId); }}
             >
-              <option value={null} disabled selected>— Choisir un cours —</option>
+              <option value={null} disabled selected>{$_('sshKeys.chooseCourseOption')}</option>
               {#each moodleCourses as c}
                 <option value={c.id}>{c.shortname} — {c.fullname}</option>
               {/each}
             </select>
-            <p class="text-xs text-neutral-400 mt-1">Les étudiants importés se connecteront via Moodle (clé SSH non requise).</p>
+            <p class="text-xs text-neutral-400 mt-1">{$_('sshKeys.moodleImportHint')}</p>
           </div>
 
           {#if moodleLoading}
@@ -479,23 +480,23 @@
               {#if loading}
                 <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
               {/if}
-              Importer {moodleSelected.size} étudiant{moodleSelected.size > 1 ? 's' : ''}
+              {$_('sshKeys.importLabel')} {moodleSelected.size} {moodleSelected.size > 1 ? $_('sshKeys.studentsPlural') : $_('sshKeys.studentSingular')}
             </button>
           {:else if moodleCourseId != null}
-            <p class="text-sm text-neutral-400 py-6 text-center">Aucun étudiant dans ce cours.</p>
+            <p class="text-sm text-neutral-400 py-6 text-center">{$_('sshKeys.noStudentInCourse')}</p>
           {/if}
         </div>
       {:else if addMode === 'xcours'}
         <div class="space-y-3">
           {#if !xcoursAffectationsAvailable}
             <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-              Catalogue consultable, mais l'import des inscriptions nécessite le token DSI (en attente).
+              {$_('sshKeys.xcoursDsiWarning')}
             </p>
           {/if}
-          <input class="field text-sm" type="text" placeholder="Rechercher (nom ou code, ex. CSC, APM…)" bind:value={xcoursSearch} />
+          <input class="field text-sm" type="text" placeholder={$_('sshKeys.xcoursSearchPlaceholder')} bind:value={xcoursSearch} />
           <div class="flex gap-2 items-center">
-            <input class="field text-sm" style="flex:1 1 auto" type="text" placeholder="Année (ex. 2025 — défaut 2026)" bind:value={xcoursYear} />
-            <button onclick={loadXCoursCatalogue} class="btn btn-secondary text-sm shrink-0">Filtrer</button>
+            <input class="field text-sm" style="flex:1 1 auto" type="text" placeholder={$_('sshKeys.xcoursYearPlaceholder')} bind:value={xcoursYear} />
+            <button onclick={loadXCoursCatalogue} class="btn btn-secondary text-sm shrink-0">{$_('sshKeys.filterButton')}</button>
           </div>
 
           {#if xcoursLoading}
@@ -504,8 +505,8 @@
             </div>
           {:else if xcoursCourseId && xcoursMembers.length > 0}
             <p class="text-xs text-neutral-500">
-              Cours : <span class="font-mono">{xcoursCourseId}</span> —
-              <button class="text-primary-700 underline" onclick={() => { xcoursCourseId = null; xcoursMembers = []; }}>changer</button>
+              {$_('sshKeys.courseLabel')} : <span class="font-mono">{xcoursCourseId}</span> —
+              <button class="text-primary-700 underline" onclick={() => { xcoursCourseId = null; xcoursMembers = []; }}>{$_('sshKeys.changeButton')}</button>
             </p>
             <div class="space-y-1 max-h-56 overflow-y-auto pr-1">
               {#each xcoursMembers as m}
@@ -519,15 +520,15 @@
               {#if loading}
                 <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
               {/if}
-              Importer {xcoursSelected.size} étudiant{xcoursSelected.size > 1 ? 's' : ''}
+              {$_('sshKeys.importLabel')} {xcoursSelected.size} {xcoursSelected.size > 1 ? $_('sshKeys.studentsPlural') : $_('sshKeys.studentSingular')}
             </button>
           {:else if xcoursCourseId}
-            <p class="text-sm text-neutral-400 py-6 text-center">{xcoursError ?? 'Aucun étudiant trouvé pour ce cours.'}</p>
+            <p class="text-sm text-neutral-400 py-6 text-center">{xcoursError ?? $_('sshKeys.noStudentFoundCourse')}</p>
           {:else}
             {#if xcoursError}<p class="text-xs text-red-600">{xcoursError}</p>{/if}
             {#if xcoursCourses.length > 0}
               <p class="text-xs text-neutral-400">
-                {xcoursCourses.length} cours{xcoursCourses.length > xcoursFiltered.length ? ` · ${xcoursFiltered.length} affichés (affinez la recherche)` : ''}
+                {xcoursCourses.length} {$_('sshKeys.coursesCount')}{xcoursCourses.length > xcoursFiltered.length ? ` · ${xcoursFiltered.length} ${$_('sshKeys.displayedRefineSearch')}` : ''}
               </p>
             {/if}
             <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
@@ -542,17 +543,17 @@
                 </button>
               {/each}
               {#if xcoursCourses.length === 0}
-                <p class="text-sm text-neutral-400 py-6 text-center">Aucun cours. Ajustez les filtres.</p>
+                <p class="text-sm text-neutral-400 py-6 text-center">{$_('sshKeys.noCourseAdjustFilters')}</p>
               {:else if xcoursFiltered.length === 0}
-                <p class="text-sm text-neutral-400 py-6 text-center">Aucun résultat pour cette recherche.</p>
+                <p class="text-sm text-neutral-400 py-6 text-center">{$_('sshKeys.noSearchResult')}</p>
               {/if}
             </div>
-            <p class="text-xs text-neutral-400">Les étudiants importés se connecteront avec leur compte établissement (clé SSH non requise).</p>
+            <p class="text-xs text-neutral-400">{$_('sshKeys.xcoursImportHint')}</p>
           {/if}
         </div>
       {:else if rawMode}
         <div class="space-y-3">
-          <label class="section-label block mb-1">Un étudiant par ligne : <code class="text-primary-700 font-mono">prenom.nom;cle_ssh</code></label>
+          <label class="section-label block mb-1">{$_('sshKeys.rawFormatLabel')} <code class="text-primary-700 font-mono">prenom.nom;cle_ssh</code></label>
           <textarea
             class="field font-mono text-xs resize-none"
             rows="10"
@@ -560,7 +561,7 @@
             bind:value={rawInput}
           ></textarea>
           <button onclick={handleAddRaw} disabled={!rawInput.trim() || loading} class="btn btn-primary text-sm">
-            Importer
+            {$_('sshKeys.importLabel')}
           </button>
         </div>
       {:else}
@@ -568,8 +569,8 @@
           {#each newStudents as student, i}
             <div class="p-3 rounded border border-neutral-200 bg-neutral-50 space-y-2">
               <div class="flex gap-2">
-                <input class="field flex-1" type="text" placeholder="Prénom" bind:value={student.firstName} />
-                <input class="field flex-1" type="text" placeholder="Nom" bind:value={student.lastName} />
+                <input class="field flex-1" type="text" placeholder={$_('sshKeys.firstNamePlaceholder')} bind:value={student.firstName} />
+                <input class="field flex-1" type="text" placeholder={$_('sshKeys.lastNamePlaceholder')} bind:value={student.lastName} />
               </div>
               <div class="flex gap-2">
                 <input class="field flex-1 font-mono text-xs" type="text" placeholder="ssh-ed25519 AAAA..." bind:value={student.sshKey} />
@@ -589,13 +590,13 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            Ajouter une ligne
+            {$_('sshKeys.addRow')}
           </button>
           <button onclick={handleAdd} disabled={loading} class="btn btn-primary text-sm">
             {#if loading}
               <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
             {/if}
-            Enregistrer
+            {$_('sshKeys.saveButton')}
           </button>
         </div>
       {/if}

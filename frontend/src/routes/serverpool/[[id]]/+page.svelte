@@ -9,6 +9,7 @@ import { authStore, serverPools, servers, configs, images, flavors, networks } f
 import { simpleMode } from '$lib/store/uiStore';
 import { onMount } from 'svelte';
 import { page } from '$app/state';
+import { _ } from 'svelte-i18n';
 
 // Inventory data for simple mode (more reliable than gRPC servers store)
 let inventoryPools: { pool_id: string; user_id: string; vms: { status: string; activity_status: string }[] }[] = $state([]);
@@ -53,7 +54,7 @@ let selectedPool = $derived($serverPools.find(p => p.name === selectedsp));
 let sortedFlavors = $derived([...$flavors].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'})));
 
 async function handleDeleteServerpool(sp: ServerPool) {
-  if (!confirm(`Supprimer le serverpool ${sp.name} ?`)) return;
+  if (!confirm($_('serverpool.confirmDeletePool') + ' ' + sp.name + ' ?')) return;
   const req: DeletePoolRequest = create(DeletePoolRequestSchema, { user: $authStore?.email, poolId: sp.name });
   try {
     const res: DeletePoolResponse = await deletePool(req);
@@ -66,7 +67,7 @@ async function handleDeleteServerpool(sp: ServerPool) {
 }
 
 async function handleCreateServer(sp: ServerPool) {
-  if (!confirm(`Ajouter un serveur au pool ${sp.name} ?`)) return;
+  if (!confirm($_('serverpool.confirmAddServer') + ' ' + sp.name + ' ?')) return;
   const req: CreatePoolRequest = create(CreatePoolRequestSchema, {
     user: $authStore?.email, name: sp.name, image: sp.image, flavor: sp.flavor,
     network: sp.network, minVm: String(sp.minVm), maxVm: String(sp.maxVm), config: sp.config,
@@ -93,13 +94,13 @@ async function handleCreateServerpool(event: Event) {
     flavor: selectedFlavor, networks: selectedNetwork,
     minVm: Number(fd.get('min_vm')), maxVm: Number(fd.get('max_vm')), config: selectedConfigFile,
   };
-  if (!data.name?.trim()) { createError = 'Le nom est obligatoire.'; return; }
-  if (!data.image || !data.flavor || !data.networks) { createError = 'Image, flavor et réseau requis.'; return; }
+  if (!data.name?.trim()) { createError = $_('serverpool.errorNameRequired'); return; }
+  if (!data.image || !data.flavor || !data.networks) { createError = $_('serverpool.errorImageFlavorNetworkRequired'); return; }
 
   const enabledOffDays = Object.entries(offDays).filter(([,v]) => v).map(([k]) => k);
   const hasSchedule = Boolean(scheduleDay && scheduleTime);
   if ((scheduleDay && !scheduleTime) || (!scheduleDay && scheduleTime)) {
-    createError = 'Renseignez le jour ET l\'heure, ou laissez les deux vides.'; return;
+    createError = $_('serverpool.errorScheduleDayTime'); return;
   }
   const req: CreatePoolRequest = create(CreatePoolRequestSchema, {
     user: $authStore?.email ?? '', name: data.name, image: data.image,
@@ -120,8 +121,8 @@ async function handleCreateServerpool(event: Event) {
       const { loadServerPools } = await import('$lib/store/serverpoolStore');
       await loadServerPools($authStore?.email ?? '');
       setTimeout(() => { createspModal = false; createSuccess = false; }, 1200);
-    } else { createError = 'Erreur lors de la création.'; }
-  } catch { createError = 'Impossible de créer le serverpool.'; }
+    } else { createError = $_('serverpool.errorCreationFailed'); }
+  } catch { createError = $_('serverpool.errorCannotCreate'); }
 }
 
 function computeNextSchedule(dayOfWeek: number, time: string): Date {
@@ -141,14 +142,14 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
 
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800">Mes cours</h1>
-      <p class="text-sm text-neutral-500 mt-1">Gérez les machines virtuelles de vos étudiants</p>
+      <h1 class="text-3xl font-bold text-primary-800">{$_('serverpool.myCoursesTitle')}</h1>
+      <p class="text-sm text-neutral-500 mt-1">{$_('serverpool.myCoursesSubtitle')}</p>
     </div>
     <button onclick={() => createspModal = true} class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
-      Créer un cours
+      {$_('serverpool.createCourse')}
     </button>
   </div>
 
@@ -157,8 +158,8 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
       <svg class="w-12 h-12 text-neutral-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
       </svg>
-      <p class="text-neutral-600 font-medium">Aucun cours créé</p>
-      <p class="text-neutral-400 text-sm mt-1">Cliquez sur "Créer un cours" pour démarrer</p>
+      <p class="text-neutral-600 font-medium">{$_('serverpool.noCourse')}</p>
+      <p class="text-neutral-400 text-sm mt-1">{$_('serverpool.noCourseHint')}</p>
     </div>
   {:else}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -173,17 +174,17 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
               <h2 class="text-base font-bold text-neutral-900">{sp.name}</h2>
               <p class="text-xs text-neutral-400 mt-0.5">
                 {#if activeCount > 0}
-                  <span class="text-green-600 font-semibold">{activeCount} étudiant{activeCount > 1 ? 's' : ''} connecté{activeCount > 1 ? 's' : ''}</span>
-                  {#if readyCount > activeCount} · {readyCount - activeCount} en attente{/if}
+                  <span class="text-green-600 font-semibold">{activeCount} {activeCount > 1 ? $_('serverpool.studentsConnected') : $_('serverpool.studentConnected')}</span>
+                  {#if readyCount > activeCount} · {readyCount - activeCount} {$_('serverpool.waiting')}{/if}
                 {:else if readyCount > 0}
-                  {readyCount} machine{readyCount > 1 ? 's' : ''} prête{readyCount > 1 ? 's' : ''}
+                  {readyCount} {readyCount > 1 ? $_('serverpool.machinesReady') : $_('serverpool.machineReady')}
                 {:else}
-                  Aucune machine démarrée
+                  {$_('serverpool.noMachineStarted')}
                 {/if}
               </p>
             </div>
             <span class="badge {activeCount > 0 ? 'badge-ready' : readyCount > 0 ? 'badge-starting' : 'badge-info'}">
-              {activeCount > 0 ? 'En cours' : readyCount > 0 ? 'Prêt' : 'Arrêté'}
+              {activeCount > 0 ? $_('serverpool.statusRunning') : readyCount > 0 ? $_('serverpool.statusReady') : $_('serverpool.statusStopped')}
             </span>
           </div>
 
@@ -192,7 +193,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
               <div class="h-2 flex-1 rounded-full {i < activeCount ? 'bg-green-400' : i < readyCount ? 'bg-primary-200' : 'bg-neutral-200'}"></div>
             {/each}
           </div>
-          <p class="text-xs text-neutral-400 -mt-2">{activeCount} / {sp.maxVm} places utilisées</p>
+          <p class="text-xs text-neutral-400 -mt-2">{activeCount} / {sp.maxVm} {$_('serverpool.placesUsed')}</p>
 
           <div class="flex gap-2 pt-1">
             <button
@@ -202,22 +203,22 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
-              Étudiants
+              {$_('serverpool.students')}
             </button>
             <button
               onclick={() => handleCreateServer(sp)}
               class="btn btn-success text-xs"
-              title="Démarrer une machine"
+              title={$_('serverpool.startMachineTitle')}
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
               </svg>
-              Démarrer
+              {$_('serverpool.start')}
             </button>
             <button
               onclick={() => handleDeleteServerpool(sp)}
               class="btn btn-danger text-xs px-2.5"
-              title="Supprimer ce cours"
+              title={$_('serverpool.deleteCourseTitle')}
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -235,14 +236,14 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-primary-800">Serverpools</h1>
-      <p class="text-sm text-neutral-500 mt-1">Gestion des groupes de machines virtuelles</p>
+      <h1 class="text-3xl font-bold text-primary-800">{$_('serverpool.serverpoolsTitle')}</h1>
+      <p class="text-sm text-neutral-500 mt-1">{$_('serverpool.serverpoolsSubtitle')}</p>
     </div>
     <button onclick={() => createspModal = true} class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
-      Nouveau serverpool
+      {$_('serverpool.newServerpool')}
     </button>
   </div>
 
@@ -265,7 +266,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
       {/each}
 
       {#if $serverPools.length === 0}
-        <p class="text-xs text-neutral-400 px-3 py-2">Aucun serverpool</p>
+        <p class="text-xs text-neutral-400 px-3 py-2">{$_('serverpool.noServerpool')}</p>
       {/if}
     </div>
 
@@ -281,7 +282,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
               <p class="text-sm text-neutral-500 mt-0.5">{selectedPool.image}</p>
             </div>
             <div class="card-elevated px-4 py-2.5 text-center">
-              <p class="section-label mb-1">Objectif VMs</p>
+              <p class="section-label mb-1">{$_('serverpool.vmTarget')}</p>
               <p class="text-xl font-bold text-primary-700 tabular-nums">{selectedPool.minVm} – {selectedPool.maxVm}</p>
             </div>
           </div>
@@ -293,7 +294,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
             {#each [
               { label: 'Flavor', icon: 'M13 10V3L4 14h7v7l9-11h-7z', value: $flavors.find(f => f.id === selectedPool?.flavor)?.name ?? selectedPool?.flavor },
               { label: 'Image', icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7', value: $images.find(i => i.id === selectedPool?.image)?.name ?? selectedPool?.image },
-              { label: 'Réseau', icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9', value: $networks.find(n => n.id === selectedPool?.network)?.name ?? selectedPool?.network },
+              { label: $_('serverpool.network'), icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9', value: $networks.find(n => n.id === selectedPool?.network)?.name ?? selectedPool?.network },
             ] as prop}
               <div class="card-elevated px-4 py-3 hover:border-primary-200 transition-colors">
                 <div class="flex items-center gap-2 mb-2">
@@ -315,20 +316,20 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
               </svg>
-              Ajouter un serveur
+              {$_('serverpool.addServer')}
             </button>
             <button onclick={() => ListStudentModalOpen = true} class="btn btn-secondary text-sm">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
-              Étudiants
+              {$_('serverpool.students')}
             </button>
             <div class="flex-1"></div>
             <button onclick={() => handleDeleteServerpool(selectedPool)} class="btn btn-danger text-sm">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
-              Supprimer
+              {$_('serverpool.delete')}
             </button>
           </div>
         </div>
@@ -339,8 +340,8 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
               d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
-          <p class="text-neutral-600 font-medium">Aucun serverpool sélectionné</p>
-          <p class="text-neutral-400 text-sm mt-1 max-w-xs">Sélectionnez un pool dans la liste ou créez-en un nouveau</p>
+          <p class="text-neutral-600 font-medium">{$_('serverpool.noPoolSelected')}</p>
+          <p class="text-neutral-400 text-sm mt-1 max-w-xs">{$_('serverpool.noPoolSelectedHint')}</p>
         </div>
       {/if}
     </div>

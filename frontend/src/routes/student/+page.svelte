@@ -7,6 +7,7 @@
 
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
+  import { _ } from 'svelte-i18n';
 
   let sshkey = $state("");
   let availablePools: { pool_id: string; user_id: string }[] = $state([]);
@@ -50,6 +51,7 @@
   let sshKeyInput = $state("");
   let addingKey = $state(false);
   let addKeyMsg = $state("");
+  let addKeyError = $state(false);
 
   let githubLogin = $derived($githubStore?.login ?? null);
   let githubKeys = $derived($githubStore?.keys ?? []);
@@ -116,6 +118,7 @@
 
   let submitting = $state(false);
   let submitStatus = $state("");
+  let submitError = $state(false);
 
   // Confirmation modal state
   let confirmState = $state({
@@ -129,14 +132,16 @@
     if (!selectedPool || !vmIp) return;
     submitting = true;
     submitStatus = "";
+    submitError = false;
     try {
       const res = await apiFetch(`/api/nbgrader/submit?pool_id=${encodeURIComponent(selectedPool.pool_id)}&user_id=${encodeURIComponent(selectedPool.user_id)}&student_ip=${encodeURIComponent(vmIp)}`, {
         method: "POST"
       });
-      if (!res.ok) throw new Error("Erreur serveur: " + await res.text());
-      submitStatus = "Travaux soumis avec succès !";
+      if (!res.ok) throw new Error($_('studentDash.serverError') + await res.text());
+      submitStatus = $_('studentDash.submitSuccess');
     } catch (e: any) {
-      submitStatus = "Erreur: " + e.message;
+      submitError = true;
+      submitStatus = $_('studentDash.errorPrefix') + e.message;
     } finally {
       submitting = false;
     }
@@ -145,8 +150,8 @@
   function submitWork() {
     confirmState = {
       show: true,
-      title: 'Soumettre',
-      message: 'Êtes-vous sûr de vouloir soumettre vos travaux ? Cette action enregistrera une copie en lecture seule de vos fichiers actuels pour l\'évaluation.',
+      title: $_('studentDash.submitConfirmTitle'),
+      message: $_('studentDash.submitConfirmMessage'),
       onConfirm: executeSubmit
     };
   }
@@ -203,13 +208,13 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: moodleUser.trim(), password: moodlePass }),
       });
-      if (!r.ok) { errorMsg = "Identifiants Moodle invalides."; return; }
+      if (!r.ok) { errorMsg = $_('studentDash.moodleInvalidCredentials'); return; }
       const data = await r.json();
       moodleEmail = data.email ?? "";
       moodlePass = "";
       moodleStudentStore.set({ email: moodleEmail, fullname: data.fullname ?? "", session: data.session_id ?? "" });
       await refreshMoodlePools();
-    } catch { errorMsg = "Erreur de connexion Moodle."; }
+    } catch { errorMsg = $_('studentDash.moodleConnectionError'); }
     finally { moodleLoading = false; }
   }
 
@@ -222,17 +227,17 @@
 
   async function addMoodleSSHKey() {
     if (!sshKeyInput.trim() || !moodleEmail) return;
-    addingKey = true; addKeyMsg = "";
+    addingKey = true; addKeyMsg = ""; addKeyError = false;
     try {
       const r = await apiFetch('/api/moodle/ssh-key', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: moodleEmail, ssh_key: sshKeyInput.trim() }),
       });
       const d = await r.json();
-      if (!d.success) { addKeyMsg = "Erreur : " + (d.error ?? "échec"); return; }
-      addKeyMsg = "Clé SSH enregistrée.";
+      if (!d.success) { addKeyError = true; addKeyMsg = $_('studentDash.addKeyErrorPrefix') + (d.error ?? $_('studentDash.failed')); return; }
+      addKeyMsg = $_('studentDash.sshKeySaved');
       sshKeyInput = ""; showAddKey = false;
-    } catch { addKeyMsg = "Erreur lors de l'enregistrement."; }
+    } catch { addKeyError = true; addKeyMsg = $_('studentDash.addKeySaveError'); }
     finally { addingKey = false; }
   }
 
@@ -257,7 +262,7 @@
           body: JSON.stringify({ pool_id: pool.pool_id, user_id: pool.user_id, email: moodleEmail }),
         });
         const d = await r.json();
-        if (!d.success) { assignError = d.error || "Erreur lors de l'attribution."; return; }
+        if (!d.success) { assignError = d.error || $_('studentDash.assignError'); return; }
         ip = d.ip; port = d.app_port ?? 0; user = "";
       } else {
         const result = await attribVMinPool(pool.pool_id, pool.user_id, sshkey);
@@ -272,13 +277,13 @@
         .catch(() => {});
       if (vmAppPort > 0) { startProbing(ip, vmAppPort); startProbingCode(ip); }
     } catch (err: any) {
-      assignError = err?.message || "Erreur lors de l'attribution de la VM.";
+      assignError = err?.message || $_('studentDash.assignVmError');
     } finally { loading = false; }
   }
 </script>
 
 <svelte:head>
-  <title>CloudPoolManager — Portail Étudiant</title>
+  <title>{$_('studentDash.pageTitle')}</title>
 </svelte:head>
 
 <div class="max-w-lg mx-auto py-10 animate-fade-up">
@@ -293,10 +298,10 @@
   {#if !vmIp}
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-primary-800 mb-2">
-        Portail étudiant
+        {$_('studentDash.studentPortal')}
       </h1>
       <p class="text-sm text-neutral-500 leading-relaxed">
-        Collez votre clé SSH publique pour accéder à votre machine virtuelle de travaux pratiques.
+        {$_('studentDash.portalIntro')}
       </p>
     </div>
 
@@ -304,14 +309,14 @@
       <div class="card p-5 mb-5 bg-primary-50/50 border-primary-200">
         <div class="flex items-start justify-between gap-3">
           <div class="space-y-2">
-            <h2 class="text-sm font-bold text-primary-800">Comment lancer ma machine ?</h2>
+            <h2 class="text-sm font-bold text-primary-800">{$_('studentDash.helpTitle')}</h2>
             <ol class="text-sm text-neutral-600 space-y-1 list-decimal list-inside">
-              <li>Identifiez-vous (clé SSH, compte établissement ou Moodle selon votre cours).</li>
-              <li>Sélectionnez votre cours, puis demandez une machine.</li>
-              <li>Ouvrez <strong>JupyterLab</strong> ou <strong>VS Code</strong>, ou connectez-vous via le terminal web / SSH.</li>
+              <li>{$_('studentDash.helpStep1')}</li>
+              <li>{$_('studentDash.helpStep2')}</li>
+              <li>{$_('studentDash.helpStep3Before')} <strong>JupyterLab</strong> {$_('studentDash.helpStep3Or')} <strong>VS Code</strong>{$_('studentDash.helpStep3After')}</li>
             </ol>
           </div>
-          <button onclick={dismissHelp} class="text-neutral-400 hover:text-neutral-600 shrink-0" aria-label="Fermer l'aide">✕</button>
+          <button onclick={dismissHelp} class="text-neutral-400 hover:text-neutral-600 shrink-0" aria-label={$_('studentDash.closeHelp')}>✕</button>
         </div>
       </div>
     {/if}
@@ -323,34 +328,34 @@
         <div class="flex items-center gap-3 px-3 py-2.5 rounded bg-blue-50 dark:bg-[#0a1a2e] border border-blue-200 dark:border-[#1e3a5f]">
           <svg class="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-blue-800 dark:text-blue-400">Connecté via Moodle — <span class="font-mono">{moodleEmail}</span></p>
-            <p class="text-xs text-blue-600 mt-0.5">Aucune clé SSH requise : accès via JupyterLab et le terminal web.</p>
+            <p class="text-sm font-semibold text-blue-800 dark:text-blue-400">{$_('studentDash.connectedViaMoodle')} <span class="font-mono">{moodleEmail}</span></p>
+            <p class="text-xs text-blue-600 mt-0.5">{$_('studentDash.moodleNoKeyNeeded')}</p>
           </div>
-          <button onclick={disconnectMoodle} class="text-blue-500 hover:text-blue-700 text-xs">Déconnecter</button>
+          <button onclick={disconnectMoodle} class="text-blue-500 hover:text-blue-700 text-xs">{$_('studentDash.disconnect')}</button>
         </div>
 
         <div class="flex items-center gap-2">
           <button onclick={refreshMoodlePools} class="btn btn-secondary text-xs gap-1.5 flex-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            Rafraîchir mes cours
+            {$_('studentDash.refreshMyCourses')}
           </button>
           <button onclick={() => showAddKey = !showAddKey} class="btn btn-secondary text-xs flex-1">
-            {showAddKey ? 'Annuler' : 'Ajouter une clé SSH'}
+            {showAddKey ? $_('studentDash.cancel') : $_('studentDash.addSshKey')}
           </button>
         </div>
 
         {#if showAddKey}
           <div class="space-y-2 p-3 rounded border border-neutral-200 bg-neutral-50">
-            <p class="text-xs text-neutral-500">Optionnel — pour vous connecter aussi en SSH direct. Sinon, JupyterLab et le terminal web suffisent.</p>
+            <p class="text-xs text-neutral-500">{$_('studentDash.addKeyOptionalHint')}</p>
             <textarea bind:value={sshKeyInput} rows="3" placeholder="ssh-ed25519 AAAA..." class="field font-mono text-xs resize-none"></textarea>
             <button onclick={addMoodleSSHKey} disabled={addingKey || !sshKeyInput.trim()} class="btn btn-primary text-xs w-full">
               {#if addingKey}<span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>{/if}
-              Enregistrer la clé
+              {$_('studentDash.saveKey')}
             </button>
           </div>
         {/if}
         {#if addKeyMsg}
-          <p class="text-xs {addKeyMsg.startsWith('Erreur') ? 'text-red-600' : 'text-green-600'}">{addKeyMsg}</p>
+          <p class="text-xs {addKeyError ? 'text-red-600' : 'text-green-600'}">{addKeyMsg}</p>
         {/if}
       {:else}
       {#if githubLogin}
@@ -360,19 +365,19 @@
             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
           </svg>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-green-800 dark:text-green-400">Connecté via GitHub — <span class="font-mono">{githubLogin}</span></p>
+            <p class="text-sm font-semibold text-green-800 dark:text-green-400">{$_('studentDash.connectedViaGithub')} <span class="font-mono">{githubLogin}</span></p>
             {#if githubKeys.length === 0}
-              <p class="text-xs text-green-600 mt-0.5">Aucune clé SSH sur ce compte. Entrez-la manuellement.</p>
+              <p class="text-xs text-green-600 mt-0.5">{$_('studentDash.githubNoKey')}</p>
             {:else if githubKeys.length === 1}
-              <p class="text-xs text-green-600 mt-0.5">Clé SSH récupérée automatiquement.</p>
+              <p class="text-xs text-green-600 mt-0.5">{$_('studentDash.githubKeyRetrieved')}</p>
             {/if}
           </div>
-          <button onclick={() => { disconnectGitHub(); sshkey = ''; }} class="text-green-500 hover:text-green-700 text-xs">Déconnecter</button>
+          <button onclick={() => { disconnectGitHub(); sshkey = ''; }} class="text-green-500 hover:text-green-700 text-xs">{$_('studentDash.disconnect')}</button>
         </div>
 
         {#if githubKeys.length > 1}
           <div>
-            <label class="section-label mb-2 block">Choisir une clé SSH</label>
+            <label class="section-label mb-2 block">{$_('studentDash.chooseSshKey')}</label>
             <div class="space-y-1.5">
               {#each githubKeys as key, i}
                 <button
@@ -380,7 +385,7 @@
                   class="w-full text-left px-3 py-2 rounded border text-xs font-mono truncate transition-colors
                     {sshkey === key ? 'border-primary-400 bg-primary-50 text-primary-800' : 'border-neutral-200 hover:border-neutral-300 text-neutral-600'}"
                 >
-                  Clé {i + 1} — {key.slice(0, 40)}…
+                  {$_('studentDash.keyLabel')} {i + 1} — {key.slice(0, 40)}…
                 </button>
               {/each}
             </div>
@@ -401,12 +406,12 @@
           <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
           </svg>
-          Se connecter avec GitHub
+          {$_('studentDash.loginWithGithub')}
         </a>
 
         <div class="flex items-center gap-3">
           <hr class="flex-1 border-neutral-200">
-          <span class="text-xs text-neutral-400">ou</span>
+          <span class="text-xs text-neutral-400">{$_('studentDash.or')}</span>
           <hr class="flex-1 border-neutral-200">
         </div>
 
@@ -418,26 +423,26 @@
                 bg-[#f98012] hover:bg-[#e06f0a] text-white transition-all"
             >
               <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
-              Se connecter avec Moodle
+              {$_('studentDash.loginWithMoodle')}
             </button>
           {:else}
             <div class="space-y-2 p-3 rounded border border-neutral-200 bg-neutral-50">
-              <p class="section-label">Connexion Moodle</p>
-              <input class="field text-sm" type="text" placeholder="Identifiant Moodle" bind:value={moodleUser} autocomplete="username" />
-              <input class="field text-sm" type="password" placeholder="Mot de passe" bind:value={moodlePass} autocomplete="current-password"
+              <p class="section-label">{$_('studentDash.moodleLogin')}</p>
+              <input class="field text-sm" type="text" placeholder={$_('studentDash.moodleUsername')} bind:value={moodleUser} autocomplete="username" />
+              <input class="field text-sm" type="password" placeholder={$_('studentDash.password')} bind:value={moodlePass} autocomplete="current-password"
                 onkeydown={(e) => { if (e.key === 'Enter') loginMoodle(); }} />
               <button onclick={loginMoodle} disabled={moodleLoading || !moodleUser.trim() || !moodlePass} class="btn btn-primary w-full text-sm">
                 {#if moodleLoading}
                   <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
                 {/if}
-                Se connecter
+                {$_('studentDash.login')}
               </button>
             </div>
           {/if}
 
           <div class="flex items-center gap-3">
             <hr class="flex-1 border-neutral-200">
-            <span class="text-xs text-neutral-400">ou clé SSH</span>
+            <span class="text-xs text-neutral-400">{$_('studentDash.orSshKey')}</span>
             <hr class="flex-1 border-neutral-200">
           </div>
         {/if}
@@ -445,7 +450,7 @@
 
       {#if !githubLogin || githubKeys.length === 0 || githubKeys.length > 1}
         <div>
-          <label for="sshkey" class="section-label mb-2 block">Clé publique SSH</label>
+          <label for="sshkey" class="section-label mb-2 block">{$_('studentDash.sshPublicKey')}</label>
           <textarea
             id="sshkey"
             bind:value={sshkey}
@@ -463,9 +468,9 @@
       >
         {#if loading && !selectedPool}
           <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
-          Recherche en cours…
+          {$_('studentDash.searching')}
         {:else}
-          Rechercher mes cours
+          {$_('studentDash.searchMyCourses')}
         {/if}
       </button>
 
@@ -482,15 +487,15 @@
             d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         <div>
-          <p class="text-sm font-semibold text-neutral-700">Aucun cours lié à cette clé SSH</p>
-          <p class="text-xs text-neutral-400 mt-1">Vérifiez que vous avez bien collé votre clé publique, ou contactez votre enseignant.</p>
+          <p class="text-sm font-semibold text-neutral-700">{$_('studentDash.noCourseForKey')}</p>
+          <p class="text-xs text-neutral-400 mt-1">{$_('studentDash.noCourseHint')}</p>
         </div>
       </div>
     {/if}
 
     {#if availablePools.length > 0}
       <div class="mt-6">
-        <p class="section-label mb-3 block">Cours disponibles</p>
+        <p class="section-label mb-3 block">{$_('studentDash.availableCourses')}</p>
         <div class="card overflow-hidden divide-y divide-neutral-100">
           {#each availablePools as pool}
             <div class="flex items-center justify-between px-5 py-3.5 hover:bg-neutral-50 transition-colors">
@@ -501,9 +506,9 @@
               <button onclick={() => assignVM(pool)} disabled={loading} class="btn btn-primary text-xs px-4 py-2">
                 {#if loading && selectedPool === pool}
                   <span class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full" style="animation: spinnerGlow 0.6s linear infinite;"></span>
-                  Attribution…
+                  {$_('studentDash.assigning')}
                 {:else}
-                  Rejoindre
+                  {$_('studentDash.join')}
                 {/if}
               </button>
             </div>
@@ -523,10 +528,10 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60"></span>
           <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
         </span>
-        <h1 class="text-3xl font-bold text-primary-800">VM attribuée</h1>
+        <h1 class="text-3xl font-bold text-primary-800">{$_('studentDash.vmAssigned')}</h1>
       </div>
       <p class="text-sm text-neutral-500 ml-6">
-        {#if (vmAppPort > 0 && !appReady) || (vmAppPort === 0 && !guacUrl)}Démarrage en cours…{:else}Votre environnement est prêt.{/if}
+        {#if (vmAppPort > 0 && !appReady) || (vmAppPort === 0 && !guacUrl)}{$_('studentDash.starting')}{:else}{$_('studentDash.envReady')}{/if}
       </p>
     </div>
 
@@ -546,7 +551,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
             </svg>
-            Ouvrir JupyterLab
+            {$_('studentDash.openJupyterLab')}
           </a>
           <!-- VS Code (code-server) — même environnement/fichiers que Jupyter,
                lancé au runtime sur {CODE_SERVER_PORT}. Affiché dès qu'il répond. -->
@@ -562,14 +567,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>
               </svg>
-              Ouvrir VS Code
+              {$_('studentDash.openVsCode')}
             </a>
           {:else}
             <div class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-xl font-semibold text-base
               bg-neutral-200 text-neutral-500 cursor-not-allowed select-none">
               <span class="w-4 h-4 border-2 border-neutral-400/40 border-t-neutral-500 rounded-full shrink-0"
                 style="animation: spinnerGlow 0.8s linear infinite;"></span>
-              Démarrage de VS Code…
+              {$_('studentDash.startingVsCode')}
             </div>
           {/if}
           <!-- Jupyter Classic — needed for nbgrader "Assignments" tab -->
@@ -590,10 +595,10 @@
                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                 </svg>
               {/if}
-              Soumettre mes travaux
+              {$_('studentDash.submitMyWork')}
             </button>
             {#if submitStatus}
-              <p class="text-xs text-center {submitStatus.startsWith('Erreur') ? 'text-red-600' : 'text-green-600'}">{submitStatus}</p>
+              <p class="text-xs text-center {submitError ? 'text-red-600' : 'text-green-600'}">{submitStatus}</p>
             {/if}
           </div>
         {:else}
@@ -601,7 +606,7 @@
             bg-neutral-200 text-neutral-500 cursor-not-allowed select-none">
             <span class="w-4 h-4 border-2 border-neutral-400/40 border-t-neutral-500 rounded-full shrink-0"
               style="animation: spinnerGlow 0.8s linear infinite;"></span>
-            Démarrage de l'application…
+            {$_('studentDash.startingApp')}
           </div>
         {/if}
       {/if}
@@ -618,7 +623,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
-          Ouvrir le terminal web (Guacamole)
+          {$_('studentDash.openWebTerminal')}
         </a>
       {:else if vmAppPort === 0}
         <!-- VM sans app (Ubuntu…) : la connexion Guacamole se prépare -->
@@ -626,7 +631,7 @@
           bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 cursor-not-allowed select-none">
           <span class="w-4 h-4 border-2 border-neutral-400/40 border-t-neutral-500 rounded-full shrink-0"
             style="animation: spinnerGlow 0.8s linear infinite;"></span>
-          Préparation de l'accès terminal…
+          {$_('studentDash.preparingTerminal')}
         </div>
       {/if}
 
@@ -634,7 +639,7 @@
       <hr class="border-neutral-200 dark:border-neutral-700"/>
 
       <div>
-        <p class="section-label mb-2.5 block">Connexion SSH</p>
+        <p class="section-label mb-2.5 block">{$_('studentDash.sshConnection')}</p>
         <div class="flex items-center gap-2 bg-neutral-900 pl-4 pr-2 py-2 rounded-md font-mono">
           <svg class="w-4 h-4 text-primary-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3"/>
@@ -644,23 +649,23 @@
             onclick={copyCmd}
             class="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold transition-all
               {copied ? 'bg-green-600 text-white' : 'bg-neutral-700 hover:bg-neutral-600 text-neutral-300'}"
-            title="Copier"
+            title={$_('studentDash.copy')}
           >
             {#if copied}
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
-              Copié
+              {$_('studentDash.copied')}
             {:else}
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
               </svg>
-              Copier
+              {$_('studentDash.copy')}
             {/if}
           </button>
         </div>
         <p class="text-xs text-neutral-400 mt-2">
-          Si la connexion demande un mot de passe :
+          {$_('studentDash.passwordHint')}
           <code class="font-mono text-neutral-500">ssh -i ~/.ssh/id_ed25519 {vmUser}@{vmIp}</code>
         </p>
       </div>
@@ -679,7 +684,7 @@
       }}
         class="btn btn-secondary text-sm"
       >
-        ← Retour
+        ← {$_('studentDash.back')}
       </button>
     </div>
   {/if}

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { _ } from 'svelte-i18n';
   import { apiFetch } from '$lib/api';
   import { authStore, serverPools } from '$lib/store';
   import { browser } from '$app/environment';
@@ -164,14 +165,14 @@
         // Confirmation message per action
         const a = selectedAssignment ? ` « ${selectedAssignment} »` : '';
         if (endpoint === 'release') {
-          successMsg = `Devoir${a} distribué à ${data.distributed ?? 0} étudiant(s) ✓`;
+          successMsg = `${$_('grading.releasedPrefix')}${a} ${$_('grading.releasedMid')} ${data.distributed ?? 0} ${$_('grading.releasedSuffix')} ✓`;
         } else if (endpoint === 'collect') {
           const n = (data.output ?? '').match(/Collected (\d+)/)?.[1] ?? '0';
-          successMsg = `${n} copie(s)${a} collectée(s) ✓`;
+          successMsg = `${n} ${$_('grading.collectedSuffix')}${a} ✓`;
         } else if (endpoint === 'autograde') {
-          successMsg = `Notation automatique${a} terminée ✓`;
+          successMsg = `${$_('grading.autogradedPrefix')}${a} ${$_('grading.autogradedSuffix')} ✓`;
         } else {
-          successMsg = 'Opération terminée ✓';
+          successMsg = $_('grading.operationDone') + ' ✓';
         }
       } else {
         error = data.output ?? data.message ?? `${endpoint} failed`;
@@ -188,7 +189,7 @@
     if (confirmMsg) {
       confirmState = {
         show: true,
-        title: endpoint === 'release' ? 'Distribuer' : endpoint === 'collect' ? 'Collecter' : 'Notation',
+        title: endpoint === 'release' ? $_('grading.confirmTitleRelease') : endpoint === 'collect' ? $_('grading.confirmTitleCollect') : $_('grading.confirmTitleAutograde'),
         message: confirmMsg,
         danger,
         onConfirm: () => executeAction(endpoint, setter)
@@ -267,11 +268,11 @@
         }),
       });
       const d = await r.json();
-      if (!r.ok) { moodlePushMsg = 'Erreur : ' + (d.error ?? 'échec'); return; }
-      moodlePushMsg = `${d.pushed} note(s) envoyée(s)`
-        + (d.skipped ? `, ${d.skipped} ignorée(s)` : '')
-        + (d.failures?.length ? `, ${d.failures.length} échec(s)` : '');
-    } catch { moodlePushMsg = "Erreur lors de l'envoi vers Moodle."; }
+      if (!r.ok) { moodlePushMsg = $_('grading.errorPrefix') + ' : ' + (d.error ?? $_('grading.genericFailure')); return; }
+      moodlePushMsg = `${d.pushed} ${$_('grading.gradesPushed')}`
+        + (d.skipped ? `, ${d.skipped} ${$_('grading.gradesSkipped')}` : '')
+        + (d.failures?.length ? `, ${d.failures.length} ${$_('grading.gradesFailed')}` : '');
+    } catch { moodlePushMsg = $_('grading.moodlePushError'); }
     finally { moodlePushing = false; }
   }
 
@@ -290,7 +291,7 @@
   }
 </script>
 
-<svelte:head><title>Notation — CloudPoolManager</title></svelte:head>
+<svelte:head><title>{$_('grading.pageTitle')} — CloudPoolManager</title></svelte:head>
 
 <div class="h-[calc(100vh-8rem)] flex flex-col gap-4 animate-fade-up">
 
@@ -305,7 +306,7 @@
   <!-- Header + pool selector -->
   <div class="flex items-center gap-4 flex-wrap">
     <div>
-      <h1 class="text-2xl font-bold text-primary-800 dark:text-primary-300">Notation</h1>
+      <h1 class="text-2xl font-bold text-primary-800 dark:text-primary-300">{$_('grading.heading')}</h1>
     </div>
 
     <select
@@ -317,7 +318,7 @@
       }}
       class="field max-w-xs ml-auto"
     >
-      <option value="">— Sélectionner un pool —</option>
+      <option value="">{$_('grading.selectPoolOption')}</option>
       {#each allPools as pool, i}
         <option value="{i}">{pool.name} ({pool.userId})</option>
       {/each}
@@ -330,7 +331,7 @@
         class="field max-w-xs"
         disabled={loadingAssignments}
       >
-        <option value="">— Assignment —</option>
+        <option value="">{$_('grading.selectAssignmentOption')}</option>
         {#each assignments as a}
           <option value={a}>{a}</option>
         {/each}
@@ -344,7 +345,7 @@
   {#if successMsg}
     <div class="card px-4 py-2.5 border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 text-green-700 dark:text-green-300 text-sm flex items-center justify-between gap-3 animate-fade-in">
       <span class="font-medium">{successMsg}</span>
-      <button onclick={() => successMsg = ''} class="text-green-600/70 hover:text-green-800 dark:hover:text-green-200 shrink-0" aria-label="Fermer">✕</button>
+      <button onclick={() => successMsg = ''} class="text-green-600/70 hover:text-green-800 dark:hover:text-green-200 shrink-0" aria-label={$_('grading.close')}>✕</button>
     </div>
   {/if}
 
@@ -357,13 +358,13 @@
 
       <!-- Actions -->
       <div class="card p-4 space-y-3">
-        <p class="section-label block mb-3">Actions</p>
+        <p class="section-label block mb-3">{$_('grading.actionsLabel')}</p>
 
         <button
-          onclick={() => postAction('release', v => releasing = v, `Êtes-vous sûr de vouloir distribuer l'assignment "${selectedAssignment}" à tous les étudiants ?`)}
+          onclick={() => postAction('release', v => releasing = v, `${$_('grading.confirmReleasePrefix')} "${selectedAssignment}" ${$_('grading.confirmReleaseSuffix')}`)}
           disabled={releasing || !selectedAssignment}
           class="btn btn-secondary w-full text-sm justify-start gap-2"
-          title="Copie le devoir chez tous les étudiants"
+          title={$_('grading.releaseTitle')}
         >
           {#if releasing}
             <span class="w-3.5 h-3.5 border-2 border-neutral-400/40 border-t-neutral-600 rounded-full shrink-0" style="animation:spinnerGlow 0.6s linear infinite;"></span>
@@ -372,14 +373,14 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
             </svg>
           {/if}
-          Distribuer aux étudiants
+          {$_('grading.releaseButton')}
         </button>
 
         <button
-          onclick={() => postAction('collect', v => collecting = v, `Êtes-vous sûr de vouloir collecter les copies pour "${selectedAssignment}" ? Les travaux seront copiés depuis l'environnement des étudiants.`)}
+          onclick={() => postAction('collect', v => collecting = v, `${$_('grading.confirmCollectPrefix')} "${selectedAssignment}" ${$_('grading.confirmCollectSuffix')}`)}
           disabled={collecting || !selectedAssignment}
           class="btn btn-secondary w-full text-sm justify-start gap-2"
-          title="Collecte les soumissions des étudiants"
+          title={$_('grading.collectTitle')}
         >
           {#if collecting}
             <span class="w-3.5 h-3.5 border-2 border-neutral-400/40 border-t-neutral-600 rounded-full shrink-0" style="animation:spinnerGlow 0.6s linear infinite;"></span>
@@ -388,14 +389,14 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
             </svg>
           {/if}
-          Collecter les copies
+          {$_('grading.collectButton')}
         </button>
 
         <button
-          onclick={() => postAction('autograde', v => autograding = v, `Êtes-vous sûr de vouloir lancer la notation automatique pour "${selectedAssignment}" ? Cela peut prendre plusieurs minutes.`, false)}
+          onclick={() => postAction('autograde', v => autograding = v, `${$_('grading.confirmAutogradePrefix')} "${selectedAssignment}" ${$_('grading.confirmAutogradeSuffix')}`, false)}
           disabled={autograding || !selectedAssignment}
           class="btn btn-primary w-full text-sm justify-start gap-2"
-          title="Note automatiquement les notebooks"
+          title={$_('grading.autogradeTitle')}
         >
           {#if autograding}
             <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full shrink-0" style="animation:spinnerGlow 0.6s linear infinite;"></span>
@@ -404,7 +405,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
             </svg>
           {/if}
-          Notation automatique
+          {$_('grading.autogradeButton')}
         </button>
 
         <button
@@ -414,7 +415,7 @@
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
-          Exporter CSV
+          {$_('grading.exportCsv')}
         </button>
 
         {#if moodleCourseId > 0}
@@ -424,7 +425,7 @@
               Moodle
             </p>
             <select class="field text-xs" bind:value={selectedMoodleAssign}>
-              <option value={null} disabled selected>— Devoir Moodle cible —</option>
+              <option value={null} disabled selected>{$_('grading.moodleTargetAssignOption')}</option>
               {#each moodleAssignments as a}
                 <option value={a.id}>{a.name} (/{a.max_grade})</option>
               {/each}
@@ -437,19 +438,19 @@
               {#if moodlePushing}
                 <span class="w-3.5 h-3.5 border-2 border-neutral-400/40 border-t-neutral-600 rounded-full" style="animation: spinnerGlow 0.7s linear infinite;"></span>
               {/if}
-              Envoyer les notes vers Moodle
+              {$_('grading.pushToMoodle')}
             </button>
             <label class="flex items-center gap-2 text-xs text-neutral-600 cursor-pointer">
               <input type="checkbox" bind:checked={autoPushMoodle} class="w-3.5 h-3.5 accent-[#f98012]" />
-              Envoyer automatiquement après « Notation automatique »
+              {$_('grading.autoPushAfterAutograde')}
             </label>
             {#if moodlePushMsg}
-              <p class="text-xs {moodlePushMsg.startsWith('Erreur') ? 'text-red-600' : 'text-green-600'}">{moodlePushMsg}</p>
+              <p class="text-xs {moodlePushMsg.startsWith($_('grading.errorPrefix')) ? 'text-red-600' : 'text-green-600'}">{moodlePushMsg}</p>
             {/if}
             {#if moodleUrl}
               <a href={`${moodleUrl}/grade/report/grader/index.php?id=${moodleCourseId}`} target="_blank" rel="noopener noreferrer"
                  class="text-xs text-[#f98012] hover:underline inline-flex items-center gap-1">
-                Carnet de notes Moodle ↗
+                {$_('grading.moodleGradebook')} ↗
               </a>
             {/if}
           </div>
@@ -459,23 +460,23 @@
               <svg class="w-3.5 h-3.5 text-[#f98012]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
               Moodle
             </p>
-            <p class="text-xs text-neutral-500">Ce pool n'est lié à aucun cours Moodle. Liez-le pour envoyer les notes.</p>
+            <p class="text-xs text-neutral-500">{$_('grading.notLinkedToMoodle')}</p>
             <select class="field text-xs" bind:value={linkCourseId}>
-              <option value={null} disabled selected>— Cours Moodle —</option>
+              <option value={null} disabled selected>{$_('grading.moodleCourseOption')}</option>
               {#each moodleCourses as c}
                 <option value={c.id}>{c.shortname} — {c.fullname}</option>
               {/each}
             </select>
             <button onclick={linkPoolToMoodle} disabled={linking || !linkCourseId} class="btn btn-secondary w-full text-xs justify-center gap-2">
               {#if linking}<span class="w-3.5 h-3.5 border-2 border-neutral-400/40 border-t-neutral-600 rounded-full" style="animation: spinnerGlow 0.7s linear infinite;"></span>{/if}
-              Lier ce pool au cours
+              {$_('grading.linkPoolToCourse')}
             </button>
           </div>
         {/if}
 
         {#if actionOutput}
           <details class="mt-1">
-            <summary class="text-xs text-neutral-500 cursor-pointer">Voir la sortie</summary>
+            <summary class="text-xs text-neutral-500 cursor-pointer">{$_('grading.viewOutput')}</summary>
             <pre class="mt-1 text-xs bg-neutral-900 text-green-400 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-32">{actionOutput}</pre>
           </details>
         {/if}
@@ -484,9 +485,9 @@
       <!-- Récap compact (le détail des notes est dans le panneau de droite) -->
       {#if !loadingGrades && selectedAssignment && grades.length > 0}
         <div class="card p-4 flex items-center justify-around text-center">
-          <div><p class="text-xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{gradedCount}</p><p class="text-[10px] text-neutral-500">notées</p></div>
-          <div><p class="text-xl font-bold text-neutral-400 tabular-nums">{missingCount}</p><p class="text-[10px] text-neutral-500">non rendu</p></div>
-          <div><p class="text-xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{avg()}</p><p class="text-[10px] text-neutral-500">moyenne</p></div>
+          <div><p class="text-xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{gradedCount}</p><p class="text-[10px] text-neutral-500">{$_('grading.statGraded')}</p></div>
+          <div><p class="text-xl font-bold text-neutral-400 tabular-nums">{missingCount}</p><p class="text-[10px] text-neutral-500">{$_('grading.statMissing')}</p></div>
+          <div><p class="text-xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{avg()}</p><p class="text-[10px] text-neutral-500">{$_('grading.statAverage')}</p></div>
         </div>
       {/if}
     </div>
@@ -494,7 +495,7 @@
     <!-- Espace de travail : lancement + tableau de bord -->
     <div class="flex-1 card overflow-hidden flex flex-col min-w-0">
       <div class="flex items-center justify-between px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 shrink-0">
-        <span class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Espace de travail</span>
+        <span class="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{$_('grading.workspace')}</span>
         {#if selectedPool}
           <span class="text-xs text-neutral-400 font-mono truncate max-w-48">{selectedPool.name}</span>
         {/if}
@@ -506,39 +507,39 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a href={jupyterDirectURL} target="_blank" rel="noopener noreferrer" class="btn btn-primary justify-center gap-2 py-3">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-              Ouvrir JupyterLab
+              {$_('grading.openJupyterLab')}
             </a>
             <button onclick={openFormgrader} class="btn btn-secondary justify-center gap-2 py-3">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-              Ouvrir Formgrader
+              {$_('grading.openFormgrader')}
             </button>
           </div>
-          <p class="text-xs text-neutral-400 -mt-3">JupyterLab et Formgrader s'ouvrent dans un onglet dédié.</p>
+          <p class="text-xs text-neutral-400 -mt-3">{$_('grading.openInNewTabHint')}</p>
 
           {#if loadingGrades}
             <div class="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-neutral-400">
               <div class="w-8 h-8 rounded-full border-2 border-neutral-200 dark:border-neutral-700 border-t-primary-600" style="animation: spinnerGlow 0.7s linear infinite;"></div>
-              <p class="text-sm">Chargement des notes{selectedAssignment ? ` — ${selectedAssignment}` : ''}…</p>
+              <p class="text-sm">{$_('grading.loadingGrades')}{selectedAssignment ? ` — ${selectedAssignment}` : ''}…</p>
             </div>
           {:else if selectedAssignment && grades.length > 0}
             <!-- Tableau de bord notes -->
             <div>
-              <p class="section-label mb-3">Vue d'ensemble — {selectedAssignment}</p>
+              <p class="section-label mb-3">{$_('grading.overview')} — {selectedAssignment}</p>
               <div class="grid grid-cols-3 gap-3">
-                <div class="card p-3 text-center"><p class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{gradedCount}</p><p class="text-xs text-neutral-500">copies notées</p></div>
-                <div class="card p-3 text-center"><p class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{avgScore.toFixed(1)}</p><p class="text-xs text-neutral-500">moyenne</p></div>
-                <div class="card p-3 text-center"><p class="text-2xl font-bold tabular-nums {manualCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}">{manualCount}</p><p class="text-xs text-neutral-500">à corriger</p></div>
+                <div class="card p-3 text-center"><p class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{gradedCount}</p><p class="text-xs text-neutral-500">{$_('grading.gradedSubmissions')}</p></div>
+                <div class="card p-3 text-center"><p class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">{avgScore.toFixed(1)}</p><p class="text-xs text-neutral-500">{$_('grading.statAverage')}</p></div>
+                <div class="card p-3 text-center"><p class="text-2xl font-bold tabular-nums {manualCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}">{manualCount}</p><p class="text-xs text-neutral-500">{$_('grading.toReview')}</p></div>
               </div>
             </div>
             <!-- Notes des étudiants (liste lisible) -->
             <div class="flex-1 min-h-0 flex flex-col">
-              <p class="section-label mb-3">Notes des étudiants</p>
+              <p class="section-label mb-3">{$_('grading.studentGrades')}</p>
               <div class="card overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
                 {#each sortedGrades as grade}
                   <div class="flex items-center gap-4 px-4 py-3">
                     <span class="font-mono text-sm text-neutral-800 dark:text-neutral-200 flex-1 truncate">{grade.student}</span>
                     {#if grade.status === 'missing'}
-                      <span class="text-sm text-neutral-400 shrink-0">Non rendu</span>
+                      <span class="text-sm text-neutral-400 shrink-0">{$_('grading.notSubmitted')}</span>
                     {:else}
                       <div class="hidden sm:block w-32 h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden shrink-0">
                         <div class="h-full rounded-full {grade.max_score > 0 && grade.score/grade.max_score >= 0.8 ? 'bg-green-500' : grade.max_score > 0 && grade.score/grade.max_score >= 0.5 ? 'bg-amber-500' : 'bg-red-500'}"
@@ -547,11 +548,11 @@
                       <span class="text-sm font-bold tabular-nums {scoreColor(grade)} w-20 text-right shrink-0">{grade.score.toFixed(1)}/{grade.max_score.toFixed(1)}</span>
                     {/if}
                     {#if grade.status === 'needs_manual_grade'}
-                      <span class="hidden md:inline text-[10px] text-amber-600 dark:text-amber-400 shrink-0">à réviser</span>
+                      <span class="hidden md:inline text-[10px] text-amber-600 dark:text-amber-400 shrink-0">{$_('grading.needsReview')}</span>
                     {/if}
                     <button onclick={() => openManualGrading(grade.student)} class="btn btn-secondary px-3 py-1.5 text-xs gap-1 shrink-0">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                      Corriger
+                      {$_('grading.gradeAction')}
                     </button>
                   </div>
                 {/each}
@@ -560,13 +561,13 @@
           {:else}
             <!-- Guide du déroulé -->
             <div class="flex-1">
-              <p class="section-label mb-3">Déroulé d'un devoir</p>
+              <p class="section-label mb-3">{$_('grading.workflowTitle')}</p>
               <ol class="space-y-2.5 text-sm text-neutral-600 dark:text-neutral-300">
-                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">1</span><span>Ouvrir <b>JupyterLab</b> → menu <b>Nbgrader → Create Assignment</b>, marquer les cellules, puis <b>Generate</b>.</span></li>
-                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">2</span><span>Choisir l'assignment ci-dessus, puis <b>Distribuer aux étudiants</b>.</span></li>
-                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">3</span><span>Les étudiants éditent <code class="text-xs">nbgrader/&lt;devoir&gt;</code> puis cliquent <b>Soumettre</b>.</span></li>
-                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">4</span><span><b>Collecter les copies</b>, puis <b>Notation automatique</b>.</span></li>
-                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">5</span><span><b>Correction manuelle</b> (Formgrader) si besoin, puis <b>Exporter CSV</b>.</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">1</span><span>{@html $_('grading.workflowStep1')}</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">2</span><span>{@html $_('grading.workflowStep2')}</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">3</span><span>{@html $_('grading.workflowStep3')}</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">4</span><span>{@html $_('grading.workflowStep4')}</span></li>
+                <li class="flex gap-2.5"><span class="shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">5</span><span>{@html $_('grading.workflowStep5')}</span></li>
               </ol>
             </div>
           {/if}
@@ -577,9 +578,9 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
           <div>
-            <p class="text-sm font-medium text-neutral-600 dark:text-neutral-400">JupyterLab non disponible</p>
+            <p class="text-sm font-medium text-neutral-600 dark:text-neutral-400">{$_('grading.jupyterUnavailable')}</p>
             <p class="text-xs text-neutral-400 mt-1 max-w-xs">
-              La VM enseignant doit être démarrée avec AppPort=8888.
+              {$_('grading.teacherVmHint')}
             </p>
           </div>
         </div>
@@ -594,9 +595,9 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
       </svg>
       <div>
-        <p class="text-base font-semibold text-neutral-600 dark:text-neutral-400">Sélectionnez un pool pour commencer</p>
+        <p class="text-base font-semibold text-neutral-600 dark:text-neutral-400">{$_('grading.selectPoolToStart')}</p>
         <p class="text-sm text-neutral-400 mt-1 max-w-sm mx-auto">
-          Choisissez un pool dans le menu ci-dessus. La VM enseignant doit être démarrée avec AppPort=8888.
+          {$_('grading.selectPoolHint')}
         </p>
       </div>
     </div>

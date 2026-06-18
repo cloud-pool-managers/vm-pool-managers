@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { _ } from 'svelte-i18n';
   import { apiFetch } from '$lib/api';
   import { authStore } from '$lib/store';
   import { browser } from '$app/environment';
@@ -46,8 +47,8 @@
     error = '';
     successMsg = '';
     if (!canSubmit) {
-      if (!githubOk) error = 'Le lien doit être une URL github.com valide.';
-      else if (!name.trim()) error = 'Le nom de l’image est requis.';
+      if (!githubOk) error = $_('proposeImage.errorInvalidUrl');
+      else if (!name.trim()) error = $_('proposeImage.errorNameRequired');
       return;
     }
     submitting = true;
@@ -63,20 +64,20 @@
         })
       });
       if (!res.ok) throw new Error(await res.text());
-      successMsg = 'Proposition envoyée ✓ — elle sera examinée par l’administrateur.';
+      successMsg = $_('proposeImage.successMsg');
       githubUrl = '';
       name = '';
       description = '';
       await loadProposals();
     } catch (e: any) {
-      error = e.message || 'Échec de l’envoi';
+      error = e.message || $_('proposeImage.errorSendFailed');
     } finally {
       submitting = false;
     }
   }
 
   function statusLabel(s: string): string {
-    return s === 'approved' ? 'Approuvée' : s === 'rejected' ? 'Refusée' : 'En attente';
+    return s === 'approved' ? $_('proposeImage.statusApproved') : s === 'rejected' ? $_('proposeImage.statusRejected') : $_('proposeImage.statusPending');
   }
   function statusClass(s: string): string {
     if (s === 'approved') return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
@@ -89,37 +90,37 @@
   }
 </script>
 
-<svelte:head><title>Proposer une image — CloudPoolManager</title></svelte:head>
+<svelte:head><title>{$_('proposeImage.pageTitle')}</title></svelte:head>
 
 <div class="max-w-3xl mx-auto px-6 py-8 animate-fade-up">
-  <h1 class="text-2xl font-bold text-primary-800 dark:text-primary-300">Proposer une image</h1>
+  <h1 class="text-2xl font-bold text-primary-800 dark:text-primary-300">{$_('proposeImage.heading')}</h1>
   <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-    Proposez une image d’environnement (repo2docker) à partir d’un dépôt GitHub. L’administrateur la construira et l’ajoutera aux images disponibles.
+    {$_('proposeImage.intro')}
   </p>
 
   <!-- Formulaire -->
   <form class="card p-6 mt-6 space-y-4" onsubmit={(e) => { e.preventDefault(); submit(); }}>
     <div>
-      <label for="gh" class="section-label block mb-1.5">Lien du dépôt GitHub *</label>
+      <label for="gh" class="section-label block mb-1.5">{$_('proposeImage.githubLabel')}</label>
       <input
         id="gh"
         type="url"
         bind:value={githubUrl}
-        placeholder="https://github.com/utilisateur/mon-image"
+        placeholder={$_('proposeImage.githubPlaceholder')}
         class="field w-full {githubUrl && !githubOk ? 'border-red-400' : ''}"
         autocomplete="off"
       />
-      <p class="text-xs text-neutral-400 mt-1">Le dépôt doit contenir la définition de l’environnement (ex. <code>environment.yml</code>, <code>requirements.txt</code>, <code>Project.toml</code>, <code>postBuild</code>…).</p>
+      <p class="text-xs text-neutral-400 mt-1">{$_('proposeImage.githubHelpStart')}<code>environment.yml</code>, <code>requirements.txt</code>, <code>Project.toml</code>, <code>postBuild</code>{$_('proposeImage.githubHelpEnd')}</p>
     </div>
 
     <div>
-      <label for="nm" class="section-label block mb-1.5">Nom de l’image / du cours *</label>
-      <input id="nm" type="text" bind:value={name} placeholder="ex. ECO589 — Économie computationnelle" class="field w-full" autocomplete="off" />
+      <label for="nm" class="section-label block mb-1.5">{$_('proposeImage.nameLabel')}</label>
+      <input id="nm" type="text" bind:value={name} placeholder={$_('proposeImage.namePlaceholder')} class="field w-full" autocomplete="off" />
     </div>
 
     <div>
-      <label for="desc" class="section-label block mb-1.5">Description (optionnel)</label>
-      <textarea id="desc" bind:value={description} rows="4" placeholder="Langage, paquets principaux, usage prévu, remarques…" class="field w-full resize-y"></textarea>
+      <label for="desc" class="section-label block mb-1.5">{$_('proposeImage.descLabel')}</label>
+      <textarea id="desc" bind:value={description} rows="4" placeholder={$_('proposeImage.descPlaceholder')} class="field w-full resize-y"></textarea>
     </div>
 
     {#if error}
@@ -136,16 +137,16 @@
         {:else}
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
         {/if}
-        Envoyer la proposition
+        {$_('proposeImage.submitButton')}
       </button>
     </div>
   </form>
 
   <!-- Mes propositions -->
   <div class="mt-8">
-    <p class="section-label mb-3">Mes propositions</p>
+    <p class="section-label mb-3">{$_('proposeImage.myProposals')}</p>
     {#if proposals.length === 0}
-      <div class="card p-6 text-center text-sm text-neutral-400">Aucune proposition envoyée pour le moment.</div>
+      <div class="card p-6 text-center text-sm text-neutral-400">{$_('proposeImage.noProposals')}</div>
     {:else}
       <div class="card overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800">
         {#each proposals as p}

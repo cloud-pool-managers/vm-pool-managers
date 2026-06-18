@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import type { Image, Flavor, Network, Config } from '$lib/type';
 
   let {
@@ -108,11 +109,11 @@
     }
   }
 
-  const offDayLabels: { key: keyof typeof offDays; label: string }[] = [
-    { key: 'monday', label: 'Lun' }, { key: 'tuesday', label: 'Mar' },
-    { key: 'wednesday', label: 'Mer' }, { key: 'thursday', label: 'Jeu' },
-    { key: 'friday', label: 'Ven' }, { key: 'saturday', label: 'Sam' },
-    { key: 'sunday', label: 'Dim' },
+  const offDayLabels: { key: keyof typeof offDays; labelKey: string }[] = [
+    { key: 'monday', labelKey: 'poolModal.dayMon' }, { key: 'tuesday', labelKey: 'poolModal.dayTue' },
+    { key: 'wednesday', labelKey: 'poolModal.dayWed' }, { key: 'thursday', labelKey: 'poolModal.dayThu' },
+    { key: 'friday', labelKey: 'poolModal.dayFri' }, { key: 'saturday', labelKey: 'poolModal.daySat' },
+    { key: 'sunday', labelKey: 'poolModal.daySun' },
   ];
 
   // Jupyter snapshots don't expose min_disk, so without a default no flavor gets
@@ -166,8 +167,8 @@
 
       <div class="flex items-center justify-between mb-6 pb-5 border-b border-neutral-200 dark:border-neutral-700">
         <div>
-          <h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100">Nouveau Serverpool</h3>
-          <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">Configurez un groupe de VMs pour vos étudiants</p>
+          <h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100">{ $_('poolModal.title') }</h3>
+          <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{ $_('poolModal.subtitle') }</p>
         </div>
         <button onclick={() => open = false} class="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,10 +185,10 @@
             </svg>
           </div>
           <div class="text-center">
-            <p class="text-base font-bold text-neutral-900">Serverpool créé avec succès</p>
-            <p class="text-sm text-neutral-500 mt-1">Les VMs vont démarrer dans quelques instants.</p>
+            <p class="text-base font-bold text-neutral-900">{ $_('poolModal.successTitle') }</p>
+            <p class="text-sm text-neutral-500 mt-1">{ $_('poolModal.successMessage') }</p>
           </div>
-          <button onclick={() => open = false} class="btn btn-primary px-8">OK</button>
+          <button onclick={() => open = false} class="btn btn-primary px-8">{ $_('poolModal.ok') }</button>
         </div>
       {:else}
 
@@ -202,26 +203,26 @@
 
           <!-- 1. Général -->
           <div class="card-elevated p-5 space-y-4">
-            <h4 class="text-xs font-bold text-primary-700 uppercase tracking-widest border-b border-neutral-200 pb-2">1. Général</h4>
+            <h4 class="text-xs font-bold text-primary-700 uppercase tracking-widest border-b border-neutral-200 pb-2">{ $_('poolModal.sectionGeneral') }</h4>
 
             <div class="space-y-1.5">
-              <label class="section-label">Nom du serverpool</label>
+              <label class="section-label">{ $_('poolModal.poolName') }</label>
               <input class="field" type="text" name="namesp" placeholder="TP-Reseaux-2026" required />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1.5">
-                <label class="section-label">Min VMs</label>
+                <label class="section-label">{ $_('poolModal.minVms') }</label>
                 <input class="field" type="number" name="min_vm" min="1" value="1" required />
               </div>
               <div class="space-y-1.5">
-                <label class="section-label">Max VMs</label>
+                <label class="section-label">{ $_('poolModal.maxVms') }</label>
                 <input class="field" type="number" name="max_vm" min="1" value="5" required />
               </div>
             </div>
 
             <div class="space-y-1.5">
-              <label class="section-label" for="app_port">Port application <span class="text-neutral-400 font-normal">(optionnel)</span></label>
+              <label class="section-label" for="app_port">{ $_('poolModal.appPort') } <span class="text-neutral-400 font-normal">{ $_('poolModal.optional') }</span></label>
               <div class="flex items-center gap-2">
                 <input
                   id="app_port"
@@ -229,10 +230,10 @@
                   type="number"
                   min="0" max="65535"
                   bind:value={appPort}
-                  placeholder="0 = aucun"
+                  placeholder={$_('poolModal.appPortPlaceholder')}
                 />
                 <p class="text-xs text-neutral-400 leading-snug">
-                  Laissez <b>0</b> si la VM n'expose pas d'app web (Ubuntu, accès terminal). Sinon le port (Jupyter = 8888) : les étudiants verront un bouton d'accès direct.
+                  { $_('poolModal.appPortHelpBefore') }<b>0</b>{ $_('poolModal.appPortHelpAfter') }
                 </p>
               </div>
             </div>
@@ -240,12 +241,12 @@
 
           <!-- 2. Infrastructure — OS + Réseau -->
           <div class="card-elevated p-5 space-y-4">
-            <h4 class="text-xs font-bold text-primary-700 uppercase tracking-widest border-b border-neutral-200 pb-2">2. Infrastructure</h4>
+            <h4 class="text-xs font-bold text-primary-700 uppercase tracking-widest border-b border-neutral-200 pb-2">{ $_('poolModal.sectionInfra') }</h4>
 
             <div class="space-y-1.5">
-              <label class="section-label">Système d'exploitation</label>
+              <label class="section-label">{ $_('poolModal.operatingSystem') }</label>
               <select class="field" value={selectedGroupImage ?? ''} onchange={(e) => onGroupChange((e.target as HTMLSelectElement).value)} required>
-                <option disabled selected value="">Famille d'OS…</option>
+                <option disabled selected value="">{ $_('poolModal.osFamilyPlaceholder') }</option>
                 {#each getImageGroups() as group}
                   <option value={group}>{group}</option>
                 {/each}
@@ -253,26 +254,26 @@
 
               {#if selectedGroupImage === JUPYTER_GROUP}
                 <select class="field mt-2" value={selectedImage ?? ''} onchange={(e) => onJupyterSnapshotChange((e.target as HTMLSelectElement).value)} required>
-                  <option disabled selected value="">Environnement Jupyter…</option>
+                  <option disabled selected value="">{ $_('poolModal.jupyterEnvPlaceholder') }</option>
                   {#each getJupyterSnapshots() as snap}
                     <option value={snap.id}>{snap.label}</option>
                   {/each}
                 </select>
-                <p class="text-xs text-neutral-400">Port 8888 activé automatiquement · image Docker pré-installée</p>
+                <p class="text-xs text-neutral-400">{ $_('poolModal.jupyterAutoPort') }</p>
               {:else if selectedGroupImage}
                 <select class="field mt-2" bind:value={selectedImage} required>
-                  <option disabled selected value="">Version exacte…</option>
+                  <option disabled selected value="">{ $_('poolModal.exactVersionPlaceholder') }</option>
                   {#each filterImagesByPrefix(images.filter(i => !i.name.startsWith('jupyter-snapshot-') && !i.name.toLowerCase().startsWith('jupyterhub')), selectedGroupImage) as img}
-                    <option value={img.id}>{img.name}{img.minDiskGigabytes > 0 ? ` (${img.minDiskGigabytes} GB requis)` : ''}</option>
+                    <option value={img.id}>{img.name}{img.minDiskGigabytes > 0 ? ` (${img.minDiskGigabytes}${$_('poolModal.gbRequiredSuffix')}` : ''}</option>
                   {/each}
                 </select>
               {/if}
             </div>
 
             <div class="space-y-1.5">
-              <label class="section-label">Réseau</label>
+              <label class="section-label">{ $_('poolModal.network') }</label>
               <select class="field" bind:value={selectedNetwork} required>
-                <option disabled selected value="">Choisir…</option>
+                <option disabled selected value="">{ $_('poolModal.choosePlaceholder') }</option>
                 {#each networks as n}
                   <option value={n.id}>{n.name}</option>
                 {/each}
@@ -290,7 +291,7 @@
               {#if img}
                 {@const needed = getImageDiskGb(img)}
                 {#if needed > 0}
-                  <span class="text-neutral-400 font-normal normal-case tracking-normal ml-2">— image {img.name.split('-')[0]}… · {needed} GB requis</span>
+                  <span class="text-neutral-400 font-normal normal-case tracking-normal ml-2">{ $_('poolModal.flavorImagePrefix') }{img.name.split('-')[0]}… · {needed}{ $_('poolModal.gbRequiredSuffixNoParen') }</span>
                 {/if}
               {/if}
             {/if}
@@ -298,7 +299,7 @@
 
           {#if !selectedImage}
             <select class="field" bind:value={selectedFlavor} required>
-              <option disabled selected value="">Sélectionnez d'abord une image…</option>
+              <option disabled selected value="">{ $_('poolModal.selectImageFirst') }</option>
               {#each flavors as f}
                 <option value={f.id}>{f.name} — {f.disk} GB · {f.vcpus} vCPU · {formatRam(f.ram)}</option>
               {/each}
@@ -321,7 +322,7 @@
               <!-- vd flavors -->
               {#if vdFlavors.length > 0}
                 <div>
-                  <p class="section-label mb-2">Flavors vd</p>
+                  <p class="section-label mb-2">{ $_('poolModal.vdFlavors') }</p>
                   <div class="border border-neutral-200 dark:border-neutral-700 rounded overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800">
                     {#each vdFlavors as f}
                       {@const status = flavorStatus(f)}
@@ -348,11 +349,11 @@
 
                         <!-- Specs -->
                         <span class="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-3">
-                          <span title="Disque">{f.disk} GB</span>
+                          <span title={$_('poolModal.disk')}>{f.disk} GB</span>
                           <span class="text-neutral-300">·</span>
-                          <span title="CPU">{f.vcpus} vCPU</span>
+                          <span title={$_('poolModal.cpu')}>{f.vcpus} vCPU</span>
                           <span class="text-neutral-300">·</span>
-                          <span title="RAM">{formatRam(f.ram)}</span>
+                          <span title={$_('poolModal.ram')}>{formatRam(f.ram)}</span>
                         </span>
 
                         <!-- Badge -->
@@ -360,8 +361,8 @@
                           {status === 'recommended' ? 'text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded'
                           : status === 'incompatible' ? 'text-red-500'
                           : ''}">
-                          {#if status === 'recommended'}★ Recommandé
-                          {:else if status === 'incompatible'}✗ Disque insuffisant ({f.disk} GB &lt; {getImageDiskGb(images.find(i => i.id === selectedImage)!)} GB)
+                          {#if status === 'recommended'}★ { $_('poolModal.recommended') }
+                          {:else if status === 'incompatible'}✗ { $_('poolModal.diskInsufficient') } ({f.disk} GB &lt; {getImageDiskGb(images.find(i => i.id === selectedImage)!)} GB)
                           {/if}
                         </span>
                       </button>
@@ -377,7 +378,7 @@
                     <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
-                    Autres flavors ({otherFlavors.length})
+                    { $_('poolModal.otherFlavors') } ({otherFlavors.length})
                   </summary>
                   <div class="mt-2 border border-neutral-200 dark:border-neutral-700 rounded overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800">
                     {#each otherFlavors as f}
@@ -397,7 +398,7 @@
                         <span class="text-sm font-semibold w-32 shrink-0 truncate {status === 'incompatible' ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-800 dark:text-neutral-200'}">{f.name}</span>
                         <span class="text-xs text-neutral-400">{f.disk} GB · {f.vcpus} vCPU · {formatRam(f.ram)}</span>
                         {#if status === 'incompatible'}
-                          <span class="ml-auto text-xs text-red-400 shrink-0">✗ Disque insuffisant</span>
+                          <span class="ml-auto text-xs text-red-400 shrink-0">✗ { $_('poolModal.diskInsufficient') }</span>
                         {/if}
                       </button>
                     {/each}
@@ -410,7 +411,7 @@
               {@const sel = flavors.find(f => f.id === selectedFlavor)}
               {#if sel}
                 <p class="text-xs text-neutral-500">
-                  Sélectionné : <span class="font-bold text-primary-700">{sel.name}</span>
+                  { $_('poolModal.selectedLabel') } <span class="font-bold text-primary-700">{sel.name}</span>
                   <span class="text-neutral-400 ml-1">— {sel.disk} GB · {sel.vcpus} vCPU · {formatRam(sel.ram)}</span>
                 </p>
               {/if}
@@ -420,16 +421,16 @@
 
         <!-- Section 3: Options avancées -->
         <div class="card-elevated p-5 space-y-5">
-          <h4 class="text-xs font-bold text-primary-700 uppercase tracking-widest border-b border-neutral-200 pb-2">3. Options avancées</h4>
+          <h4 class="text-xs font-bold text-primary-700 uppercase tracking-widest border-b border-neutral-200 pb-2">{ $_('poolModal.sectionAdvanced') }</h4>
 
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             <!-- Left: Config + off days -->
             <div class="space-y-4">
               <div class="space-y-1.5">
-                <label class="section-label">Script d'initialisation</label>
+                <label class="section-label">{ $_('poolModal.initScript') }</label>
                 <select class="field" bind:value={selectedConfigFile}>
-                  <option value="">Aucun (défaut)</option>
+                  <option value="">{ $_('poolModal.noneDefault') }</option>
                   {#each configs as c}
                     <option value={c.name}>{c.name}</option>
                   {/each}
@@ -437,9 +438,9 @@
               </div>
 
               <div>
-                <p class="section-label mb-2.5 block">Jours de fermeture</p>
+                <p class="section-label mb-2.5 block">{ $_('poolModal.offDays') }</p>
                 <div class="flex flex-wrap gap-2">
-                  {#each offDayLabels as { key, label }}
+                  {#each offDayLabels as { key, labelKey }}
                     <button
                       type="button"
                       class="w-9 h-9 rounded text-xs font-bold transition-all
@@ -447,38 +448,38 @@
                           ? 'bg-primary-700 text-white border border-primary-800'
                           : 'bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-600 hover:border-primary-400 hover:text-primary-600 dark:hover:border-primary-500'}"
                       onclick={() => offDays[key] = !offDays[key]}
-                    >{label}</button>
+                    >{$_(labelKey)}</button>
                   {/each}
                 </div>
-                <p class="text-xs text-neutral-400 mt-2">Suspend les VMs ces jours pour économiser les ressources</p>
+                <p class="text-xs text-neutral-400 mt-2">{ $_('poolModal.offDaysHelp') }</p>
               </div>
             </div>
 
             <!-- Right: Schedule -->
             <div class="space-y-3">
-              <p class="section-label block">Planning de démarrage</p>
+              <p class="section-label block">{ $_('poolModal.startSchedule') }</p>
               <div class="grid grid-cols-3 gap-3">
                 <div class="space-y-1.5">
-                  <label class="section-label">Jour</label>
+                  <label class="section-label">{ $_('poolModal.day') }</label>
                   <select class="field" bind:value={scheduleDay}>
-                    <option value="">Aucun</option>
-                    <option value="1">Lundi</option>
-                    <option value="2">Mardi</option>
-                    <option value="3">Mercredi</option>
-                    <option value="4">Jeudi</option>
-                    <option value="5">Vendredi</option>
+                    <option value="">{ $_('poolModal.none') }</option>
+                    <option value="1">{ $_('poolModal.monday') }</option>
+                    <option value="2">{ $_('poolModal.tuesday') }</option>
+                    <option value="3">{ $_('poolModal.wednesday') }</option>
+                    <option value="4">{ $_('poolModal.thursday') }</option>
+                    <option value="5">{ $_('poolModal.friday') }</option>
                   </select>
                 </div>
                 <div class="space-y-1.5">
-                  <label class="section-label">Heure</label>
+                  <label class="section-label">{ $_('poolModal.hour') }</label>
                   <input class="field" type="time" bind:value={scheduleTime} />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="section-label">Durée (h)</label>
+                  <label class="section-label">{ $_('poolModal.durationHours') }</label>
                   <input class="field" type="number" min="1" max="24" bind:value={scheduleWindowHours} placeholder="4" />
                 </div>
               </div>
-              <p class="text-xs text-neutral-400">Laissez vide pour démarrer manuellement</p>
+              <p class="text-xs text-neutral-400">{ $_('poolModal.scheduleHelp') }</p>
             </div>
 
           </div>
@@ -487,10 +488,10 @@
         <!-- Footer -->
         <div class="flex items-center justify-end gap-3 pt-1">
           <button type="button" onclick={() => open = false} class="btn btn-secondary text-sm">
-            Annuler
+            { $_('poolModal.cancel') }
           </button>
           <button type="submit" class="btn btn-primary text-sm px-6">
-            Créer le serverpool
+            { $_('poolModal.create') }
           </button>
         </div>
 
