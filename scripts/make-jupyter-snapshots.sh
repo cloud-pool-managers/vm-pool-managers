@@ -94,6 +94,19 @@ sudo docker run -d --restart=always --name jupyter \
   -v /home/vmuser:/home/jovyan/work \
   ${nbgrader_tag} \
   bash -lc 'pip install -U packaging >/dev/null 2>&1 || true; exec jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.token="" --ServerApp.password="" --ServerApp.allow_origin="*"'
+# VS Code (code-server) à côté de Jupyter, sur le port 8080, montant le même
+# /home/vmuser -> mêmes fichiers que Jupyter (qui le voit dans /home/jovyan/work).
+# --auth none : cohérent avec Jupyter lancé sans token (contrôle = frontière réseau).
+# Image tirée via le proxy registry Polytechnique (pas de modif d'image VM).
+sudo docker rm -f codeserver 2>/dev/null || true
+# --network host : code-server peut joindre le serveur Jupyter (localhost:8888)
+# pour exécuter les notebooks avec le MÊME environnement/libs que JupyterLab.
+# Extensions Python+Jupyter installées au démarrage (depuis Open VSX).
+sudo docker run -d --restart=always --name codeserver \
+  --network host --entrypoint /bin/bash \
+  -v /home/vmuser:/home/coder/project \
+  registry.virtualdata.cloud.idcs.polytechnique.fr/docker-hub-proxy/codercom/code-server:latest \
+  -lc 'code-server --install-extension ms-python.python --install-extension ms-toolsai.jupyter || true; exec code-server --auth none --cert --bind-addr 0.0.0.0:8443 /home/coder/project'
 SCRIPT
 )
   if [ -n "$POSTGRES_DSN" ] && command -v psql &>/dev/null; then

@@ -51,3 +51,33 @@ sudo -u vmuser /home/vmuser/jupyter-env/bin/jupyter nbextension enable --sys-pre
 sudo -u vmuser /home/vmuser/jupyter-env/bin/jupyter serverextension enable --sys-prefix --py nbgrader
 
 systemctl restart jupyterlab
+
+# --- VS Code (code-server) à côté de Jupyter, port 8080 ---
+# Installé au runtime (aucune image modifiée). Non-fatal : si l'install échoue
+# (réseau), Jupyter reste fonctionnel. --auth none : même modèle d'accès que Jupyter.
+if ! command -v code-server >/dev/null 2>&1; then
+  curl -fsSL https://code-server.dev/install.sh | sh || true
+fi
+if command -v code-server >/dev/null 2>&1; then
+  # Extensions Python + Jupyter (depuis Open VSX) pour exécuter les notebooks
+  # via le serveur Jupyter local (localhost:8888) = même environnement.
+  sudo -u vmuser /usr/bin/code-server --install-extension ms-python.python --install-extension ms-toolsai.jupyter || true
+  cat > /etc/systemd/system/codeserver.service << 'SVC'
+[Unit]
+Description=code-server (VS Code Web)
+After=network.target
+
+[Service]
+Type=simple
+User=vmuser
+ExecStart=/usr/bin/code-server --auth none --cert --bind-addr 0.0.0.0:8443 /home/vmuser
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SVC
+  systemctl daemon-reload
+  systemctl enable codeserver
+  systemctl restart codeserver
+fi
