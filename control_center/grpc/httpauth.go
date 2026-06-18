@@ -17,6 +17,7 @@ import (
 type httpIdentity struct {
 	Email   string
 	IsAdmin bool
+	Role    string // admin | prof | ta | student | chercheur
 	Via     string // "oidc" | "moodle" | "github"
 }
 
@@ -53,6 +54,7 @@ var publicHTTPPaths = map[string]bool{
 	"/auth/github/callback": true,
 	"/vm-registrar":         true,
 	"/metrics":              true,
+	"/api/announcement":     true, // annonce publique (bandeau visible par tous)
 }
 
 // adminHTTPPrefixes : routes réservées aux enseignants/admin (lecture/écriture de notes,
@@ -71,6 +73,9 @@ var adminHTTPPrefixes = []string{
 	"/api/moodle/link-pool",
 	"/api/moodle/courses",
 	"/api/moodle/enrolments",
+	"/api/xcours/", // catalogue + affectations + import (gestion enseignant)
+	"/api/vm/",     // actions de cycle de vie des VMs (start/stop/suspend/reboot)
+	"/api/pool/",   // métadonnées des pools (libellé, étiquettes)
 	"/api/github/students",
 	"/api/image-proposals",
 }
@@ -109,14 +114,16 @@ func resolveIdentity(r *http.Request) (httpIdentity, bool) {
 				}
 			}
 		}
-		return httpIdentity{Email: email, IsAdmin: admin, Via: "oidc"}, email != ""
+		role := resolveRole(email, admin)
+		return httpIdentity{Email: email, IsAdmin: role == RoleAdmin, Role: role, Via: "oidc"}, email != ""
 	}
 
 	// 2. Session Moodle (élève ou admin site).
 	var ms models.MoodleSession
 	if err := config.Database.Where("id = ?", tok).First(&ms).Error; err == nil {
 		if time.Since(ms.CreatedAt) <= 24*time.Hour {
-			return httpIdentity{Email: ms.Email, IsAdmin: ms.Role == "admin", Via: "moodle"}, ms.Email != ""
+			role := resolveRole(ms.Email, ms.Role == "admin")
+			return httpIdentity{Email: ms.Email, IsAdmin: role == RoleAdmin, Role: role, Via: "moodle"}, ms.Email != ""
 		}
 	}
 
@@ -124,7 +131,7 @@ func resolveIdentity(r *http.Request) (httpIdentity, bool) {
 	var gs models.GitHubSession
 	if err := config.Database.Where("id = ?", tok).First(&gs).Error; err == nil {
 		if time.Since(gs.CreatedAt) <= time.Hour {
-			return httpIdentity{Email: gs.Login, IsAdmin: false, Via: "github"}, gs.Login != ""
+			return httpIdentity{Email: gs.Login, IsAdmin: false, Role: RoleStudent, Via: "github"}, gs.Login != ""
 		}
 	}
 
@@ -147,9 +154,18 @@ func httpAuthMiddleware(next http.Handler) http.Handler {
 			httpJSONError(w, http.StatusUnauthorized, "authentification requise")
 			return
 		}
-		if isAdminPath(path) && !id.IsAdmin {
-			httpJSONError(w, http.StatusForbidden, "réservé aux enseignants")
+		if strings.HasPrefix(path, "/api/admin/") && id.Role != RoleAdmin {
+			httpJSONError(w, http.StatusForbidden, "réservé aux administrateurs")
 			return
+		}
+		if isAdminPath(path) && !isStaff(id.Role) {
+			httpJSONError(w, http.StatusForbidden, "réservé à l'équipe pédagogique")
+			return
+		}
+
+		// Journal d'audit : trace les actions mutantes (hors bruit).
+		if isMutating(r.Method) && strings.HasPrefix(path, "/api/") {
+			writeAudit(id, r)
 		}
 
 		ctx := context.WithValue(r.Context(), httpIdentityKey, id)
