@@ -54,6 +54,10 @@ caddy/key.pem
 # Auth configs (contain credentials)
 /auth/
 
+# OpenStack credentials (généré depuis clouds.yaml.template)
+clouds.yaml
+**/clouds.yaml
+
 # Coverage
 coverage.*
 *.coverprofile
