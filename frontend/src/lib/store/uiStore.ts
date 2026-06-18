@@ -20,6 +20,19 @@ function darkModeDefault(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
+function persistedString(key: string, defaultVal: string) {
+  let initial = defaultVal;
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(key);
+    if (saved !== null) initial = saved;
+  }
+  const store = writable<string>(initial);
+  store.subscribe((val) => {
+    if (typeof window !== 'undefined') localStorage.setItem(key, val);
+  });
+  return store;
+}
+
 function persistedNumber(key: string, defaultVal: number) {
   let initial = defaultVal;
   if (typeof window !== 'undefined') {
@@ -34,6 +47,8 @@ function persistedNumber(key: string, defaultVal: number) {
 }
 
 export const simpleMode = persistedBool('ui_simple_mode', true);
+// Langue de l'interface ('fr' | 'en')
+export const language = persistedString('ui_language', 'fr');
 // Réduire les animations (confort / accessibilité)
 export const reduceMotion = persistedBool('ui_reduce_motion', false);
 // Intervalle de rafraîchissement de l'inventaire, en secondes

@@ -4,6 +4,7 @@
   import { apiFetch } from '$lib/api';
   import { authStore } from '$lib/store/authStore';
   import { meStore } from '$lib/store/meStore';
+  import { _ } from 'svelte-i18n';
 
   interface Item { label: string; sub: string; href: string; }
 
@@ -18,16 +19,17 @@
 
   const navItems = $derived(() => {
     const items: Item[] = [];
+    const goTo = $_('palette.goTo');
     if (isStaff) {
-      if (isAdmin) items.push({ label: 'Inventaire', sub: 'Aller à', href: '/inventory' });
-      items.push({ label: 'Serverpools', sub: 'Aller à', href: '/serverpool' });
-      items.push({ label: 'Notation', sub: 'Aller à', href: '/grading' });
+      if (isAdmin) items.push({ label: $_('nav.inventory'), sub: goTo, href: '/inventory' });
+      items.push({ label: $_('nav.serverpools'), sub: goTo, href: '/serverpool' });
+      items.push({ label: $_('nav.grading'), sub: goTo, href: '/grading' });
       if (isAdmin) {
-        items.push({ label: 'Configurations', sub: 'Aller à', href: '/config' });
-        items.push({ label: 'Proposer une image', sub: 'Aller à', href: '/propose-image' });
+        items.push({ label: $_('nav.configs'), sub: goTo, href: '/config' });
+        items.push({ label: $_('nav.proposeImage'), sub: goTo, href: '/propose-image' });
       }
     }
-    items.push({ label: 'Paramètres', sub: 'Aller à', href: '/profile' });
+    items.push({ label: $_('common.settings'), sub: goTo, href: '/profile' });
     return items;
   });
 
@@ -37,7 +39,7 @@
     const poolItems: Item[] = (query
       ? pools.filter(p => (p.label + ' ' + p.sub).toLowerCase().includes(query))
       : pools
-    ).slice(0, 8).map(p => ({ label: p.label, sub: 'Pool · ' + p.sub, href: '/serverpool/' + p.id }));
+    ).slice(0, 8).map(p => ({ label: p.label, sub: $_('palette.pool') + ' · ' + p.sub, href: '/serverpool/' + p.id }));
     return [...nav, ...poolItems];
   });
 
@@ -87,7 +89,7 @@
     <div class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm" onclick={close}></div>
     <div class="relative w-full max-w-lg bg-white dark:bg-neutral-800 rounded-xl shadow-2xl overflow-hidden">
       <input bind:this={inputEl} bind:value={q} oninput={() => (sel = 0)}
-        placeholder="Rechercher une page, un pool…"
+        placeholder={$_('palette.placeholder')}
         class="w-full px-4 py-3 text-sm bg-transparent outline-none border-b border-neutral-100 dark:border-neutral-700 text-neutral-800 dark:text-neutral-100" />
       <div class="max-h-80 overflow-y-auto py-1">
         {#each results() as item, i}
@@ -98,10 +100,10 @@
           </button>
         {/each}
         {#if results().length === 0}
-          <p class="text-sm text-neutral-400 px-4 py-6 text-center">Aucun résultat.</p>
+          <p class="text-sm text-neutral-400 px-4 py-6 text-center">{$_('common.noResult')}</p>
         {/if}
       </div>
-      <div class="px-4 py-2 border-t border-neutral-100 dark:border-neutral-700 text-[11px] text-neutral-400">↑↓ naviguer · ⏎ ouvrir · Échap fermer</div>
+      <div class="px-4 py-2 border-t border-neutral-100 dark:border-neutral-700 text-[11px] text-neutral-400">{$_('palette.hint')}</div>
     </div>
   </div>
 {/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { apiFetch } from '$lib/api';
+  import { _ } from 'svelte-i18n';
 
   interface AuditLog { id: number; created_at: string; actor: string; role: string; method: string; path: string; ip: string; }
 
@@ -12,14 +13,14 @@
 
   function label(l: AuditLog): string {
     const p = l.path;
-    if (p === '/api/vm/action') return 'Action sur une VM';
-    if (p === '/api/vm/rebuild') return 'Réinitialisation d\'une VM';
-    if (p === '/api/admin/users/role') return 'Changement de rôle';
-    if (p === '/api/admin/announcement') return 'Annonce modifiée';
-    if (p === '/api/xcours/import') return 'Import d\'un cours de l\'X';
-    if (p === '/api/moodle/import') return 'Import depuis Moodle';
+    if (p === '/api/vm/action') return $_('notif.vmAction');
+    if (p === '/api/vm/rebuild') return $_('notif.vmRebuild');
+    if (p === '/api/admin/users/role') return $_('notif.roleChange');
+    if (p === '/api/admin/announcement') return $_('notif.announcement');
+    if (p === '/api/xcours/import') return $_('notif.importX');
+    if (p === '/api/moodle/import') return $_('notif.importMoodle');
     if (p.startsWith('/api/nbgrader/')) return 'nbgrader : ' + (p.split('/').pop() || '');
-    if (l.method === 'DELETE') return 'Suppression';
+    if (l.method === 'DELETE') return $_('notif.deletion');
     return l.method + ' ' + p;
   }
   function timeAgo(s: string): string {
@@ -53,7 +54,7 @@
 </script>
 
 <div class="relative">
-  <button onclick={toggle} title="Notifications" aria-label="Notifications"
+  <button onclick={toggle} title={$_('notif.title')} aria-label={$_('notif.title')}
     class="relative p-2 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
     <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -68,9 +69,9 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="fixed inset-0 z-40" onclick={() => (open = false)}></div>
     <div class="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-xl z-50 p-2">
-      <div class="px-2 py-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Activité récente</div>
+      <div class="px-2 py-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">{$_('notif.recent')}</div>
       {#if logs.length === 0}
-        <p class="text-sm text-neutral-400 px-2 py-4 text-center">Aucune activité.</p>
+        <p class="text-sm text-neutral-400 px-2 py-4 text-center">{$_('notif.empty')}</p>
       {:else}
         {#each logs as l}
           <div class="px-2 py-2 rounded-lg {l.id > lastSeen ? 'bg-primary-50/60 dark:bg-primary-900/20' : ''}">

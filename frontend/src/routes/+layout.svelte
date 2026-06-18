@@ -14,10 +14,12 @@
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import { page } from '$app/state';
-  import { simpleMode, darkMode, reduceMotion } from '$lib/store/uiStore';
+  import { simpleMode, darkMode, reduceMotion, language } from '$lib/store/uiStore';
   import { meStore, loadMe, resetMe } from '$lib/store/meStore';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
   import CommandPalette from '$lib/components/CommandPalette.svelte';
+  import '$lib/i18n';
+  import { locale, _ } from 'svelte-i18n';
 
   let { children } = $props();
   let userStreamController: AbortController | null = null;
@@ -96,6 +98,12 @@
     document.documentElement.classList.toggle('reduce-motion', $reduceMotion);
   });
 
+  // Synchronise la langue de l'interface (store persistant → svelte-i18n + <html lang>).
+  $effect(() => {
+    locale.set($language);
+    if (browser) document.documentElement.lang = $language;
+  });
+
   let mobileOpen = $state(false);
   let moodleUrl = $state('');
 
@@ -121,16 +129,16 @@
     const links: { href: string; label: string; secondary?: boolean }[] = [];
     if (isStaff) {
       // Équipe pédagogique (admin / prof / ta).
-      if (isAdmin) links.push({ href: '/inventory', label: simple ? 'Mes étudiants' : 'Inventaire' });
-      links.push({ href: '/serverpool', label: simple ? 'Mes cours' : 'Serverpools' });
-      links.push({ href: '/grading', label: 'Notation' });
-      if (!simple && isAdmin) links.push({ href: '/config', label: 'Configurations', secondary: true });
-      if (isAdmin) links.push({ href: '/propose-image', label: 'Proposer une image', secondary: true });
+      if (isAdmin) links.push({ href: '/inventory', label: simple ? $_('nav.myStudents') : $_('nav.inventory') });
+      links.push({ href: '/serverpool', label: simple ? $_('nav.myCourses') : $_('nav.serverpools') });
+      links.push({ href: '/grading', label: $_('nav.grading') });
+      if (!simple && isAdmin) links.push({ href: '/config', label: $_('nav.configs'), secondary: true });
+      if (isAdmin) links.push({ href: '/propose-image', label: $_('nav.proposeImage'), secondary: true });
     } else if (role === 'chercheur') {
       // Chercheur : gère ses propres environnements de calcul.
-      links.push({ href: '/serverpool', label: 'Mes environnements' });
+      links.push({ href: '/serverpool', label: $_('nav.myEnvironments') });
     } else if (auth) {
-      links.push({ href: '/student', label: 'Mes cours' });
+      links.push({ href: '/student', label: $_('nav.myCourses') });
     }
     // 'Profil' a été déplacé dans la page Paramètres (accessible via l'icône ⚙).
     return links;
@@ -202,7 +210,7 @@
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-primary-700 dark:hover:text-primary-300'}"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h16M4 18h16"/></svg>
-              Plus
+              {$_('nav.more')}
             </button>
             {#if moreOpen}
               <!-- top-full + pt-2 = pont invisible : pas de trou entre le bouton et le menu,
@@ -221,7 +229,7 @@
                     <div class="my-1 border-t border-black/5 dark:border-white/10"></div>
                     <a href={moodleUrl} target="_blank" rel="noopener noreferrer" onclick={() => moreOpen = false} class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-neutral-700 dark:text-neutral-300 hover:bg-[#f98012]/10">
                       <svg class="w-4 h-4 shrink-0 text-[#f98012]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
-                      Ouvrir Moodle
+                      {$_('nav.openMoodle')}
                       <span class="ml-auto text-[10px] text-neutral-400">↗</span>
                     </a>
                   {/if}
@@ -236,7 +244,7 @@
       <div class="flex items-center gap-2">
         <CommandPalette />
         <button onclick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}
-          title="Recherche (⌘K)" aria-label="Recherche"
+          title={$_('common.search') + ' (⌘K)'} aria-label={$_('common.search')}
           class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-primary-700 hover:border-primary-300 transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>
           <span class="font-mono">⌘K</span>
@@ -248,7 +256,7 @@
         {#if $authStore || $githubStore || $moodleStudentStore}
           {@const settingsHref = $authStore ? '/profile' : '/student/settings'}
           <a
-            href={settingsHref} title="Paramètres" aria-label="Paramètres"
+            href={settingsHref} title={$_('common.settings')} aria-label={$_('common.settings')}
             class="p-2 rounded-full transition-colors {isActive(settingsHref) ? 'text-primary-700 dark:text-primary-300 bg-black/5 dark:bg-white/10' : 'text-neutral-500 dark:text-neutral-400 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-black/5 dark:hover:bg-white/5'}"
           >
             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
@@ -256,28 +264,28 @@
         {/if}
 
         {#if $authStore}
-          <button onclick={logout} class="btn btn-secondary text-xs px-3.5 py-2">Déconnexion</button>
+          <button onclick={logout} class="btn btn-secondary text-xs px-3.5 py-2">{$_('common.logout')}</button>
         {:else if $githubStore}
           <span class="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500">
             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
             <span class="font-mono font-semibold text-neutral-700">{$githubStore.login}</span>
           </span>
-          <button onclick={disconnectGitHub} class="btn btn-secondary text-xs px-3.5 py-2">Déconnexion</button>
+          <button onclick={disconnectGitHub} class="btn btn-secondary text-xs px-3.5 py-2">{$_('common.logout')}</button>
         {:else if $moodleStudentStore}
           <span class="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500">
             <svg class="w-3.5 h-3.5 text-[#f98012]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
             <span class="font-mono font-semibold text-neutral-700">{$moodleStudentStore.email}</span>
           </span>
-          <button onclick={disconnectMoodleStudent} class="btn btn-secondary text-xs px-3.5 py-2">Déconnexion</button>
+          <button onclick={disconnectMoodleStudent} class="btn btn-secondary text-xs px-3.5 py-2">{$_('common.logout')}</button>
         {:else}
-          <button onclick={startOIDCLogin} class="btn btn-primary text-xs px-3.5 py-2">Se connecter</button>
+          <button onclick={startOIDCLogin} class="btn btn-primary text-xs px-3.5 py-2">{$_('common.login')}</button>
         {/if}
 
         <!-- Hamburger -->
         <button
           onclick={() => mobileOpen = !mobileOpen}
           class="md:hidden p-1.5 rounded text-neutral-500 hover:text-primary-700 hover:bg-primary-50 transition-colors"
-          aria-label="Menu">
+          aria-label={$_('common.menu')}>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {#if mobileOpen}
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -312,7 +320,7 @@
       <div class="mb-6 px-4 py-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-sm flex items-start gap-3 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200">
         <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
         <span class="flex-1 font-medium">{announcement.message}</span>
-        <button onclick={() => (announceDismissed = true)} class="opacity-60 hover:opacity-100 shrink-0" aria-label="Fermer">✕</button>
+        <button onclick={() => (announceDismissed = true)} class="opacity-60 hover:opacity-100 shrink-0" aria-label={$_('common.close')}>✕</button>
       </div>
     {/if}
     {@render children?.()}
@@ -320,8 +328,8 @@
 
   <footer class="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#13151f]">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <span class="text-xs text-neutral-400 tracking-wide">CloudPoolManager — IDCS Infrastructure</span>
-      <span class="text-xs text-neutral-400 tracking-wide">École Polytechnique · Institut Polytechnique de Paris</span>
+      <span class="text-xs text-neutral-400 tracking-wide">{$_('footer.infra')}</span>
+      <span class="text-xs text-neutral-400 tracking-wide">{$_('footer.school')}</span>
     </div>
   </footer>
 

@@ -6,6 +6,7 @@
   import logoX from '$lib/assets/logo_polytechnique_crop.png';
   import { browser } from '$app/environment';
   import { onMount } from 'svelte';
+  import { _ } from 'svelte-i18n';
 
   // If already logged in, redirect away
   if (browser && $authStore) {
@@ -34,16 +35,16 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: mUser.trim(), password: mPass }),
       });
-      if (!r.ok) { mErr = 'Identifiants Moodle invalides.'; return; }
+      if (!r.ok) { mErr = $_('login.moodleInvalid'); return; }
       const d = await r.json();
       moodleStudentStore.set({ email: d.email ?? '', fullname: d.fullname ?? '', session: d.session_id ?? '' });
       goto('/student');
-    } catch { mErr = 'Erreur de connexion Moodle.'; }
+    } catch { mErr = $_('login.moodleError'); }
     finally { mLoading = false; }
   }
 </script>
 
-<svelte:head><title>Connexion — CloudPoolManager</title></svelte:head>
+<svelte:head><title>{$_('login.pageTitle')}</title></svelte:head>
 
 <div class="min-h-screen flex flex-col" style="background: #fbfbfd;">
 
@@ -79,10 +80,10 @@
             </svg>
           </div>
           <h1 class="text-xl font-bold text-neutral-900">
-            Accès à la plateforme
+            {$_('login.title')}
           </h1>
           <p class="text-sm text-neutral-500 mt-1">
-            Connectez-vous avec vos identifiants Polytechnique
+            {$_('login.subtitle')}
           </p>
         </div>
 
@@ -100,7 +101,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
             </svg>
-            <span class="flex-1 text-left">Se connecter avec SSO Polytechnique</span>
+            <span class="flex-1 text-left">{$_('login.sso')}</span>
             <svg class="w-4 h-4 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
@@ -109,7 +110,7 @@
           <!-- Séparateur -->
           <div class="flex items-center gap-3">
             <div class="flex-1 h-px bg-neutral-200"></div>
-            <span class="text-xs text-neutral-400 font-medium">ou</span>
+            <span class="text-xs text-neutral-400 font-medium">{$_('login.or')}</span>
             <div class="flex-1 h-px bg-neutral-200"></div>
           </div>
 
@@ -122,8 +123,8 @@
             <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 3.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
             </svg>
-            <span class="flex-1 text-left">Se connecter avec GitHub</span>
-            <span class="text-xs text-white/50 font-normal">portail étudiant</span>
+            <span class="flex-1 text-left">{$_('login.github')}</span>
+            <span class="text-xs text-white/50 font-normal">{$_('login.studentPortal')}</span>
           </a>
 
           <!-- Moodle login -->
@@ -134,18 +135,18 @@
                 class="w-full flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all bg-[#f98012] hover:bg-[#e06f0a] text-white"
               >
                 <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3 1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/></svg>
-                <span class="flex-1 text-left">Se connecter avec Moodle</span>
-                <span class="text-xs text-white/60 font-normal">portail étudiant</span>
+                <span class="flex-1 text-left">{$_('login.moodle')}</span>
+                <span class="text-xs text-white/60 font-normal">{$_('login.studentPortal')}</span>
               </button>
             {:else}
               <div class="space-y-2 p-3 rounded-xl border border-[#f98012]/40 bg-[#f98012]/5 animate-fade-in">
-                <input class="field text-sm" type="text" placeholder="Identifiant Moodle" bind:value={mUser} autocomplete="username" />
-                <input class="field text-sm" type="password" placeholder="Mot de passe" bind:value={mPass} autocomplete="current-password"
+                <input class="field text-sm" type="text" placeholder={$_('login.moodleUser')} bind:value={mUser} autocomplete="username" />
+                <input class="field text-sm" type="password" placeholder={$_('login.moodlePass')} bind:value={mPass} autocomplete="current-password"
                   onkeydown={(e) => { if (e.key === 'Enter') loginMoodle(); }} />
                 {#if mErr}<p class="text-xs text-red-600">{mErr}</p>{/if}
                 <button onclick={loginMoodle} disabled={mLoading || !mUser.trim() || !mPass}
                   class="w-full px-5 py-2.5 rounded-xl font-semibold text-sm bg-[#f98012] hover:bg-[#e06f0a] text-white disabled:opacity-50">
-                  {mLoading ? 'Connexion…' : 'Se connecter'}
+                  {mLoading ? $_('login.connecting') : $_('common.login')}
                 </button>
               </div>
             {/if}
@@ -161,8 +162,8 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
-            <span class="flex-1 text-left">Accéder au portail étudiant</span>
-            <span class="text-xs text-neutral-400 font-normal">clé SSH uniquement</span>
+            <span class="flex-1 text-left">{$_('login.accessPortal')}</span>
+            <span class="text-xs text-neutral-400 font-normal">{$_('login.sshOnly')}</span>
           </a>
 
         </div>
@@ -170,19 +171,19 @@
         <!-- Pied de carte -->
         <div class="px-8 py-4 bg-neutral-50 border-t border-neutral-100">
           <p class="text-xs text-neutral-400 text-center leading-relaxed">
-            Accès réservé aux membres de l'École Polytechnique.<br>
-            En cas de problème, contactez l'équipe IDCS.
+            {$_('login.footerReserved')}<br>
+            {$_('login.footerContact')}
           </p>
         </div>
       </div>
 
       <!-- Infos comptes de test -->
       <div class="mt-5 p-4 bg-white border border-neutral-200 rounded text-xs text-neutral-500 space-y-1 animate-fade-up" style="animation-delay:0.08s;">
-        <p class="font-semibold text-neutral-600 mb-2">Comptes de développement</p>
+        <p class="font-semibold text-neutral-600 mb-2">{$_('login.devAccounts')}</p>
         <div class="grid grid-cols-2 gap-x-4 gap-y-1 font-mono">
-          <span class="text-neutral-400">Admin</span>
+          <span class="text-neutral-400">{$_('login.admin')}</span>
           <span>admin / admin123</span>
-          <span class="text-neutral-400">Étudiant</span>
+          <span class="text-neutral-400">{$_('login.student')}</span>
           <span>student / student123</span>
         </div>
       </div>
@@ -193,8 +194,8 @@
   <!-- Footer -->
   <footer class="border-t border-neutral-200 bg-white">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <span class="text-xs text-neutral-400">CloudPoolManager — IDCS Infrastructure</span>
-      <span class="text-xs text-neutral-400">École Polytechnique · Institut Polytechnique de Paris</span>
+      <span class="text-xs text-neutral-400">{$_('footer.infra')}</span>
+      <span class="text-xs text-neutral-400">{$_('footer.school')}</span>
     </div>
   </footer>
 
