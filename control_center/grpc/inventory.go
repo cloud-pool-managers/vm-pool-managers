@@ -36,6 +36,7 @@ type InventoryPool struct {
 	LinkedCourse string        `json:"linked_course,omitempty"` // cours lié (Moodle / X), si renseigné
 	Label        string        `json:"label,omitempty"`         // nom d'affichage facultatif
 	Tags         string        `json:"tags,omitempty"`          // étiquettes (CSV)
+	Compute      bool          `json:"compute,omitempty"`       // pool « calcul » (SSH/terminal seul)
 	PoolID       string        `json:"pool_id"`
 	UserID       string        `json:"user_id"`
 	VMs          []InventoryVM `json:"vms"`
@@ -52,11 +53,13 @@ func buildInventory() ([]InventoryPool, error) {
 	linkedByKey := make(map[string]string, len(activePools))
 	labelByKey := make(map[string]string, len(activePools))
 	tagsByKey := make(map[string]string, len(activePools))
+	computeByKey := make(map[string]bool, len(activePools))
 	for _, p := range activePools {
 		k := p.ServerpoolID + ":" + p.UserID
 		validPools[k] = true
 		labelByKey[k] = p.Label
 		tagsByKey[k] = p.Tags
+		computeByKey[k] = p.ComputeMode
 		if p.XCourseCode != "" {
 			linkedByKey[k] = "X · " + p.XCourseCode
 		} else if p.MoodleCourseID != 0 {
@@ -144,6 +147,9 @@ func buildInventory() ([]InventoryPool, error) {
 	// Probe app ports in parallel (bounded to 500ms timeout).
 	var wg sync.WaitGroup
 	for i := range pending {
+		if computeByKey[pending[i].key] {
+			continue // pool calcul : pas d'appli web → on ne sonde pas Jupyter
+		}
 		wg.Add(1)
 		go func(p *pendingProbe) {
 			defer wg.Done()
@@ -203,6 +209,7 @@ func buildInventory() ([]InventoryPool, error) {
 		p.LinkedCourse = linkedByKey[k]
 		p.Label = labelByKey[k]
 		p.Tags = tagsByKey[k]
+		p.Compute = computeByKey[k]
 		result = append(result, *p)
 	}
 	return result, nil

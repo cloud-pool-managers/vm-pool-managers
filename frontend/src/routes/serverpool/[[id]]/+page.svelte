@@ -43,6 +43,7 @@ let offDays = $state({ monday:false, tuesday:false, wednesday:false, thursday:fa
 let selectedGroupImage: string | null = $state(null);
 let selectedImage: string | null = $state(null);
 let appPort = $state(0);
+let computeMode = $state(false);
 
 // Progression des étudiants d'un pool (A1).
 interface ProgressRow { name: string; email?: string; has_vm: boolean; ip?: string; power_state?: string; activity?: string; healthy: boolean; last_active?: string; }
@@ -207,10 +208,13 @@ async function handleCreateServerpool(event: Event) {
   if ((scheduleDay && !scheduleTime) || (!scheduleDay && scheduleTime)) {
     createError = $_('serverpool.errorScheduleDayTime'); return;
   }
+  const metadata: Record<string, string> = {};
+  if (enabledOffDays.length > 0) metadata.off_days = enabledOffDays.join(',');
+  if (computeMode) metadata.compute = 'true';
   const req: CreatePoolRequest = create(CreatePoolRequestSchema, {
     user: $authStore?.email ?? '', name: data.name, image: data.image,
     flavor: data.flavor, network: data.networks, minVm: String(data.minVm), maxVm: String(data.maxVm),
-    config: data.config ?? '', metadata: enabledOffDays.length > 0 ? { off_days: enabledOffDays.join(',') } : {},
+    config: data.config ?? '', metadata,
     timeWindow: 0, appPort: appPort > 0 ? appPort : 0,
   });
   if (hasSchedule) {
@@ -562,7 +566,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
     images={$images} flavors={sortedFlavors} networks={$networks} configs={$configs}
     bind:selectedGroupImage bind:selectedImage bind:selectedFlavor bind:selectedNetwork
     bind:selectedConfigFile bind:scheduleDay bind:scheduleTime bind:scheduleWindowHours bind:offDays
-    bind:appPort {createError} {createSuccess}
+    bind:appPort bind:computeMode {createError} {createSuccess}
     {handleCreateServerpool} {getUniqueFirstAlphaBlocks} {filterImagesByPrefix}
   />
 {/if}

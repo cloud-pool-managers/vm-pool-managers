@@ -32,7 +32,7 @@
       default: return { label: ps || '—', cls: 'bg-neutral-100 text-neutral-500 border-neutral-200' };
     }
   }
-  interface InventoryPool { pool_id: string; user_id: string; vms: VMInstance[]; linked_course?: string; label?: string; tags?: string; }
+  interface InventoryPool { pool_id: string; user_id: string; vms: VMInstance[]; linked_course?: string; label?: string; tags?: string; compute?: boolean; }
   const tagList = (t?: string) => (t || '').split(',').map(s => s.trim()).filter(Boolean);
 
   let pools: InventoryPool[] = $state([]);
@@ -350,6 +350,9 @@
                 {#if pool.linked_course}
                   <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 border border-primary-200">🎓 {pool.linked_course}</span>
                 {/if}
+                {#if pool.compute}
+                  <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200">⚙ {$_('inventory.computeBadge')}</span>
+                {/if}
                 {#each tagList(pool.tags) as tag}
                   <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 border border-neutral-200">{tag}</span>
                 {/each}
@@ -503,6 +506,9 @@
             <span class="text-xs text-neutral-500">{pool.user_id}</span>
             {#if pool.linked_course}
               <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 border border-primary-200">🎓 {pool.linked_course}</span>
+            {/if}
+            {#if pool.compute}
+              <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200">⚙ {$_('inventory.computeBadge')}</span>
             {/if}
             {#each tagList(pool.tags) as tag}
               <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 border border-neutral-200">{tag}</span>

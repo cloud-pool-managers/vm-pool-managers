@@ -20,6 +20,7 @@
     scheduleWindowHours = $bindable(),
     offDays = $bindable(),
     appPort = $bindable(),
+    computeMode = $bindable(),
     createError,
     createSuccess,
     handleCreateServerpool,
@@ -41,6 +42,7 @@
     scheduleWindowHours: number | undefined;
     offDays: { monday:boolean; tuesday:boolean; wednesday:boolean; thursday:boolean; friday:boolean; saturday:boolean; sunday:boolean; };
     appPort: number;
+    computeMode: boolean;
     createError: string;
     createSuccess: boolean;
     handleCreateServerpool: (e: Event) => void;
@@ -252,6 +254,15 @@
                 </p>
               </div>
             </div>
+
+            <!-- Type de pool « calcul » (B7) -->
+            <label class="flex items-start gap-2.5 cursor-pointer pt-1">
+              <input type="checkbox" bind:checked={computeMode} class="w-4 h-4 mt-0.5 accent-primary-700" />
+              <span>
+                <span class="text-sm font-medium text-neutral-800 dark:text-neutral-200">{ $_('poolModal.computeMode') }</span>
+                <span class="block text-xs text-neutral-400">{ $_('poolModal.computeModeHint') }</span>
+              </span>
+            </label>
           </div>
 
           <!-- 2. Infrastructure — OS + Réseau -->

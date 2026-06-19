@@ -66,6 +66,9 @@ func (s *Service) CreatePool(
 		if offDays, ok := md["off_days"]; ok && offDays != "" {
 			pool.OffDays = offDays
 		}
+		if md["compute"] == "true" {
+			pool.ComputeMode = true
+		}
 	}
 	res := config.Database.Create(&pool)
 	if res.Error != nil {
@@ -95,7 +98,7 @@ func (s *Service) CreatePool(
 			Type:   pb.Type_SERVERPOOL,
 		},
 	)
-	
+
 	if err != nil || !rep.GetSuccess() {
 		log.Printf("Failed to create pool in OpenStack immediately: %v", err)
 		// Revert status so we know it failed

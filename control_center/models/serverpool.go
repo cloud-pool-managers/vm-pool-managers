@@ -36,6 +36,7 @@ type Serverpool struct {
 	XCourseCode    string `gorm:"default:''"`        // cours de l'X lié (shortname, ex. CSC_41M03_EP-2025), renseigné à l'import
 	Label          string `gorm:"default:''"`        // nom d'affichage facultatif (sinon ServerpoolID)
 	Tags           string `gorm:"default:''"`        // étiquettes libres (CSV) pour organiser/filtrer
+	ComputeMode    bool   `gorm:"default:false"`     // pool « calcul » : SSH/terminal seul, sans appli web (pas de sonde Jupyter)
 }
 
 func (sp *Serverpool) FromPb(pbs *pb.StreamRessourceResponse) error {
