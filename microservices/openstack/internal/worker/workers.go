@@ -91,6 +91,20 @@ func processJob(workerID int, job models.Job) {
 		} else {
 			log.Println("VM resized:", job.Data["instance_id"])
 		}
+
+	case models.SuspendVM:
+		if err := jobs.SuspendVM(job.Data["instance_id"]); err != nil {
+			log.Println("Failed to suspend VM:", err)
+		} else {
+			log.Println("VM suspended (hibernation):", job.Data["instance_id"])
+		}
+
+	case models.ResumeVM:
+		if err := jobs.ResumeVM(job.Data["instance_id"]); err != nil {
+			log.Println("Failed to resume VM:", err)
+		} else {
+			log.Println("VM resumed:", job.Data["instance_id"])
+		}
 	}
 }
 

@@ -98,6 +98,35 @@ func isOffDay(p models.Serverpool) bool {
 	return false
 }
 
+// shouldHibernate indique si les VMs du pool doivent être suspendues maintenant :
+// soit c'est un jour off du pool, soit on est dans la fenêtre nocturne globale.
+func shouldHibernate(p models.Serverpool) bool {
+	return isOffDay(p) || inNightWindow()
+}
+
+// inNightWindow lit HIBERNATE_NIGHT="start-end" (heures 0-23, ex. "22-7") et indique
+// si l'heure courante est dans la fenêtre d'hibernation nocturne. Vide = désactivé.
+func inNightWindow() bool {
+	spec := strings.TrimSpace(os.Getenv("HIBERNATE_NIGHT"))
+	if spec == "" {
+		return false
+	}
+	parts := strings.SplitN(spec, "-", 2)
+	if len(parts) != 2 {
+		return false
+	}
+	start, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	end, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err1 != nil || err2 != nil || start == end {
+		return false
+	}
+	h := time.Now().Hour()
+	if start < end {
+		return h >= start && h < end // fenêtre dans la même journée
+	}
+	return h >= start || h < end // fenêtre à cheval sur minuit (ex. 22-7)
+}
+
 func Monitor(c context.Context) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -160,25 +189,33 @@ func CheckAndCreate() {
 			}
 		}
 
-		// Off-days: the pool's machines still exist (we keep provisioning up to
-		// MinVM below) but are powered OFF (kept, not deleted) on closed days to
-		// free compute, and powered back ON otherwise.
+		// Hibernation : les jours off (OffDays) et/ou la nuit (HIBERNATE_NIGHT), les
+		// VMs du pool sont SUSPENDUES (état RAM préservé, vCPU/RAM libérés) plutôt
+		// qu'éteintes — reprise rapide. Elles sont reprises automatiquement sinon.
+		// Les machines existent toujours (provisionnement jusqu'à MinVM ci-dessous).
 		if !isWarmPool(p) {
-			if isOffDay(p) {
+			if shouldHibernate(p) {
 				for _, s := range poolServers {
-					if strings.EqualFold(s.Status, "ACTIVE") && !powerThrottled(s.ID) {
+					if strings.EqualFold(s.Status, "ACTIVE") && !s.ManualOff && !powerThrottled(s.ID) {
 						markPower(s.ID)
-						worker.AddJob(*worker.CreateJob(models.StopVM, map[string]string{"instance_id": s.ID}), false)
-						log.Printf("[off-day] pool %s/%s: stopping %s", p.ServerpoolID, p.UserID, s.ID)
+						worker.AddJob(*worker.CreateJob(models.SuspendVM, map[string]string{"instance_id": s.ID}), false)
+						log.Printf("[hibernate] pool %s/%s: suspending %s", p.ServerpoolID, p.UserID, s.ID)
 					}
 				}
 			} else {
 				for _, s := range poolServers {
-					// Ne pas relancer une VM arrêtée VOLONTAIREMENT (ManualOff) par un admin.
-					if strings.EqualFold(s.Status, "SHUTOFF") && !s.ManualOff && !powerThrottled(s.ID) {
+					// Ne pas réveiller une VM arrêtée/suspendue VOLONTAIREMENT (ManualOff).
+					if s.ManualOff || powerThrottled(s.ID) {
+						continue
+					}
+					if strings.EqualFold(s.Status, "SUSPENDED") {
+						markPower(s.ID)
+						worker.AddJob(*worker.CreateJob(models.ResumeVM, map[string]string{"instance_id": s.ID}), false)
+						log.Printf("[hibernate] pool %s/%s: resuming %s", p.ServerpoolID, p.UserID, s.ID)
+					} else if strings.EqualFold(s.Status, "SHUTOFF") {
 						markPower(s.ID)
 						worker.AddJob(*worker.CreateJob(models.StartVM, map[string]string{"instance_id": s.ID}), false)
-						log.Printf("[off-day] pool %s/%s: starting %s", p.ServerpoolID, p.UserID, s.ID)
+						log.Printf("[hibernate] pool %s/%s: starting %s", p.ServerpoolID, p.UserID, s.ID)
 					}
 				}
 			}
