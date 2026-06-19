@@ -614,4 +614,17 @@ export default {
     "overQuota": "over quota",
     "storageNote": "Storage shown is provisioned disk (flavors), not actual usage.",
   },
+  home: {
+    "title": "Home — CloudPoolManager",
+    "hello": "Hello",
+    "subAdmin": "Platform overview and quick access.",
+    "subProf": "Your courses, pools and grading.",
+    "subChercheur": "Your compute environments.",
+    "subStudent": "Your workspace.",
+    "quickActions": "Quick access",
+    "statPools": "Pools",
+    "statVms": "VMs",
+    "statActive": "Active",
+    "statMyPools": "My pools",
+  },
 };

@@ -8,9 +8,9 @@
   import { onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
 
-  // If already logged in, redirect away
+  // If already logged in, redirect to the role-tailored home dashboard.
   if (browser && $authStore) {
-    goto($authStore.role === 'admin' ? '/serverpool' : '/student');
+    goto('/home');
   }
 
   let moodleConfigured = $state(false);

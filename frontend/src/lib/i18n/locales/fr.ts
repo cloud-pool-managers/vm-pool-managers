@@ -614,4 +614,17 @@ export default {
     "overQuota": "quota dépassé",
     "storageNote": "Le stockage indiqué est l'espace disque provisionné (flavors), pas l'usage réel.",
   },
+  home: {
+    "title": "Accueil — CloudPoolManager",
+    "hello": "Bonjour",
+    "subAdmin": "Vue d'ensemble de la plateforme et accès rapides.",
+    "subProf": "Vos cours, vos pools et la notation.",
+    "subChercheur": "Vos environnements de calcul.",
+    "subStudent": "Votre espace de travail.",
+    "quickActions": "Accès rapides",
+    "statPools": "Pools",
+    "statVms": "VMs",
+    "statActive": "Actifs",
+    "statMyPools": "Mes pools",
+  },
 };

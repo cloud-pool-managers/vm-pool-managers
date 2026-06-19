@@ -53,10 +53,7 @@
       sessionStorage.removeItem('oidc_code_verifier');
 
       await loginOIDC(tokens.id_token, tokens.access_token);
-      const { get } = await import('svelte/store');
-      const { authStore } = await import('$lib/store/authStore');
-      const auth = get(authStore);
-      goto(auth?.role === 'admin' ? '/serverpool' : '/student');
+      goto('/home');
     } catch (e: any) {
       error = e?.message ?? 'Erreur inconnue';
     }
