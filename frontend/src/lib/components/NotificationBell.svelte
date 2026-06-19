@@ -15,12 +15,22 @@
     const p = l.path;
     if (p === '/api/vm/action') return $_('notif.vmAction');
     if (p === '/api/vm/rebuild') return $_('notif.vmRebuild');
+    if (p === '/api/vm/resize') return $_('notif.vmResize');
     if (p === '/api/admin/users/role') return $_('notif.roleChange');
     if (p === '/api/admin/announcement') return $_('notif.announcement');
+    if (p === '/api/pool/meta') return $_('notif.poolMeta');
+    if (p === '/api/pool/presets') return $_('notif.preset');
+    if (p === '/api/pool/broadcast-file') return $_('notif.broadcast');
+    if (p === '/api/jobs') return $_('notif.jobSubmit');
+    if (p === '/api/jobs/cancel') return $_('notif.jobCancel');
     if (p === '/api/xcours/import') return $_('notif.importX');
     if (p === '/api/moodle/import') return $_('notif.importMoodle');
-    if (p.startsWith('/api/nbgrader/')) return 'nbgrader : ' + (p.split('/').pop() || '');
+    if (p === '/api/moodle/attrib-vm') return $_('notif.attribVm');
+    if (p === '/api/moodle/push-grades') return $_('notif.pushGrades');
+    if (p === '/api/moodle/ssh-key') return $_('notif.sshKey');
+    if (p.startsWith('/api/nbgrader/')) return $_('notif.nbgrader') + ' (' + (p.split('/').pop() || '') + ')';
     if (l.method === 'DELETE') return $_('notif.deletion');
+    if (l.method === 'POST' || l.method === 'PUT' || l.method === 'PATCH') return $_('notif.genericChange');
     return l.method + ' ' + p;
   }
   function timeAgo(s: string): string {

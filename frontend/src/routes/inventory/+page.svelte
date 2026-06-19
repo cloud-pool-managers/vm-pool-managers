@@ -55,6 +55,9 @@
 
   // Actions de cycle de vie d'une VM (Phase 0 : /api/vm/action).
   let actingId = $state<string | null>(null);
+  // Boutons d'action VM harmonisés : carrés de taille fixe, couleurs cohérentes.
+  const ABTN = 'inline-flex items-center justify-center w-9 h-9 rounded-lg border text-base transition-colors disabled:opacity-40 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-primary-300 hover:text-primary-700';
+  const ABTN_DANGER = 'inline-flex items-center justify-center w-9 h-9 rounded-lg border text-base transition-colors disabled:opacity-40 border-neutral-200 dark:border-neutral-700 text-red-500 hover:border-red-300 hover:text-red-600';
   // Message d'action séparé de `error` (qui, lui, masque tout l'inventaire).
   let vmMsg = $state<{ type: 'ok' | 'err'; text: string } | null>(null);
   let vmMsgTimer: ReturnType<typeof setTimeout> | null = null;
@@ -254,18 +257,18 @@
 {#snippet actionButtons(vm: VMInstance)}
   {#if vm.id}
     {#if vm.power_state === 'SHUTOFF'}
-      <button onclick={() => requestVmAction(vm,'start')} disabled={actingId===vm.id} title={$_('inventory.actionStart')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionStart')}>▶</button>
+      <button onclick={() => requestVmAction(vm,'start')} disabled={actingId===vm.id} title={$_('inventory.actionStart')} class={ABTN} aria-label={$_('inventory.actionStart')}>▶</button>
     {:else if vm.power_state === 'SUSPENDED' || vm.power_state === 'PAUSED'}
-      <button onclick={() => requestVmAction(vm,'resume')} disabled={actingId===vm.id} title={$_('inventory.actionResume')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionResume')}>▶</button>
+      <button onclick={() => requestVmAction(vm,'resume')} disabled={actingId===vm.id} title={$_('inventory.actionResume')} class={ABTN} aria-label={$_('inventory.actionResume')}>▶</button>
     {:else if vm.power_state === 'ACTIVE'}
-      <button onclick={() => requestVmAction(vm,'stop')} disabled={actingId===vm.id} title={$_('inventory.actionStop')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionStop')}>⏹</button>
-      <button onclick={() => requestVmAction(vm,'reboot')} disabled={actingId===vm.id} title={$_('inventory.actionReboot')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionReboot')}>↻</button>
+      <button onclick={() => requestVmAction(vm,'stop')} disabled={actingId===vm.id} title={$_('inventory.actionStop')} class={ABTN} aria-label={$_('inventory.actionStop')}>⏹</button>
+      <button onclick={() => requestVmAction(vm,'reboot')} disabled={actingId===vm.id} title={$_('inventory.actionReboot')} class={ABTN} aria-label={$_('inventory.actionReboot')}>↻</button>
     {:else}
-      <button onclick={() => requestVmAction(vm,'start')} disabled={actingId===vm.id} title={$_('inventory.actionStart')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionStart')}>▶</button>
-      <button onclick={() => requestVmAction(vm,'stop')} disabled={actingId===vm.id} title={$_('inventory.actionStop')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.actionStop')}>⏹</button>
+      <button onclick={() => requestVmAction(vm,'start')} disabled={actingId===vm.id} title={$_('inventory.actionStart')} class={ABTN} aria-label={$_('inventory.actionStart')}>▶</button>
+      <button onclick={() => requestVmAction(vm,'stop')} disabled={actingId===vm.id} title={$_('inventory.actionStop')} class={ABTN} aria-label={$_('inventory.actionStop')}>⏹</button>
     {/if}
-    <button onclick={() => requestVmResize(vm)} disabled={actingId===vm.id} title={$_('inventory.resizeTitle')} class="btn btn-secondary text-xs px-2 py-1" aria-label={$_('inventory.resize')}>⤢</button>
-    <button onclick={() => requestVmRebuild(vm)} disabled={actingId===vm.id} title={$_('inventory.resetTitle')} class="btn btn-secondary text-xs px-2 py-1 !text-red-600" aria-label={$_('inventory.actionReset')}>⟲</button>
+    <button onclick={() => requestVmResize(vm)} disabled={actingId===vm.id} title={$_('inventory.resizeTitle')} class={ABTN} aria-label={$_('inventory.resize')}>⤢</button>
+    <button onclick={() => requestVmRebuild(vm)} disabled={actingId===vm.id} title={$_('inventory.resetTitle')} class={ABTN_DANGER} aria-label={$_('inventory.actionReset')}>⟲</button>
   {/if}
 {/snippet}
 
@@ -413,10 +416,10 @@
                     <span class="text-xs text-amber-600">{$_('inventory.startingUp')}</span>
                   {/if}
                   {#if vm.guac_url}
-                    <a href={vm.guac_url} target="_blank" rel="noopener" class="btn btn-secondary text-xs px-2 py-1">{$_('inventory.terminal')}</a>
+                    <a href={vm.guac_url} target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-neutral-200 dark:border-neutral-700 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:border-primary-300 hover:text-primary-700 transition-colors">⊳ {$_('inventory.terminal')}</a>
                   {/if}
                   {#if vm.grafana_url}
-                    <a href={vm.grafana_url} target="_blank" rel="noopener" title={$_('inventory.graphs')} class="btn btn-secondary text-xs px-2 py-1">{$_('inventory.graphs')}</a>
+                    <a href={vm.grafana_url} target="_blank" rel="noopener" title={$_('inventory.graphs')} class="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-neutral-200 dark:border-neutral-700 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:border-primary-300 hover:text-primary-700 transition-colors">{$_('inventory.graphs')}</a>
                   {/if}
                   {@render actionButtons(vm)}
                 </div>
