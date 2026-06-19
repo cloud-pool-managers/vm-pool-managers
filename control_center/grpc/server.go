@@ -201,6 +201,7 @@ func Start_grpc(ctx context.Context) {
 	mux.HandleFunc("/api/pool/meta", handlePoolMeta)
 	mux.HandleFunc("/api/pool/broadcast-file", handlePoolBroadcastFile)
 	mux.HandleFunc("/api/pool/progress", handlePoolProgress)
+	mux.HandleFunc("/api/pool/presets", handlePoolPresets)
 	mux.HandleFunc("/api/usage", handleUsage)
 	mux.HandleFunc("/api/pricing", handlePricing)
 	mux.HandleFunc("/api/storage", handleStorage)

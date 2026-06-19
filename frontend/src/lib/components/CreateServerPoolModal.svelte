@@ -52,9 +52,54 @@
 
   // Estimateur de coût (F2) : tarifs récupérés du backend.
   let pricing = $state<{ currency: string; vcpu_hour: number; gb_hour: number } | null>(null);
+
+  // Presets de pool : config de création sauvegardée, réapplicable.
+  interface Preset { id: number; name: string; image: string; flavor: string; network: string; config: string; app_port: number; off_days: string; compute_mode: boolean; }
+  let presets = $state<Preset[]>([]);
+  let selectedPresetId = $state('');
+
+  async function loadPresets() {
+    try { const r = await apiFetch('/api/pool/presets'); if (r.ok) presets = (await r.json()).presets ?? []; } catch { /* ignore */ }
+  }
   onMount(async () => {
     try { const r = await apiFetch('/api/pricing'); if (r.ok) pricing = await r.json(); } catch { /* ignore */ }
+    loadPresets();
   });
+
+  const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const;
+
+  function applyPreset(idStr: string) {
+    const p = presets.find((x) => String(x.id) === idStr);
+    if (!p) return;
+    selectedImage = p.image || null;
+    selectedFlavor = p.flavor || '';
+    selectedNetwork = p.network || '';
+    selectedConfigFile = p.config || '';
+    appPort = p.app_port || 0;
+    computeMode = !!p.compute_mode;
+    const set = new Set((p.off_days || '').split(',').map((d) => d.trim()));
+    for (const d of DAYS) offDays[d] = set.has(d);
+    // Tente de positionner le groupe d'image pour l'aperçu groupé.
+    const img = images.find((i) => i.id === p.image);
+    if (img) { const m = img.name.match(/^[A-Za-z]+/); selectedGroupImage = m ? m[0] : null; }
+  }
+
+  async function saveAsPreset() {
+    const name = typeof window !== 'undefined' ? window.prompt($_('poolModal.presetPrompt')) : null;
+    if (!name || !name.trim()) return;
+    const offCsv = DAYS.filter((d) => offDays[d]).join(',');
+    try {
+      const r = await apiFetch('/api/pool/presets', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(), image: selectedImage ?? '', flavor: selectedFlavor,
+          network: selectedNetwork, config: selectedConfigFile, app_port: appPort,
+          off_days: offCsv, compute_mode: computeMode,
+        }),
+      });
+      if (r.ok) await loadPresets();
+    } catch { /* ignore */ }
+  }
   const flavorEstimate = $derived(() => {
     if (!pricing || !selectedFlavor) return null;
     const f = flavors.find((x) => x.id === selectedFlavor);
@@ -214,6 +259,18 @@
       {/if}
 
       <form class="space-y-6" onsubmit={handleCreateServerpool}>
+
+        <!-- Presets : appliquer une config sauvegardée / enregistrer la config actuelle -->
+        <div class="flex flex-wrap items-center gap-2 px-1">
+          <span class="section-label">{ $_('poolModal.presets') }</span>
+          <select bind:value={selectedPresetId} onchange={() => applyPreset(selectedPresetId)} class="field text-sm w-auto py-1.5">
+            <option value="">{ $_('poolModal.presetApply') }</option>
+            {#each presets as p}
+              <option value={String(p.id)}>{p.name}</option>
+            {/each}
+          </select>
+          <button type="button" onclick={saveAsPreset} class="btn btn-secondary text-xs">💾 { $_('poolModal.presetSave') }</button>
+        </div>
 
         <!-- Section 1 + 2 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
