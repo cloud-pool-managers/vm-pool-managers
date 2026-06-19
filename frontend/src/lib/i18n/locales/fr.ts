@@ -601,5 +601,6 @@ export default {
     "loading": "Chargement…",
     "empty": "Aucune consommation enregistrée pour ce mois.",
     "disclaimer": "Estimation indicative basée sur les tarifs configurés et l'échantillonnage d'activité.",
+    "accruing": "La consommation se cumule à partir de maintenant (échantillonnage chaque minute des VMs allumées). Reviens dans quelques minutes pour voir des chiffres.",
   },
 };

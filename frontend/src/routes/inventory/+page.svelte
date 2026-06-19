@@ -189,29 +189,6 @@
     }
   }
 
-  // Annonce étudiants (broadcast).
-  let annMessage = $state('');
-  let annActive = $state(false);
-  let annSaving = $state(false);
-  let annOpen = $state(false);
-  async function loadAnnouncement() {
-    try {
-      const r = await apiFetch('/api/announcement');
-      if (r.ok) { const d = await r.json(); annMessage = d.message || ''; annActive = !!d.active; }
-    } catch { /* ignore */ }
-  }
-  async function saveAnnouncement() {
-    annSaving = true;
-    try {
-      const r = await apiFetch('/api/admin/announcement', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: annMessage, active: annActive }),
-      });
-      if (r.ok) { const d = await r.json(); annActive = !!d.active; showVmMsg('ok', $_('inventory.annSaved')); }
-      else showVmMsg('err', $_('inventory.annSaveFailed'));
-    } catch { showVmMsg('err', $_('inventory.saveFailed')); }
-    finally { annSaving = false; }
-  }
 
   // Édition du libellé / des étiquettes d'un pool.
   let editingPool = $state<string | null>(null);
@@ -237,7 +214,6 @@
     if (!browser) return;
     if (!$authStore || $authStore.role !== 'admin') { window.location.href = '/'; return; }
     fetchInventory();
-    loadAnnouncement();
   });
 
   // Auto-refresh : intervalle configurable (Paramètres). Se recrée si l'intervalle change.
@@ -333,26 +309,6 @@
     <button onclick={() => (vmMsg = null)} class="opacity-80 hover:opacity-100 shrink-0" aria-label={$_('inventory.close')}>✕</button>
   </div>
 {/if}
-
-<div class="max-w-7xl mx-auto mb-4">
-  <div class="card px-5 py-4">
-    <button onclick={() => (annOpen = !annOpen)} class="flex items-center justify-between w-full text-left">
-      <span class="text-sm font-semibold text-neutral-800">📣 {$_('inventory.announcementTitle')} {#if annActive}<span class="badge badge-ready ml-2">{$_('inventory.active')}</span>{/if}</span>
-      <span class="text-neutral-400 text-xs">{annOpen ? $_('inventory.collapse') : $_('inventory.manage')}</span>
-    </button>
-    {#if annOpen}
-      <div class="mt-3 space-y-3">
-        <textarea class="field text-sm" rows="2" placeholder={$_('inventory.announcementPlaceholder')} bind:value={annMessage}></textarea>
-        <div class="flex items-center justify-between">
-          <label class="flex items-center gap-2 text-sm text-neutral-600">
-            <input type="checkbox" bind:checked={annActive} class="w-4 h-4 accent-primary-700" /> {$_('inventory.showAnnouncement')}
-          </label>
-          <button onclick={saveAnnouncement} disabled={annSaving} class="btn btn-primary text-sm">{$_('inventory.save')}</button>
-        </div>
-      </div>
-    {/if}
-  </div>
-</div>
 
 {#if $simpleMode}
 <div class="space-y-6 animate-fade-up">

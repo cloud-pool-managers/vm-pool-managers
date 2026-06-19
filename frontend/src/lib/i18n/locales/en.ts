@@ -601,5 +601,6 @@ export default {
     "loading": "Loading…",
     "empty": "No usage recorded for this month.",
     "disclaimer": "Indicative estimate based on configured rates and activity sampling.",
+    "accruing": "Usage accrues from now on (every-minute sampling of running VMs). Come back in a few minutes to see figures.",
   },
 };

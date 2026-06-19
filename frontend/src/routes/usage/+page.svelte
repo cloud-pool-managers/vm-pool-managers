@@ -59,6 +59,12 @@
     <div class="card p-5"><p class="section-label">{$_('usage.gbHours')}</p><p class="text-2xl font-bold tabular-nums mt-1">{fmt(totals.gb_hours)}</p></div>
   </div>
 
+  {#if !loading && totals.cost === 0}
+    <div class="px-4 py-3 rounded-xl border border-sky-200 bg-sky-50 text-sky-900 text-sm dark:bg-sky-900/20 dark:border-sky-700 dark:text-sky-200">
+      {$_('usage.accruing')}
+    </div>
+  {/if}
+
   <!-- Détail -->
   <div class="card overflow-hidden">
     {#if loading}

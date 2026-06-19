@@ -17,6 +17,7 @@
   import { simpleMode, darkMode, reduceMotion, language } from '$lib/store/uiStore';
   import { meStore, loadMe, resetMe } from '$lib/store/meStore';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
+  import AnnouncementButton from '$lib/components/AnnouncementButton.svelte';
   import CommandPalette from '$lib/components/CommandPalette.svelte';
   import '$lib/i18n';
   import { locale, _ } from 'svelte-i18n';
@@ -252,6 +253,7 @@
           <span class="font-mono">⌘K</span>
         </button>
         {#if ($meStore?.is_admin ?? ($authStore?.role === 'admin'))}
+          <AnnouncementButton />
           <NotificationBell />
         {/if}
         <!-- Paramètres : lien direct vers la page dédiée (admin: Paramètres ; étudiant: Mon compte) -->
