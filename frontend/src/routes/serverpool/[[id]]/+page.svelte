@@ -44,6 +44,8 @@ let selectedGroupImage: string | null = $state(null);
 let selectedImage: string | null = $state(null);
 let appPort = $state(0);
 let computeMode = $state(false);
+let minVm = $state(1);
+let maxVm = $state(5);
 
 // Progression des étudiants d'un pool (A1).
 interface ProgressRow { name: string; email?: string; has_vm: boolean; ip?: string; power_state?: string; activity?: string; healthy: boolean; last_active?: string; }
@@ -566,7 +568,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
     images={$images} flavors={sortedFlavors} networks={$networks} configs={$configs}
     bind:selectedGroupImage bind:selectedImage bind:selectedFlavor bind:selectedNetwork
     bind:selectedConfigFile bind:scheduleDay bind:scheduleTime bind:scheduleWindowHours bind:offDays
-    bind:appPort bind:computeMode {createError} {createSuccess}
+    bind:appPort bind:computeMode bind:minVm bind:maxVm {createError} {createSuccess}
     {handleCreateServerpool} {getUniqueFirstAlphaBlocks} {filterImagesByPrefix}
   />
 {/if}

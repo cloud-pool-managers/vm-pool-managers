@@ -38,6 +38,8 @@ func handlePoolPresets(w http.ResponseWriter, r *http.Request) {
 			Flavor:      p.Flavor,
 			Network:     p.Network,
 			Config:      p.Config,
+			MinVM:       p.MinVM,
+			MaxVM:       p.MaxVM,
 			AppPort:     p.AppPort,
 			OffDays:     p.OffDays,
 			ComputeMode: p.ComputeMode,

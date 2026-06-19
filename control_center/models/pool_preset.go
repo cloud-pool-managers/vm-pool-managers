@@ -13,6 +13,8 @@ type PoolPreset struct {
 	Flavor      string    `json:"flavor"`
 	Network     string    `json:"network"`
 	Config      string    `json:"config"`
+	MinVM       int       `json:"min_vm"`
+	MaxVM       int       `json:"max_vm"`
 	AppPort     int       `json:"app_port"`
 	OffDays     string    `json:"off_days"`
 	ComputeMode bool      `json:"compute_mode"`

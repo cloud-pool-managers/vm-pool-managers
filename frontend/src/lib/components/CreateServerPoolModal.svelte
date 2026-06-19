@@ -21,6 +21,8 @@
     offDays = $bindable(),
     appPort = $bindable(),
     computeMode = $bindable(),
+    minVm = $bindable(),
+    maxVm = $bindable(),
     createError,
     createSuccess,
     handleCreateServerpool,
@@ -43,6 +45,8 @@
     offDays: { monday:boolean; tuesday:boolean; wednesday:boolean; thursday:boolean; friday:boolean; saturday:boolean; sunday:boolean; };
     appPort: number;
     computeMode: boolean;
+    minVm: number;
+    maxVm: number;
     createError: string;
     createSuccess: boolean;
     handleCreateServerpool: (e: Event) => void;
@@ -54,7 +58,7 @@
   let pricing = $state<{ currency: string; vcpu_hour: number; gb_hour: number } | null>(null);
 
   // Presets de pool : config de création sauvegardée, réapplicable.
-  interface Preset { id: number; name: string; image: string; flavor: string; network: string; config: string; app_port: number; off_days: string; compute_mode: boolean; }
+  interface Preset { id: number; name: string; image: string; flavor: string; network: string; config: string; min_vm: number; max_vm: number; app_port: number; off_days: string; compute_mode: boolean; }
   let presets = $state<Preset[]>([]);
   let selectedPresetId = $state('');
 
@@ -71,17 +75,30 @@
   function applyPreset(idStr: string) {
     const p = presets.find((x) => String(x.id) === idStr);
     if (!p) return;
-    selectedImage = p.image || null;
+    // Image : positionner d'abord le bon GROUPE (sinon le sous-sélecteur ne s'affiche
+    // pas), puis l'image. Les snapshots jupyter ont un groupe dédié.
+    const img = images.find((i) => i.id === p.image);
+    if (img) {
+      if (img.name.startsWith('jupyter-snapshot-') || img.name.toLowerCase().startsWith('jupyterhub')) {
+        selectedGroupImage = JUPYTER_GROUP;
+      } else {
+        const m = img.name.match(/^[A-Za-z]+/);
+        selectedGroupImage = m ? m[0] : null;
+      }
+      selectedImage = p.image;
+    } else {
+      selectedGroupImage = null;
+      selectedImage = p.image || null;
+    }
     selectedFlavor = p.flavor || '';
     selectedNetwork = p.network || '';
     selectedConfigFile = p.config || '';
     appPort = p.app_port || 0;
     computeMode = !!p.compute_mode;
+    if (p.min_vm > 0) minVm = p.min_vm;
+    if (p.max_vm > 0) maxVm = p.max_vm;
     const set = new Set((p.off_days || '').split(',').map((d) => d.trim()));
     for (const d of DAYS) offDays[d] = set.has(d);
-    // Tente de positionner le groupe d'image pour l'aperçu groupé.
-    const img = images.find((i) => i.id === p.image);
-    if (img) { const m = img.name.match(/^[A-Za-z]+/); selectedGroupImage = m ? m[0] : null; }
   }
 
   async function saveAsPreset() {
@@ -93,7 +110,8 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(), image: selectedImage ?? '', flavor: selectedFlavor,
-          network: selectedNetwork, config: selectedConfigFile, app_port: appPort,
+          network: selectedNetwork, config: selectedConfigFile,
+          min_vm: minVm, max_vm: maxVm, app_port: appPort,
           off_days: offCsv, compute_mode: computeMode,
         }),
       });
@@ -287,11 +305,11 @@
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1.5">
                 <label class="section-label">{ $_('poolModal.minVms') }</label>
-                <input class="field" type="number" name="min_vm" min="1" value="1" required />
+                <input class="field" type="number" name="min_vm" min="1" bind:value={minVm} required />
               </div>
               <div class="space-y-1.5">
                 <label class="section-label">{ $_('poolModal.maxVms') }</label>
-                <input class="field" type="number" name="max_vm" min="1" value="5" required />
+                <input class="field" type="number" name="max_vm" min="1" bind:value={maxVm} required />
               </div>
             </div>
 
