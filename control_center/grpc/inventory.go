@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ type InventoryVM struct {
 	models.VMInstance
 	PowerState   string `json:"power_state,omitempty"` // état Nova live : ACTIVE | SHUTOFF | SUSPENDED…
 	GuacURL      string `json:"guac_url,omitempty"`
+	GrafanaURL   string `json:"grafana_url,omitempty"`   // dashboard Grafana de la VM (si configuré)
 	Student      string `json:"student,omitempty"`       // étudiant attribué (par IP), si VM étudiante
 	IsInstructor bool   `json:"is_instructor,omitempty"` // VM de l'enseignant (la plus ancienne du pool)
 }
@@ -210,6 +212,15 @@ func toInventoryVM(vm models.VMInstance) InventoryVM {
 	ivm := InventoryVM{VMInstance: vm}
 	if guacClient != nil && vm.GuacConnectionID != "" {
 		ivm.GuacURL = guacClient.BuildClientURL(vm.GuacConnectionID)
+	}
+	if tpl := strings.TrimSpace(os.Getenv("GRAFANA_VM_DASHBOARD")); tpl != "" {
+		ip := vm.IP
+		if ip == "" {
+			ip = vm.PublicIP
+		}
+		if ip != "" {
+			ivm.GrafanaURL = strings.ReplaceAll(tpl, "{ip}", ip)
+		}
 	}
 	return ivm
 }

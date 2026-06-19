@@ -72,6 +72,7 @@ func Start_DB(ctx context.Context) {
 		&models.MoodleSession{},
 		&models.AuditLog{},
 		&models.Announcement{},
+		&models.VMUsage{},
 	)
 
 	syncSequences(Database)

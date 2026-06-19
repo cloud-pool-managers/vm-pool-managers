@@ -28,6 +28,7 @@ func Start_Monitoring(
 
 	go StartSSHActivityChecker(ctx)
 	go StartAutoSuspend(ctx, clientMicroservice)
+	go StartUsageAccounting(ctx)
 	if guacClient != nil {
 		go guacamoleSyncLoop(ctx, guacClient)
 	}

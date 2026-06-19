@@ -78,6 +78,8 @@ var adminHTTPPrefixes = []string{
 	"/api/pool/",   // métadonnées des pools (libellé, étiquettes)
 	"/api/github/students",
 	"/api/image-proposals",
+	"/api/usage",   // consommation & coûts (équipe pédagogique)
+	"/api/pricing", // tarifs unitaires (estimateur)
 }
 
 func isAdminPath(p string) bool {

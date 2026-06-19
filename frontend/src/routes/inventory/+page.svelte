@@ -13,6 +13,7 @@
     registered_at: string; last_seen: string; raw_meta: Record<string, string>;
     power_state?: string;    // état Nova live : ACTIVE | SHUTOFF | SUSPENDED…
     guac_url?: string;
+    grafana_url?: string;
     student?: string;        // étudiant attribué (par IP)
     is_instructor?: boolean; // VM de l'enseignant
   }
@@ -455,6 +456,9 @@
                   {#if vm.guac_url}
                     <a href={vm.guac_url} target="_blank" rel="noopener" class="btn btn-secondary text-xs px-2 py-1">{$_('inventory.terminal')}</a>
                   {/if}
+                  {#if vm.grafana_url}
+                    <a href={vm.grafana_url} target="_blank" rel="noopener" title={$_('inventory.graphs')} class="btn btn-secondary text-xs px-2 py-1">{$_('inventory.graphs')}</a>
+                  {/if}
                   {@render actionButtons(vm)}
                 </div>
               </div>
@@ -651,6 +655,9 @@
                       </a>
                     {:else}
                       <span class="text-xs text-neutral-400">—</span>
+                    {/if}
+                    {#if vm.grafana_url}
+                      <a href={vm.grafana_url} target="_blank" rel="noopener" class="btn btn-secondary text-xs px-2 py-1 mt-1 w-fit">{$_('inventory.graphs')}</a>
                     {/if}
                     <div class="flex gap-1 mt-1">{@render actionButtons(vm)}</div>
                   </td>

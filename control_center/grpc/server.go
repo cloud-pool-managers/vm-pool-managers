@@ -201,6 +201,8 @@ func Start_grpc(ctx context.Context) {
 	mux.HandleFunc("/api/pool/meta", handlePoolMeta)
 	mux.HandleFunc("/api/pool/broadcast-file", handlePoolBroadcastFile)
 	mux.HandleFunc("/api/pool/progress", handlePoolProgress)
+	mux.HandleFunc("/api/usage", handleUsage)
+	mux.HandleFunc("/api/pricing", handlePricing)
 	mux.HandleFunc("/api/image-proposals", handleImageProposals)
 	mux.HandleFunc("/api/jupyter-proxy/", handleJupyterProxy)
 	mux.HandleFunc("/vm-registrar", func(w http.ResponseWriter, r *http.Request) {

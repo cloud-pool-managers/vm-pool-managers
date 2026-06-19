@@ -1,5 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import { onMount } from 'svelte';
+  import { apiFetch } from '$lib/api';
   import type { Image, Flavor, Network, Config } from '$lib/type';
 
   let {
@@ -45,6 +47,19 @@
     getUniqueFirstAlphaBlocks: (images: Image[]) => string[];
     filterImagesByPrefix: (images: Image[], prefix: string) => Image[];
   } = $props();
+
+  // Estimateur de coût (F2) : tarifs récupérés du backend.
+  let pricing = $state<{ currency: string; vcpu_hour: number; gb_hour: number } | null>(null);
+  onMount(async () => {
+    try { const r = await apiFetch('/api/pricing'); if (r.ok) pricing = await r.json(); } catch { /* ignore */ }
+  });
+  const flavorEstimate = $derived(() => {
+    if (!pricing || !selectedFlavor) return null;
+    const f = flavors.find((x) => x.id === selectedFlavor);
+    if (!f) return null;
+    const perHour = f.vcpus * pricing.vcpu_hour + (f.ram / 1024) * pricing.gb_hour;
+    return { perHour, perDay: perHour * 24, currency: pricing.currency };
+  });
 
   // Maps snapshot suffix → human label
   const jupyterSnapshotLabels: Record<string, string> = {
@@ -296,6 +311,15 @@
               {/if}
             {/if}
           </h4>
+
+          {#if flavorEstimate()}
+            {@const e = flavorEstimate()!}
+            <p class="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+              💶 {$_('poolModal.estimate')}
+              <b class="text-primary-700 dark:text-primary-300">{e.perHour.toFixed(3)} {e.currency}/h</b>
+              · {e.perDay.toFixed(2)} {e.currency}/{$_('poolModal.perDayUnit')} · {$_('poolModal.perVM')}
+            </p>
+          {/if}
 
           {#if !selectedImage}
             <select class="field" bind:value={selectedFlavor} required>
