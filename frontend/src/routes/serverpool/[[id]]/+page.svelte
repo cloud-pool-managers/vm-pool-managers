@@ -44,6 +44,46 @@ let selectedGroupImage: string | null = $state(null);
 let selectedImage: string | null = $state(null);
 let appPort = $state(0);
 
+// Progression des étudiants d'un pool (A1).
+interface ProgressRow { name: string; email?: string; has_vm: boolean; ip?: string; power_state?: string; activity?: string; healthy: boolean; last_active?: string; }
+let progressOpen = $state(false);
+let progressLoading = $state(false);
+let progressRows = $state<ProgressRow[]>([]);
+let progressStats = $state<{ enrolled: number; launched: number; active: number }>({ enrolled: 0, launched: 0, active: 0 });
+
+async function loadProgress(sp: ServerPool) {
+  progressLoading = true;
+  try {
+    const res = await apiFetch(`/api/pool/progress?pool_id=${encodeURIComponent(sp.name)}&user_id=${encodeURIComponent(sp.userId)}`);
+    if (res.ok) {
+      const d = await res.json();
+      progressRows = d.rows ?? [];
+      progressStats = { enrolled: d.enrolled ?? 0, launched: d.launched ?? 0, active: d.active ?? 0 };
+    }
+  } catch { /* ignore */ }
+  finally { progressLoading = false; }
+}
+function toggleProgress(sp: ServerPool) {
+  progressOpen = !progressOpen;
+  if (progressOpen) loadProgress(sp);
+}
+function progressActivityLabel(row: ProgressRow): string {
+  if (!row.has_vm) return $_('progress.notLaunched');
+  if (row.activity === 'active') return $_('progress.onNotebook');
+  if (row.activity === 'connected') return $_('progress.connected');
+  if (row.power_state === 'SUSPENDED' || row.power_state === 'PAUSED') return $_('progress.suspended');
+  if (row.power_state === 'SHUTOFF') return $_('progress.off');
+  return $_('progress.idle');
+}
+function progressRelative(iso?: string): string {
+  if (!iso) return '—';
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (d < 60) return `${d}s`;
+  if (d < 3600) return `${Math.floor(d / 60)}min`;
+  if (d < 86400) return `${Math.floor(d / 3600)}h`;
+  return `${Math.floor(d / 86400)}j`;
+}
+
 // Diffusion d'un fichier à toutes les VMs d'un pool (A2).
 let broadcastFile: File | null = $state(null);
 let broadcastSubdir = $state('');
@@ -437,6 +477,66 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
             </div>
             {#if broadcastMsg}
               <p class="text-xs mt-2 {broadcastErr ? 'text-red-600' : 'text-green-600'}">{broadcastMsg}</p>
+            {/if}
+          </div>
+
+          <hr class="divider"/>
+
+          <!-- Progression des étudiants en direct (A1) -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <p class="section-label">{$_('progress.title')}</p>
+              </div>
+              <button onclick={() => toggleProgress(selectedPool)} class="btn btn-secondary text-xs">
+                {progressOpen ? $_('progress.hide') : $_('progress.show')}
+              </button>
+            </div>
+
+            {#if progressOpen}
+              <div class="flex flex-wrap gap-4 mb-3 text-sm">
+                <span class="text-neutral-500">{$_('progress.enrolled')} : <b class="text-neutral-800 dark:text-neutral-200">{progressStats.enrolled}</b></span>
+                <span class="text-neutral-500">{$_('progress.launched')} : <b class="text-primary-700">{progressStats.launched}</b></span>
+                <span class="text-neutral-500">{$_('progress.activeNow')} : <b class="text-green-600">{progressStats.active}</b></span>
+                <button onclick={() => loadProgress(selectedPool)} disabled={progressLoading} class="text-xs text-primary-600 hover:underline">{$_('progress.refresh')}</button>
+              </div>
+              {#if progressLoading && progressRows.length === 0}
+                <p class="text-sm text-neutral-400 py-3">{$_('progress.loading')}</p>
+              {:else if progressRows.length === 0}
+                <p class="text-sm text-neutral-400 py-3">{$_('progress.empty')}</p>
+              {:else}
+                <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
+                  <table class="w-full text-sm">
+                    <thead class="bg-neutral-50 dark:bg-neutral-800/50 text-left text-xs text-neutral-500">
+                      <tr>
+                        <th class="px-3 py-2 font-semibold">{$_('progress.colStudent')}</th>
+                        <th class="px-3 py-2 font-semibold">{$_('progress.colState')}</th>
+                        <th class="px-3 py-2 font-semibold text-right">{$_('progress.colLastActivity')}</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {#each progressRows as row}
+                        <tr>
+                          <td class="px-3 py-2">
+                            <span class="font-medium text-neutral-800 dark:text-neutral-200">{row.name}</span>
+                            {#if row.email}<span class="text-xs text-neutral-400 ml-1">{row.email}</span>{/if}
+                          </td>
+                          <td class="px-3 py-2">
+                            <span class="inline-flex items-center gap-1.5">
+                              <span class="w-2 h-2 rounded-full {row.activity === 'active' ? 'bg-green-500' : row.activity === 'connected' ? 'bg-sky-500' : row.has_vm ? 'bg-neutral-300' : 'bg-neutral-200'}"></span>
+                              {progressActivityLabel(row)}
+                            </span>
+                          </td>
+                          <td class="px-3 py-2 text-right text-xs text-neutral-400">{row.has_vm ? progressRelative(row.last_active) : '—'}</td>
+                        </tr>
+                      {/each}
+                    </tbody>
+                  </table>
+                </div>
+              {/if}
             {/if}
           </div>
         </div>
