@@ -369,6 +369,8 @@ export default {
   },
   serverpool: {
     "broadcastTitle": "Push a file to all VMs",
+    "broadcastChoose": "Choose a file",
+    "broadcastNoFile": "no file selected",
     "broadcastHint": "The file (assignment, dataset…) is dropped into each pool VM's home directory.",
     "broadcastSubdir": "subfolder (optional)",
     "broadcastSend": "Send to all VMs",

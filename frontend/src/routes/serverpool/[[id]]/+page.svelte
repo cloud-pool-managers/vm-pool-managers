@@ -497,16 +497,26 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
               <p class="section-label">{$_('serverpool.broadcastTitle')}</p>
             </div>
             <p class="text-xs text-neutral-400 mb-3">{$_('serverpool.broadcastHint')}</p>
-            <div class="flex flex-wrap items-center gap-2">
-              <input type="file" onchange={(e) => broadcastFile = (e.currentTarget.files?.[0] ?? null)}
-                class="text-sm file:btn file:btn-secondary file:text-xs file:mr-3" />
-              <input type="text" bind:value={broadcastSubdir} placeholder={$_('serverpool.broadcastSubdir')}
-                class="field text-sm w-44 py-1.5" />
-              <button onclick={() => handleBroadcastFile(selectedPool)}
-                disabled={!broadcastFile || broadcastBusy} class="btn btn-primary text-sm">
-                {#if broadcastBusy}<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full inline-block" style="animation: spinnerGlow 0.6s linear infinite;"></span>{/if}
-                {$_('serverpool.broadcastSend')}
-              </button>
+            <div class="space-y-2.5">
+              <div class="flex flex-wrap items-center gap-3">
+                <label class="btn btn-secondary text-sm cursor-pointer inline-flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                  {$_('serverpool.broadcastChoose')}
+                  <input type="file" class="hidden" onchange={(e) => { broadcastFile = (e.currentTarget.files?.[0] ?? null); broadcastMsg = ''; }} />
+                </label>
+                <span class="text-sm truncate max-w-[18rem] {broadcastFile ? 'text-neutral-700 dark:text-neutral-200 font-medium' : 'text-neutral-400'}">
+                  {broadcastFile?.name ?? $_('serverpool.broadcastNoFile')}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <input type="text" bind:value={broadcastSubdir} placeholder={$_('serverpool.broadcastSubdir')}
+                  class="field text-sm w-48 py-1.5" />
+                <button onclick={() => handleBroadcastFile(selectedPool)}
+                  disabled={!broadcastFile || broadcastBusy} class="btn btn-primary text-sm inline-flex items-center gap-2">
+                  {#if broadcastBusy}<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full inline-block" style="animation: spinnerGlow 0.6s linear infinite;"></span>{/if}
+                  {$_('serverpool.broadcastSend')}
+                </button>
+              </div>
             </div>
             {#if broadcastMsg}
               <p class="text-xs mt-2 {broadcastErr ? 'text-red-600' : 'text-green-600'}">{broadcastMsg}</p>
@@ -534,7 +544,7 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
                 <span class="text-neutral-500">{$_('progress.enrolled')} : <b class="text-neutral-800 dark:text-neutral-200">{progressStats.enrolled}</b></span>
                 <span class="text-neutral-500">{$_('progress.launched')} : <b class="text-primary-700">{progressStats.launched}</b></span>
                 <span class="text-neutral-500">{$_('progress.activeNow')} : <b class="text-green-600">{progressStats.active}</b></span>
-                <button onclick={() => loadProgress(selectedPool)} disabled={progressLoading} class="text-xs text-primary-600 hover:underline">{$_('progress.refresh')}</button>
+                <button onclick={() => loadProgress(selectedPool)} disabled={progressLoading} class="btn btn-secondary text-xs">{$_('progress.refresh')}</button>
               </div>
               {#if progressLoading && progressRows.length === 0}
                 <p class="text-sm text-neutral-400 py-3">{$_('progress.loading')}</p>
