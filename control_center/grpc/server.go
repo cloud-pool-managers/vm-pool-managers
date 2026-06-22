@@ -186,8 +186,6 @@ func Start_grpc(ctx context.Context) {
 	mux.HandleFunc("/api/pool/broadcast-file", handlePoolBroadcastFile)
 	mux.HandleFunc("/api/pool/progress", handlePoolProgress)
 	mux.HandleFunc("/api/pool/presets", handlePoolPresets)
-	mux.HandleFunc("/api/usage", handleUsage)
-	mux.HandleFunc("/api/storage", handleStorage)
 	mux.HandleFunc("/api/admin/console", handleAdminConsole)
 	mux.HandleFunc("/api/admin/kill-switch", handleAdminKillSwitch)
 	mux.HandleFunc("/api/admin/cleanup-orphans", handleAdminCleanupOrphans)

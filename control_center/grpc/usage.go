@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strconv"
@@ -9,6 +10,8 @@ import (
 
 	"control_center/config"
 	"control_center/models"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
 // Tarification (configurable par .env, valeurs par défaut indicatives).
@@ -39,34 +42,41 @@ func vmCost(seconds int64, vcpus, ramMB int) (vmHours, vcpuHours, gbHours, cost 
 
 // GET /api/pricing est servi par HUMA (registerHumaRoutes dans huma.go).
 
-// GET /api/usage?month=YYYY-MM&by=user|pool — consommation et coût du mois (F1/F4).
-// Staff uniquement ; un non-admin ne voit que ses propres pools.
-func handleUsage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeJSONMoodle(w, http.StatusMethodNotAllowed, map[string]string{"error": "GET requis"})
-		return
-	}
-	month := r.URL.Query().Get("month")
-	if month == "" {
-		month = time.Now().UTC().Format("2006-01")
-	}
-	by := r.URL.Query().Get("by")
-	if by != "pool" {
-		by = "user"
-	}
+// registerUsageHuma enregistre GET /api/usage (consommation & coûts, F1/F4).
+func registerUsageHuma(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "get-usage", Method: http.MethodGet, Path: "/api/usage",
+		Summary: "Consommation et coût du mois", Tags: []string{"usage"},
+	}, func(ctx context.Context, in *struct {
+		Month string `query:"month"`
+		By    string `query:"by"`
+	}) (*AnyOutput, error) {
+		month := in.Month
+		if month == "" {
+			month = time.Now().UTC().Format("2006-01")
+		}
+		by := in.By
+		if by != "pool" {
+			by = "user"
+		}
 
-	q := config.Database.Where("year_month = ?", month)
-	id, _ := identityFrom(r.Context())
-	if id.Role != RoleAdmin {
-		q = q.Where("user_id = ?", id.Email) // un prof ne voit que ses pools
-	}
+		q := config.Database.Where("year_month = ?", month)
+		id, _ := identityFrom(ctx)
+		if id.Role != RoleAdmin {
+			q = q.Where("user_id = ?", id.Email) // un prof ne voit que ses pools
+		}
 
-	var rows []models.VMUsage
-	if err := q.Find(&rows).Error; err != nil {
-		writeJSONMoodle(w, http.StatusInternalServerError, map[string]string{"error": "lecture de la consommation échouée"})
-		return
-	}
+		var rows []models.VMUsage
+		if err := q.Find(&rows).Error; err != nil {
+			return nil, huma.Error500InternalServerError("lecture de la consommation échouée")
+		}
 
+		return &AnyOutput{Body: buildUsageReport(rows, month, by)}, nil
+	})
+}
+
+// buildUsageReport agrège les lignes de consommation par utilisateur/pool (forme JSON inchangée).
+func buildUsageReport(rows []models.VMUsage, month, by string) map[string]any {
 	type group struct {
 		Key       string  `json:"key"`
 		VMHours   float64 `json:"vm_hours"`
@@ -105,7 +115,7 @@ func handleUsage(w http.ResponseWriter, r *http.Request) {
 		out = append(out, g)
 	}
 
-	writeJSONMoodle(w, http.StatusOK, map[string]any{
+	return map[string]any{
 		"month":    month,
 		"by":       by,
 		"currency": priceCurrency(),
@@ -113,5 +123,5 @@ func handleUsage(w http.ResponseWriter, r *http.Request) {
 		"totals": map[string]float64{
 			"vm_hours": totVM, "vcpu_hours": totVCPU, "gb_hours": totGB, "cost": totCost,
 		},
-	})
+	}
 }

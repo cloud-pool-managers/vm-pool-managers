@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strconv"
@@ -8,6 +9,8 @@ import (
 
 	"control_center/config"
 	"control_center/models"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
 // storageQuotaGB : quota de stockage alloué par groupe (utilisateur/pool), en Go.
@@ -19,38 +22,45 @@ func storageQuotaGB() int {
 	return 200
 }
 
-// GET /api/storage?by=user|pool — stockage ALLOUÉ (disque des flavors × VMs) par
-// utilisateur ou pool, avec quota et alerte de dépassement. Staff uniquement ;
-// un non-admin ne voit que ses propres pools.
-func handleStorage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeJSONMoodle(w, http.StatusMethodNotAllowed, map[string]string{"error": "GET requis"})
-		return
-	}
-	by := r.URL.Query().Get("by")
-	if by != "pool" {
-		by = "user"
-	}
+// registerStorageHuma enregistre GET /api/storage — stockage ALLOUÉ (disque des
+// flavors × VMs) par utilisateur ou pool, avec quota et alerte de dépassement.
+// Staff uniquement ; un non-admin ne voit que ses propres pools.
+func registerStorageHuma(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "get-storage", Method: http.MethodGet, Path: "/api/storage",
+		Summary: "Stockage alloué et quotas", Tags: []string{"usage"},
+	}, func(ctx context.Context, in *struct {
+		By string `query:"by"`
+	}) (*AnyOutput, error) {
+		by := in.By
+		if by != "pool" {
+			by = "user"
+		}
 
-	// Flavors : id -> disque (Go).
-	var flavors []models.Flavor
-	config.Database.Find(&flavors)
-	diskByFlavor := map[string]int{}
-	for _, f := range flavors {
-		diskByFlavor[f.ID] = f.Disk
-	}
+		// Flavors : id -> disque (Go).
+		var flavors []models.Flavor
+		config.Database.Find(&flavors)
+		diskByFlavor := map[string]int{}
+		for _, f := range flavors {
+			diskByFlavor[f.ID] = f.Disk
+		}
 
-	id, _ := identityFrom(r.Context())
-	q := config.Database.Model(&models.Server{})
-	if id.Role != RoleAdmin {
-		q = q.Where("user_id = ?", id.Email)
-	}
-	var servers []models.Server
-	if err := q.Find(&servers).Error; err != nil {
-		writeJSONMoodle(w, http.StatusInternalServerError, map[string]string{"error": "lecture des serveurs échouée"})
-		return
-	}
+		id, _ := identityFrom(ctx)
+		q := config.Database.Model(&models.Server{})
+		if id.Role != RoleAdmin {
+			q = q.Where("user_id = ?", id.Email)
+		}
+		var servers []models.Server
+		if err := q.Find(&servers).Error; err != nil {
+			return nil, huma.Error500InternalServerError("lecture des serveurs échouée")
+		}
 
+		return &AnyOutput{Body: buildStorageReport(servers, diskByFlavor, by)}, nil
+	})
+}
+
+// buildStorageReport agrège le stockage alloué par groupe (forme JSON inchangée).
+func buildStorageReport(servers []models.Server, diskByFlavor map[string]int, by string) map[string]any {
 	type group struct {
 		Key    string `json:"key"`
 		VMs    int    `json:"vms"`
@@ -88,10 +98,10 @@ func handleStorage(w http.ResponseWriter, r *http.Request) {
 		out = append(out, g)
 	}
 
-	writeJSONMoodle(w, http.StatusOK, map[string]any{
+	return map[string]any{
 		"by":       by,
 		"quota_gb": quota,
 		"groups":   out,
 		"totals":   map[string]int{"vms": totalVMs, "disk_gb": totalDisk},
-	})
+	}
 }

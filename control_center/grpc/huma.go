@@ -38,6 +38,8 @@ func (e *apiError) GetStatus() int { return e.status }
 // On y déplace les endpoints au fur et à mesure (et on retire le mux.HandleFunc correspondant).
 func registerHumaRoutes(api huma.API) {
 	registerJobsHuma(api)
+	registerUsageHuma(api)
+	registerStorageHuma(api)
 
 	// GET /api/me — identité + rôle effectif de l'appelant.
 	huma.Register(api, huma.Operation{
