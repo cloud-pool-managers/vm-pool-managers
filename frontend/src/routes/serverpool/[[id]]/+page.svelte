@@ -12,10 +12,14 @@ import { page } from '$app/state';
 import { _ } from 'svelte-i18n';
 
 // Inventory data for simple mode (more reliable than gRPC servers store)
-let inventoryPools: { pool_id: string; user_id: string; label?: string; vms: { status: string; activity_status: string }[] }[] = $state([]);
+interface InvPool { pool_id: string; user_id: string; label?: string; tags?: string; compute?: boolean; linked_course?: string; vms: { status: string; activity_status: string }[]; }
+let inventoryPools: InvPool[] = $state([]);
 // Nom d'affichage d'un pool (label défini dans l'inventaire, sinon l'identifiant).
 const poolLabel = (name: string, user: string) =>
   inventoryPools.find(p => p.pool_id === name && p.user_id === user)?.label || name;
+const poolMeta = (name: string, user: string): InvPool | undefined =>
+  inventoryPools.find(p => p.pool_id === name && p.user_id === user);
+const poolTags = (m?: InvPool) => (m?.tags || '').split(',').map(t => t.trim()).filter(Boolean);
 async function loadInventory() {
   try {
     const res = await apiFetch('/api/inventory');
@@ -139,6 +143,7 @@ onMount(() => {
 });
 
 let selectedPool = $derived($serverPools.find(p => p.name === selectedsp));
+let selMeta = $derived(selectedPool ? poolMeta(selectedPool.name, selectedPool.userId) : undefined);
 let sortedFlavors = $derived([...$flavors].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'})));
 
 async function handleDeleteServerpool(sp: ServerPool) {
@@ -400,9 +405,28 @@ function computeNextSchedule(dayOfWeek: number, time: string): Date {
 
           <!-- Pool name + range -->
           <div class="flex items-start justify-between">
-            <div>
+            <div class="min-w-0">
               <h2 class="text-xl font-bold text-neutral-900">{poolLabel(selectedPool.name, selectedPool.userId)}</h2>
-              <p class="text-sm text-neutral-500 mt-0.5">{selectedPool.image}</p>
+              <p class="text-xs text-neutral-400 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                {#if poolLabel(selectedPool.name, selectedPool.userId) !== selectedPool.name}
+                  <span class="font-mono">{selectedPool.name}</span>
+                  <span class="text-neutral-300">·</span>
+                {/if}
+                <span>{selectedPool.userId}</span>
+              </p>
+              {#if selMeta?.linked_course || selMeta?.compute || poolTags(selMeta).length}
+                <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                  {#if selMeta?.linked_course}
+                    <span class="text-[11px] font-medium px-2 py-0.5 rounded bg-primary-50 text-primary-700 border border-primary-200">🎓 {selMeta.linked_course}</span>
+                  {/if}
+                  {#if selMeta?.compute}
+                    <span class="text-[11px] font-medium px-2 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200">⚙ {$_('inventory.computeBadge')}</span>
+                  {/if}
+                  {#each poolTags(selMeta) as tag}
+                    <span class="text-[11px] font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-600 border border-neutral-200">{tag}</span>
+                  {/each}
+                </div>
+              {/if}
             </div>
             <div class="card-elevated px-4 py-2.5 text-center">
               <p class="section-label mb-1">{$_('serverpool.vmTarget')}</p>
