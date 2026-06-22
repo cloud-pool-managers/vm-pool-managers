@@ -209,6 +209,9 @@ func Start_grpc(ctx context.Context) {
 	mux.HandleFunc("/api/jobs/cancel", handleBatchJobCancel)
 	mux.HandleFunc("/api/jobs/rerun", handleBatchJobRerun)
 	mux.HandleFunc("/api/jobs/sweep", handleBatchJobSweep)
+	mux.HandleFunc("/api/admin/console", handleAdminConsole)
+	mux.HandleFunc("/api/admin/kill-switch", handleAdminKillSwitch)
+	mux.HandleFunc("/api/admin/cleanup-orphans", handleAdminCleanupOrphans)
 	mux.HandleFunc("/api/image-proposals", handleImageProposals)
 	mux.HandleFunc("/api/jupyter-proxy/", handleJupyterProxy)
 	mux.HandleFunc("/vm-registrar", func(w http.ResponseWriter, r *http.Request) {

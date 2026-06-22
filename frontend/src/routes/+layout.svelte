@@ -119,6 +119,7 @@
     '/profile': 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
     '/usage': 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
     '/jobs': 'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+    '/admin': 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
   };
 
   const navLinks = $derived(() => {
@@ -137,6 +138,7 @@
       links.push({ href: '/grading', label: $_('nav.grading') });
       if (!simple && isAdmin) links.push({ href: '/config', label: $_('nav.configs'), secondary: true });
       if (isAdmin) links.push({ href: '/usage', label: $_('nav.costs'), secondary: true });
+      if (isAdmin) links.push({ href: '/admin', label: $_('nav.admin'), secondary: true });
       links.push({ href: '/jobs', label: $_('nav.jobs'), secondary: true });
       if (isAdmin) links.push({ href: '/propose-image', label: $_('nav.proposeImage'), secondary: true });
     } else if (role === 'chercheur') {
