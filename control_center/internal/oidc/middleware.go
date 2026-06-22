@@ -2,10 +2,12 @@ package oidc
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +17,17 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+// oidcHTTPClient sert à récupérer discovery + JWKS. En déploiement IP/TLS auto-signé
+// (Dex derrière un Caddy `tls internal`), OIDC_INSECURE_SKIP_VERIFY=true permet d'accepter
+// le certificat auto-signé. À NE PAS activer avec un vrai certificat (domaine + Let's Encrypt).
+func oidcHTTPClient() *http.Client {
+	c := &http.Client{Timeout: 10 * time.Second}
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("OIDC_INSECURE_SKIP_VERIFY")), "true") {
+		c.Transport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	}
+	return c
+}
 
 type contextKey string
 
@@ -43,7 +56,8 @@ func fetchJWKS() (map[string]interface{}, error) {
 	}
 	jwksMu.RUnlock()
 
-	resp, err := http.Get(issuerURL() + "/.well-known/openid-configuration")
+	client := oidcHTTPClient()
+	resp, err := client.Get(issuerURL() + "/.well-known/openid-configuration")
 	if err != nil {
 		return nil, fmt.Errorf("oidc discovery: %w", err)
 	}
@@ -56,7 +70,7 @@ func fetchJWKS() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	resp2, err := http.Get(discovery.JWKSURI)
+	resp2, err := client.Get(discovery.JWKSURI)
 	if err != nil {
 		return nil, fmt.Errorf("jwks fetch: %w", err)
 	}
