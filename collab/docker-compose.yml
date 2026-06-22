@@ -1,0 +1,62 @@
+# Prototype — édition collaborative TEMPS RÉEL dans VS Code (code-server) via
+# Open Collaboration Tools (OCT). Spike Phase 4.
+#
+#   cd collab && docker compose up -d        (1er run : npx télécharge le serveur OCT)
+#   Hôte   : http://localhost:8443  (VS Code A) → palette « Open Collaboration: Share »
+#   Invité : http://localhost:8444  (VS Code B) → palette « Open Collaboration: Join » + code
+#   → édition simultanée + curseurs/sélections en direct (CRDT).
+#
+# Deux instances code-server SÉPARÉES (= deux utilisateurs) qui se synchronisent
+# via le serveur OCT. Auth simple (pseudo) activée côté serveur, sans OAuth.
+services:
+  oct-server:
+    image: node:20-slim
+    container_name: oct-server
+    restart: unless-stopped
+    working_dir: /srv
+    entrypoint: ["/bin/bash", "-c"]
+    # NB : la sous-commande `start` est dépréciée et l'option --port est buggée (port → NaN)
+    # dans cette version → on lance le bin SANS start, avec --hostname 0.0.0.0 (port défaut 8100).
+    command:
+      - "npm i -g open-collaboration-server@latest >/dev/null 2>&1 && exec oct-server --hostname 0.0.0.0"
+    environment:
+      OCT_ACTIVATE_SIMPLE_LOGIN: "true"       # auth par pseudo (pas d'OAuth, pour le proto)
+      OCT_BASE_URL: "http://oct-server:8100"  # URL interne atteinte par les code-server
+    ports:
+      - "8100:8100"
+
+  code-server-host:
+    image: codercom/code-server:latest
+    container_name: code-server-host
+    restart: unless-stopped
+    depends_on: [oct-server]
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >
+        mkdir -p ~/.local/share/code-server/User &&
+        cp /tmp/oct-settings.json ~/.local/share/code-server/User/settings.json &&
+        code-server --install-extension typefox.open-collaboration-tools || true;
+        exec code-server --auth none --bind-addr 0.0.0.0:8080 /home/coder/project
+    volumes:
+      - ./settings.json:/tmp/oct-settings.json:ro
+      - ./project-host:/home/coder/project
+    ports:
+      - "8443:8080"
+
+  code-server-guest:
+    image: codercom/code-server:latest
+    container_name: code-server-guest
+    restart: unless-stopped
+    depends_on: [oct-server]
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >
+        mkdir -p ~/.local/share/code-server/User &&
+        cp /tmp/oct-settings.json ~/.local/share/code-server/User/settings.json &&
+        code-server --install-extension typefox.open-collaboration-tools || true;
+        exec code-server --auth none --bind-addr 0.0.0.0:8080 /home/coder/project
+    volumes:
+      - ./settings.json:/tmp/oct-settings.json:ro
+      - ./project-guest:/home/coder/project
+    ports:
+      - "8444:8080"

@@ -1,0 +1,5 @@
+# workspaces de démo : on garde les fichiers samples seedés mais pas les artefacts d'édition
+project-host/.*
+project-guest/.*
+!project-host/demo.py
+!project-guest/README.md

@@ -1,0 +1,6 @@
+{
+  "oct.serverUrl": "http://oct-server:8100/",
+  "oct.alwaysAskToOverrideServerUrl": false,
+  "workbench.colorTheme": "Default Dark Modern",
+  "security.workspace.trust.enabled": false
+}
