@@ -1,5 +1,5 @@
 # Stack d'observabilité — à déployer sur une VM du projet infra (vmpoolmanager).
-# Grafana (UI) + Prometheus (métriques) + Loki (logs).
+# Grafana (UI) + Prometheus (métriques) + Loki (logs) + Tempo (traces) + OTel Collector.
 # Voir monitoring/README.md pour le déploiement.
 
 services:
@@ -27,6 +27,35 @@ services:
     ports:
       - "3100:3100"
 
+  # Backend de traces (OTLP → stockage local, requêtable par Grafana).
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: tempo
+    restart: unless-stopped
+    command: -config.file=/etc/tempo/tempo.yml
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200" # API de requête Tempo
+
+  # Point d'entrée OTLP : reçoit traces/métriques/logs des services Go et les
+  # répartit vers Tempo (traces) / Prometheus (métriques) / Loki (logs).
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.105.0
+    container_name: otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yml"]
+    depends_on:
+      - tempo
+      - loki
+    volumes:
+      - ./otel-collector/config.yml:/etc/otelcol/config.yml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC (les services Go exportent ici)
+      - "4318:4318" # OTLP HTTP
+      - "8889:8889" # métriques exposées pour Prometheus
+
   grafana:
     image: grafana/grafana:11.1.0
     container_name: grafana
@@ -34,6 +63,7 @@ services:
     depends_on:
       - prometheus
       - loki
+      - tempo
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-changeme}
@@ -52,3 +82,4 @@ volumes:
   prometheus-data:
   loki-data:
   grafana-data:
+  tempo-data:

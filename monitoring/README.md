@@ -1,6 +1,26 @@
-# Observabilité — Grafana + Prometheus + Loki
+# Observabilité — Grafana + Prometheus + Loki + Tempo + OTel Collector
 
-Stack de supervision (Grafana + Prometheus + Loki + Promtail).
+Stack de supervision (Grafana + Prometheus + Loki + Promtail + **Tempo** + **OTel Collector**).
+
+## OpenTelemetry (traces + métriques + logs)
+
+Les deux services Go (control center + microservice OpenStack) sont instrumentés OTel
+(HTTP via `otelhttp`, gRPC via `otelgrpc`, SQL via le plugin GORM, logs via `slog`) et
+exportent en **OTLP/gRPC** vers l'**OTel Collector**, qui répartit :
+
+```
+services Go ──OTLP:4317──▶ otel-collector ─┬─ traces ──▶ Tempo  (:3200)
+                                           ├─ métriques ▶ :8889 ─ scrapé par Prometheus
+                                           └─ logs ─────▶ Loki  (/otlp)
+                                                          Grafana lit Tempo+Loki+Prometheus
+```
+
+- Activer l'export côté service : `OTEL_EXPORTER_OTLP_ENDPOINT=http://<collector>:4317`
+  (+`OTEL_EXPORTER_OTLP_INSECURE=true` sans TLS). **Le scheme `http://` est obligatoire.**
+  Vide → télémétrie **désactivée** (no-op, aucun blocage au démarrage).
+- En dev (services natifs, collector docker) : `http://localhost:4317`.
+- Corrélation dans Grafana : trace ↔ logs (via `trace_id`), datasources **Tempo** et **Loki**
+  provisionnées. Rétention traces : 7 j (Tempo), métriques 90 j (Prometheus).
 
 > ⚠️ **Topologie selon l'environnement.** La stack doit tourner **là où elle atteint le
 > Control Center (`/metrics`) et PostgreSQL**.

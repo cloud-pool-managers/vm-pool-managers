@@ -15,6 +15,11 @@ scrape_configs:
         labels:
           service: control-center
 
+  # Métriques OTel (control center + microservice) réexposées par le Collector.
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8889"]
+
   # Prometheus lui-même (santé de la stack).
   - job_name: prometheus
     static_configs:

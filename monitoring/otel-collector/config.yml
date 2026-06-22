@@ -1,0 +1,53 @@
+# OpenTelemetry Collector — point d'entrée OTLP de la stack d'observabilité.
+# Les services Go (control center + microservice) envoient traces/métriques/logs en
+# OTLP/gRPC sur :4317. Le collector les répartit : traces → Tempo, métriques → endpoint
+# Prometheus (scrapé), logs → Loki (OTLP natif).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  batch: {}
+
+exporters:
+  # Traces → Tempo (OTLP/gRPC interne).
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  # Métriques → exposées en /metrics sur :8889, scrapées par Prometheus.
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+  # Logs → Loki via son endpoint OTLP natif (/otlp).
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/loki]

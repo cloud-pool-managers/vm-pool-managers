@@ -29,6 +29,9 @@ schema_config:
 
 limits_config:
   retention_period: 90d
+  # Requis pour l'ingestion OTLP native (/otlp) : les attributs OTel deviennent
+  # des structured metadata.
+  allow_structured_metadata: true
   reject_old_samples: false
   ingestion_rate_mb: 32
   ingestion_burst_size_mb: 64
