@@ -143,13 +143,9 @@ func Start_grpc(ctx context.Context) {
 	mux.HandleFunc("/api/vm-activity", handleVMActivity)
 	mux.HandleFunc("/api/guac-url", handleGuacURL)
 	mux.HandleFunc("/api/app-status", handleAppStatus)
-	mux.HandleFunc("/api/github/session", handleGitHubSession)
-	mux.HandleFunc("/api/github/students", handleGitHubStudents)
-	mux.HandleFunc("/api/github/public-keys", handleGitHubPublicKeys)
-	mux.HandleFunc("/api/github/login", handleGitHubLogin)
-	mux.HandleFunc("/auth/github/callback", handleGitHubCallback)
+	mux.HandleFunc("/api/github/login", handleGitHubLogin)              // redirection OAuth → brut
+	mux.HandleFunc("/auth/github/callback", handleGitHubCallback)       // redirection OAuth → brut
 	mux.HandleFunc("/api/nbgrader/export-csv", handleNbgraderExportCSV) // CSV download → handler brut
-	mux.HandleFunc("/api/image-proposals", handleImageProposals)
 	mux.HandleFunc("/api/jupyter-proxy/", handleJupyterProxy)
 	mux.HandleFunc("/vm-registrar", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "vm-registrar")

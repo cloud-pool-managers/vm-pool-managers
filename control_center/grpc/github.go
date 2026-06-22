@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"context"
 	"control_center/config"
 	"control_center/models"
 	"crypto/rand"
@@ -13,9 +14,71 @@ import (
 	"net/url"
 	"os"
 	"time"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
 var githubHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
+// registerGitHubHuma : endpoints JSON /api/github/*. login + callback restent des handlers
+// bruts (redirections OAuth 302, pas du JSON).
+func registerGitHubHuma(api huma.API) {
+	// GET /api/github/session?id= — login + clés SSH d'une session GitHub.
+	huma.Register(api, huma.Operation{
+		OperationID: "github-session", Method: http.MethodGet, Path: "/api/github/session",
+		Summary: "Session GitHub (login + clés)", Tags: []string{"github"},
+	}, func(ctx context.Context, in *struct {
+		ID string `query:"id"`
+	}) (*AnyOutput, error) {
+		if in.ID == "" {
+			return nil, huma.Error400BadRequest("missing id")
+		}
+		var sess models.GitHubSession
+		if err := config.Database.First(&sess, "id = ?", in.ID).Error; err != nil {
+			return nil, huma.Error404NotFound("session not found")
+		}
+		var keys []string
+		json.Unmarshal([]byte(sess.SSHKeys), &keys)
+		return &AnyOutput{Body: map[string]any{"login": sess.Login, "keys": keys}}, nil
+	})
+
+	// GET /api/github/public-keys?login= — clés SSH publiques d'un login GitHub.
+	huma.Register(api, huma.Operation{
+		OperationID: "github-public-keys", Method: http.MethodGet, Path: "/api/github/public-keys",
+		Summary: "Clés SSH publiques d'un login GitHub", Tags: []string{"github"},
+	}, func(ctx context.Context, in *struct {
+		Login string `query:"login"`
+	}) (*AnyOutput, error) {
+		if in.Login == "" {
+			return nil, huma.Error400BadRequest("missing login")
+		}
+		keys, err := fetchGitHubKeysPublic(in.Login)
+		if err != nil || len(keys) == 0 {
+			return &AnyOutput{Body: map[string]any{"keys": []string{}}}, nil
+		}
+		return &AnyOutput{Body: map[string]any{"keys": keys}}, nil
+	})
+
+	// GET /api/github/students — élèves connectés via GitHub (24 h). Réponse = tableau JSON.
+	huma.Register(api, huma.Operation{
+		OperationID: "github-students", Method: http.MethodGet, Path: "/api/github/students",
+		Summary: "Élèves connectés via GitHub (24 h)", Tags: []string{"github"},
+	}, func(ctx context.Context, _ *struct{}) (*AnyOutput, error) {
+		var sessions []models.GitHubSession
+		config.Database.Where("created_at > ?", time.Now().Add(-24*time.Hour)).Find(&sessions)
+		type entry struct {
+			Login string   `json:"login"`
+			Keys  []string `json:"keys"`
+		}
+		result := []entry{}
+		for _, s := range sessions {
+			var keys []string
+			json.Unmarshal([]byte(s.SSHKeys), &keys)
+			result = append(result, entry{Login: s.Login, Keys: keys})
+		}
+		return &AnyOutput{Body: result}, nil
+	})
+}
 
 func randomState() string {
 	b := make([]byte, 16)
@@ -98,62 +161,6 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	config.Database.Where("created_at < ?", time.Now().Add(-time.Hour)).Delete(&models.GitHubSession{})
 
 	http.Redirect(w, r, "/student?github_session="+sessionID, http.StatusFound)
-}
-
-// handleGitHubSession returns the stored login + SSH keys for a session ID.
-func handleGitHubSession(w http.ResponseWriter, r *http.Request) {
-	sessionID := r.URL.Query().Get("id")
-	if sessionID == "" {
-		http.Error(w, "missing id", http.StatusBadRequest)
-		return
-	}
-	var sess models.GitHubSession
-	if err := config.Database.First(&sess, "id = ?", sessionID).Error; err != nil {
-		http.Error(w, "session not found", http.StatusNotFound)
-		return
-	}
-	var keys []string
-	json.Unmarshal([]byte(sess.SSHKeys), &keys)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"login": sess.Login,
-		"keys":  keys,
-	})
-}
-
-// handleGitHubPublicKeys returns public SSH keys for a GitHub login (no auth needed).
-func handleGitHubPublicKeys(w http.ResponseWriter, r *http.Request) {
-	login := r.URL.Query().Get("login")
-	if login == "" {
-		http.Error(w, "missing login", http.StatusBadRequest)
-		return
-	}
-	keys, err := fetchGitHubKeysPublic(login)
-	if err != nil || len(keys) == 0 {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"keys": []string{}})
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"keys": keys})
-}
-
-// handleGitHubStudents returns all GitHub-connected students from the last 24h (for admin).
-func handleGitHubStudents(w http.ResponseWriter, r *http.Request) {
-	var sessions []models.GitHubSession
-	config.Database.Where("created_at > ?", time.Now().Add(-24*time.Hour)).Find(&sessions)
-	type entry struct {
-		Login string   `json:"login"`
-		Keys  []string `json:"keys"`
-	}
-	var result []entry
-	for _, s := range sessions {
-		var keys []string
-		json.Unmarshal([]byte(s.SSHKeys), &keys)
-		result = append(result, entry{Login: s.Login, Keys: keys})
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
 }
 
 func exchangeGitHubCode(code string) (string, error) {

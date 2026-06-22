@@ -1,40 +1,41 @@
 package grpc
 
 import (
-	"control_center/config"
-	"control_center/models"
-	"encoding/json"
+	"context"
 	"net/http"
 	"strings"
+
+	"control_center/config"
+	"control_center/models"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
-// handleImageProposals stores and lists teacher image proposals.
+// registerImageProposalsHuma stocke et liste les propositions d'images des enseignants.
 //
-//	POST /api/image-proposals   {github_url, name, description, submitted_by}
-//	GET  /api/image-proposals?user=<email>   → that teacher's proposals (newest first)
-func handleImageProposals(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		var body struct {
+//	POST /api/image-proposals  {github_url, name, description, submitted_by}  → 201 + proposal
+//	GET  /api/image-proposals?user=<email>  → propositions (récentes d'abord)
+func registerImageProposalsHuma(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "create-image-proposal", Method: http.MethodPost, Path: "/api/image-proposals",
+		Summary: "Proposer une image", Tags: []string{"images"}, DefaultStatus: http.StatusCreated,
+	}, func(ctx context.Context, in *struct {
+		Body struct {
 			GithubURL   string `json:"github_url"`
 			Name        string `json:"name"`
 			Description string `json:"description"`
 			SubmittedBy string `json:"submitted_by"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			http.Error(w, "invalid JSON", http.StatusBadRequest)
-			return
-		}
+	}) (*AnyOutput, error) {
+		body := in.Body
 		body.GithubURL = strings.TrimSpace(body.GithubURL)
 		body.Name = strings.TrimSpace(body.Name)
 		if body.GithubURL == "" || body.Name == "" {
-			http.Error(w, "github_url et name sont requis", http.StatusBadRequest)
-			return
+			return nil, huma.Error400BadRequest("github_url et name sont requis")
 		}
 		if !strings.HasPrefix(body.GithubURL, "https://github.com/") &&
 			!strings.HasPrefix(body.GithubURL, "http://github.com/") {
-			http.Error(w, "github_url doit être une URL github.com", http.StatusBadRequest)
-			return
+			return nil, huma.Error400BadRequest("github_url doit être une URL github.com")
 		}
 
 		p := models.ImageProposal{
@@ -45,24 +46,23 @@ func handleImageProposals(w http.ResponseWriter, r *http.Request) {
 			Status:      "pending",
 		}
 		if err := config.Database.Create(&p).Error; err != nil {
-			http.Error(w, "db error: "+err.Error(), http.StatusInternalServerError)
-			return
+			return nil, huma.Error500InternalServerError("db error: " + err.Error())
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(p)
+		return &AnyOutput{Body: p}, nil
+	})
 
-	case http.MethodGet:
+	huma.Register(api, huma.Operation{
+		OperationID: "list-image-proposals", Method: http.MethodGet, Path: "/api/image-proposals",
+		Summary: "Lister les propositions d'images", Tags: []string{"images"},
+	}, func(ctx context.Context, in *struct {
+		User string `query:"user"`
+	}) (*AnyOutput, error) {
 		var list []models.ImageProposal
 		q := config.Database.Order("created_at DESC")
-		if u := r.URL.Query().Get("user"); u != "" {
-			q = q.Where("submitted_by = ?", u)
+		if in.User != "" {
+			q = q.Where("submitted_by = ?", in.User)
 		}
 		q.Find(&list)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(list)
-
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
+		return &AnyOutput{Body: list}, nil
+	})
 }
