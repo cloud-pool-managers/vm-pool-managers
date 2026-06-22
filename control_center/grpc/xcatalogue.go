@@ -1,73 +1,98 @@
 package grpc
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 	"strings"
 
 	"control_center/config"
 	"control_center/internal/xcatalogue"
 	"control_center/models"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
-// GET /api/xcours/status — indique si les endpoints PROTÉGÉS (affectations) sont utilisables
-// (token présent). Le catalogue, lui, est public et marche toujours.
-func handleXCoursStatus(w http.ResponseWriter, r *http.Request) {
-	writeJSONMoodle(w, http.StatusOK, map[string]any{
-		"catalogue_available":    true,                    // public
-		"affectations_available": xcatalogue.Configured(), // nécessite XCOURSES_TOKEN
+// registerXCoursHuma enregistre les endpoints /api/xcours/* (cours de l'X / Synapses).
+func registerXCoursHuma(api huma.API) {
+	// GET /api/xcours/status — endpoints protégés (affectations) utilisables ? Catalogue toujours public.
+	huma.Register(api, huma.Operation{
+		OperationID: "xcours-status", Method: http.MethodGet, Path: "/api/xcours/status",
+		Summary: "Disponibilité du catalogue et des affectations X", Tags: []string{"xcours"},
+	}, func(ctx context.Context, _ *struct{}) (*AnyOutput, error) {
+		return &AnyOutput{Body: map[string]any{
+			"catalogue_available":    true,                    // public
+			"affectations_available": xcatalogue.Configured(), // nécessite XCOURSES_TOKEN
+		}}, nil
 	})
-}
 
-// GET /api/xcours/catalogue?year=&dep= — catalogue public des cours de l'X.
-func handleXCoursCatalogue(w http.ResponseWriter, r *http.Request) {
-	c := xcatalogue.New()
-	courses, err := c.Catalogue(r.URL.Query().Get("year"), r.URL.Query().Get("dep"))
-	if err != nil {
-		writeJSONMoodle(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
-		return
-	}
-	writeJSONMoodle(w, http.StatusOK, map[string]any{"courses": courses})
-}
-
-// GET /api/xcours/members?id=CODE_EP-ANNÉE — profs + élèves d'un cours (token requis).
-func handleXCoursMembers(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(r.URL.Query().Get("id"))
-	if id == "" {
-		writeJSONMoodle(w, http.StatusBadRequest, map[string]string{"error": "id requis"})
-		return
-	}
-	members, err := xcatalogue.New().CourseMembers(id)
-	if err != nil {
-		writeJSONMoodle(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
-		return
-	}
-	teachers, students := 0, 0
-	for _, m := range members {
-		if m.IsTeacher() {
-			teachers++
-		} else {
-			students++
+	// GET /api/xcours/catalogue?year=&dep= — catalogue public des cours de l'X.
+	huma.Register(api, huma.Operation{
+		OperationID: "xcours-catalogue", Method: http.MethodGet, Path: "/api/xcours/catalogue",
+		Summary: "Catalogue des cours de l'X", Tags: []string{"xcours"},
+	}, func(ctx context.Context, in *struct {
+		Year string `query:"year"`
+		Dep  string `query:"dep"`
+	}) (*AnyOutput, error) {
+		courses, err := xcatalogue.New().Catalogue(in.Year, in.Dep)
+		if err != nil {
+			return nil, huma.Error502BadGateway(err.Error())
 		}
-	}
-	writeJSONMoodle(w, http.StatusOK, map[string]any{
-		"members": members, "teachers": teachers, "students": students,
+		return &AnyOutput{Body: map[string]any{"courses": courses}}, nil
 	})
-}
 
-// GET /api/xcours/groups?id=CODE_EP-ANNÉE — groupes (TD/PC) d'un cours (token requis).
-func handleXCoursGroups(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(r.URL.Query().Get("id"))
-	if id == "" {
-		writeJSONMoodle(w, http.StatusBadRequest, map[string]string{"error": "id requis"})
-		return
-	}
-	groups, err := xcatalogue.New().CourseGroups(id)
-	if err != nil {
-		writeJSONMoodle(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
-		return
-	}
-	writeJSONMoodle(w, http.StatusOK, map[string]any{"groups": groups})
+	// GET /api/xcours/members?id=CODE_EP-ANNÉE — profs + élèves d'un cours (token requis).
+	huma.Register(api, huma.Operation{
+		OperationID: "xcours-members", Method: http.MethodGet, Path: "/api/xcours/members",
+		Summary: "Membres d'un cours de l'X", Tags: []string{"xcours"},
+	}, func(ctx context.Context, in *struct {
+		ID string `query:"id"`
+	}) (*AnyOutput, error) {
+		id := strings.TrimSpace(in.ID)
+		if id == "" {
+			return nil, huma.Error400BadRequest("id requis")
+		}
+		members, err := xcatalogue.New().CourseMembers(id)
+		if err != nil {
+			return nil, huma.Error502BadGateway(err.Error())
+		}
+		teachers, students := 0, 0
+		for _, m := range members {
+			if m.IsTeacher() {
+				teachers++
+			} else {
+				students++
+			}
+		}
+		return &AnyOutput{Body: map[string]any{
+			"members": members, "teachers": teachers, "students": students,
+		}}, nil
+	})
+
+	// GET /api/xcours/groups?id=CODE_EP-ANNÉE — groupes (TD/PC) d'un cours (token requis).
+	huma.Register(api, huma.Operation{
+		OperationID: "xcours-groups", Method: http.MethodGet, Path: "/api/xcours/groups",
+		Summary: "Groupes (TD/PC) d'un cours de l'X", Tags: []string{"xcours"},
+	}, func(ctx context.Context, in *struct {
+		ID string `query:"id"`
+	}) (*AnyOutput, error) {
+		id := strings.TrimSpace(in.ID)
+		if id == "" {
+			return nil, huma.Error400BadRequest("id requis")
+		}
+		groups, err := xcatalogue.New().CourseGroups(id)
+		if err != nil {
+			return nil, huma.Error502BadGateway(err.Error())
+		}
+		return &AnyOutput{Body: map[string]any{"groups": groups}}, nil
+	})
+
+	// POST /api/xcours/import — importe les élèves d'un cours de l'X dans un pool.
+	huma.Register(api, huma.Operation{
+		OperationID: "xcours-import", Method: http.MethodPost, Path: "/api/xcours/import",
+		Summary: "Importer les élèves d'un cours de l'X", Tags: []string{"xcours"},
+	}, func(ctx context.Context, in *struct{ Body xcoursImportRequest }) (*AnyOutput, error) {
+		return handleXCoursImport(in.Body)
+	})
 }
 
 type xcoursImportRequest struct {
@@ -78,29 +103,18 @@ type xcoursImportRequest struct {
 	Usernames  []string `json:"usernames"`   // optionnel : restreint à ces logins
 }
 
-// POST /api/xcours/import — importe les élèves d'un cours de l'X dans un pool.
+// handleXCoursImport importe les élèves d'un cours de l'X dans un pool.
 // Calqué sur l'import Moodle : une ligne students par élève (Name = MoodleEmail = login,
 // = id nbgrader), accès via login établissement (attribution sans clé SSH).
-func handleXCoursImport(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeJSONMoodle(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST requis"})
-		return
-	}
-	var req xcoursImportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONMoodle(w, http.StatusBadRequest, map[string]string{"error": "JSON invalide"})
-		return
-	}
+func handleXCoursImport(req xcoursImportRequest) (*AnyOutput, error) {
 	if req.PoolID == "" || req.UserID == "" || req.CourseCode == "" {
-		writeJSONMoodle(w, http.StatusBadRequest, map[string]string{"error": "pool_id, user_id et course_code requis"})
-		return
+		return nil, huma.Error400BadRequest("pool_id, user_id et course_code requis")
 	}
 
 	c := xcatalogue.New()
 	members, err := c.CourseMembers(req.CourseCode)
 	if err != nil {
-		writeJSONMoodle(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
-		return
+		return nil, huma.Error502BadGateway(err.Error())
 	}
 
 	// Filtre optionnel par groupe (TD/PC).
@@ -108,8 +122,7 @@ func handleXCoursImport(w http.ResponseWriter, r *http.Request) {
 	if req.GroupName != "" {
 		groups, err := c.CourseGroups(req.CourseCode)
 		if err != nil {
-			writeJSONMoodle(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
-			return
+			return nil, huma.Error502BadGateway(err.Error())
 		}
 		groupOnly = map[string]bool{}
 		for _, g := range groups {
@@ -132,15 +145,13 @@ func handleXCoursImport(w http.ResponseWriter, r *http.Request) {
 	if err := config.Database.Preload("ListStudents.Students").
 		Where("serverpool_id = ? AND user_id = ?", req.PoolID, req.UserID).
 		First(&pool).Error; err != nil {
-		writeJSONMoodle(w, http.StatusNotFound, map[string]string{"error": "pool introuvable"})
-		return
+		return nil, huma.Error404NotFound("pool introuvable")
 	}
 	list := &pool.ListStudents
 	if list.ID == 0 {
 		list.PoolId = pool.ID
 		if err := config.Database.Create(list).Error; err != nil {
-			writeJSONMoodle(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-			return
+			return nil, huma.Error500InternalServerError(err.Error())
 		}
 	}
 	existing := map[string]bool{}
@@ -179,8 +190,7 @@ func handleXCoursImport(w http.ResponseWriter, r *http.Request) {
 			MoodleEmail: m.Username, // clé de jointure login établissement ↔ étudiant
 		}
 		if err := config.Database.Create(&student).Error; err != nil {
-			writeJSONMoodle(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-			return
+			return nil, huma.Error500InternalServerError(err.Error())
 		}
 		existing[key] = true
 		imported++
@@ -190,7 +200,7 @@ func handleXCoursImport(w http.ResponseWriter, r *http.Request) {
 	config.Database.Model(&models.Serverpool{}).Where("id = ?", pool.ID).
 		Update("x_course_code", req.CourseCode)
 
-	writeJSONMoodle(w, http.StatusOK, map[string]any{
+	return &AnyOutput{Body: map[string]any{
 		"imported": imported, "skipped": skipped, "course_code": req.CourseCode,
-	})
+	}}, nil
 }
