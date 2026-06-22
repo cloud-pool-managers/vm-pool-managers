@@ -55,6 +55,9 @@ var publicHTTPPaths = map[string]bool{
 	"/vm-registrar":         true,
 	"/metrics":              true,
 	"/api/announcement":     true, // annonce publique (bandeau visible par tous)
+	"/api/docs":             true, // doc OpenAPI (schéma, non sensible)
+	"/api/openapi.json":     true,
+	"/api/openapi.yaml":     true,
 }
 
 // adminHTTPPrefixes : routes réservées aux enseignants/admin (lecture/écriture de notes,

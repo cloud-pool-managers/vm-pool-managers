@@ -84,18 +84,7 @@ func upsertUserRole(email, role string) error {
 	return config.Database.Model(&u).Update("role", role).Error
 }
 
-// GET /api/me — identité + rôle effectif de l'appelant (toute personne authentifiée).
-func handleMe(w http.ResponseWriter, r *http.Request) {
-	id, ok := identityFrom(r.Context())
-	if !ok {
-		writeJSONMoodle(w, http.StatusUnauthorized, map[string]string{"error": "non authentifié"})
-		return
-	}
-	writeJSONMoodle(w, http.StatusOK, map[string]any{
-		"email": id.Email, "role": id.Role, "is_admin": id.Role == RoleAdmin,
-		"is_staff": isStaff(id.Role), "via": id.Via,
-	})
-}
+// GET /api/me est désormais servi par HUMA (registerHumaRoutes dans huma.go).
 
 // GET /api/admin/users — liste des utilisateurs et rôles (admin uniquement).
 func handleAdminUsers(w http.ResponseWriter, r *http.Request) {

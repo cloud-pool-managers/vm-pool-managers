@@ -153,6 +153,9 @@ func Start_grpc(ctx context.Context) {
 
 	registerMetrics()
 	mux := http.NewServeMux()
+	// API HUMA (OpenAPI + validation) montée sur le même mux. Migration incrémentale :
+	// les endpoints migrés sont enregistrés ici ; les autres restent en mux.HandleFunc.
+	newHumaAPI(mux)
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/api/inventory", handleInventory)
 	mux.HandleFunc("/api/vm-activity", handleVMActivity)
@@ -189,7 +192,6 @@ func Start_grpc(ctx context.Context) {
 	mux.HandleFunc("/api/xcours/members", handleXCoursMembers)
 	mux.HandleFunc("/api/xcours/groups", handleXCoursGroups)
 	mux.HandleFunc("/api/xcours/import", handleXCoursImport)
-	mux.HandleFunc("/api/me", handleMe)
 	mux.HandleFunc("/api/admin/users", handleAdminUsers)
 	mux.HandleFunc("/api/admin/users/role", handleAdminSetRole)
 	mux.HandleFunc("/api/admin/audit", handleAdminAudit)
