@@ -58,12 +58,8 @@
 
   onMount(async () => {
     if (!browser) return;
-    // Force canonical URL — redirect to 10.202.3.109 if accessed via another IP (e.g. Colima 169.254.x.x)
-    const h = window.location.hostname;
-    if (h !== '10.202.3.109' && h !== 'localhost' && h !== '127.0.0.1' && !h.startsWith('192.168.')) {
-      window.location.href = 'https://10.202.3.109' + window.location.pathname;
-      return;
-    }
+    // L'app est servie en origin-relatif (API, gRPC-Web, OIDC dérivés de window.location).
+    // Elle fonctionne donc sur n'importe quel hôte (domaine de prod ou IP) sans redirection.
     try {
       const mr = await apiFetch('/api/moodle/status');
       if (mr.ok) { const md = await mr.json(); if (md.configured) moodleUrl = md.url ?? ''; }
