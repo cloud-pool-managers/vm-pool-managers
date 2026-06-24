@@ -115,7 +115,7 @@ sudo docker run -d --restart=always --name codeserver \
   --network host --entrypoint /bin/bash \
   -v /home/vmuser:/home/coder/project \
   registry.virtualdata.cloud.idcs.polytechnique.fr/docker-hub-proxy/codercom/code-server:latest \
-  -lc 'mkdir -p ~/.local/share/code-server/User; printf "{\"oct.serverUrl\":\"http://157.136.249.81:8100/\",\"oct.alwaysAskToOverrideServerUrl\":false}" > ~/.local/share/code-server/User/settings.json; code-server --install-extension ms-python.python --install-extension ms-toolsai.jupyter --install-extension typefox.open-collaboration-tools || true; exec code-server --auth none --cert --bind-addr 0.0.0.0:8443 /home/coder/project'
+  -lc 'mkdir -p ~/.local/share/code-server/User; printf "{\"oct.serverUrl\":\"http://157.136.249.81:8100/\",\"oct.alwaysAskToOverrideServerUrl\":false,\"files.autoSave\":\"afterDelay\",\"files.autoSaveDelay\":1000}" > ~/.local/share/code-server/User/settings.json; code-server --install-extension ms-python.python --install-extension ms-toolsai.jupyter --install-extension typefox.open-collaboration-tools || true; exec code-server --auth none --cert --bind-addr 0.0.0.0:8443 /home/coder/project'
 # 2ᵉ instance code-server EN LECTURE SEULE sur 8444, pour le partage « lecture » entre
 # élèves (le proxy y route les invités en mode read). Le projet est monté ':ro' : c'est
 # un verrou AU NIVEAU OS — ni l'éditeur ni le terminal ne peuvent modifier les fichiers,

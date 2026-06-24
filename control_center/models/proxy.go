@@ -36,6 +36,7 @@ type VscodeGrant struct {
 	Target       string    `gorm:"index"` // identité (email) de l'élève qui partage SA VM
 	PasswordHash string    // bcrypt du mot de passe de partage
 	Mode         string    // "read" | "write"
+	Editor       string    // "jupyter" (session collab temps réel sur l'infra) | "vscode" (VS Code de l'hôte, par mot de passe)
 	// Session de collaboration hébergée sur la VM infra dédiée (colabVscodeInfra) : un
 	// code-server qui monte les fichiers de l'hôte (sshfs). Hôte + invité écriture → port RW
 	// (éditeur partagé) ; invité lecture → port RO (montage :ro). La collaboration ne tourne

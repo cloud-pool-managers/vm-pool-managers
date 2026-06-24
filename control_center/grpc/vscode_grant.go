@@ -113,6 +113,7 @@ func createVscodeGrant(w http.ResponseWriter, r *http.Request, id httpIdentity) 
 		PoolID   string `json:"pool_id"`
 		OwnerID  string `json:"owner_id"`
 		Mode     string `json:"mode"`
+		Editor   string `json:"editor"` // "jupyter" | "vscode"
 		Password string `json:"password"`
 		TTLHours int    `json:"ttl_hours"`
 	}
@@ -128,21 +129,18 @@ func createVscodeGrant(w http.ResponseWriter, r *http.Request, id httpIdentity) 
 		http.Error(w, "mot de passe trop court (min 4 caractères)", http.StatusBadRequest)
 		return
 	}
-	mode := "read"
-	if body.Mode == "write" {
-		mode = "write"
+	editor := "jupyter"
+	if body.Editor == "vscode" {
+		editor = "vscode"
 	}
-	// La cible est TOUJOURS l'identité authentifiée : on ne partage que SES fichiers.
-	// On récupère l'IP de SA VM (source des fichiers à monter sur la VM infra).
+	mode := "write"
+	if body.Mode == "read" {
+		mode = "read"
+	}
+	// On ne partage que SES fichiers : on vérifie que l'hôte a bien une VM dans ce pool.
 	_, hostIP, err := resolveStudentVM(body.PoolID, body.OwnerID, id.Email)
 	if err != nil {
 		http.Error(w, "vous n'avez pas de VM dans ce pool: "+err.Error(), http.StatusForbidden)
-		return
-	}
-	// Lance la session de collaboration sur la VM infra (Jupyter collaboratif montant SES fichiers).
-	collabIP, port, err := provisionCollabSession(id.Email, hostIP)
-	if err != nil {
-		http.Error(w, "session collaborative indisponible: "+err.Error(), http.StatusServiceUnavailable)
 		return
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
@@ -165,22 +163,29 @@ func createVscodeGrant(w http.ResponseWriter, r *http.Request, id httpIdentity) 
 		Target:       id.Email,
 		PasswordHash: string(hash),
 		Mode:         mode,
-		CollabIP:     collabIP,
-		CollabPortRW: port, // port du Jupyter collaboratif sur la VM infra
+		Editor:       editor,
 		ExpiresAt:    time.Now().Add(ttl),
 	}
-	config.Database.Create(&grant)
 
-	// L'hôte ouvre la session collaborative (Jupyter temps réel sur la VM infra), pas son
-	// propre éditeur → ProxySession jupyter vers la session collab. Le binôme ouvrira la MÊME.
+	if editor == "vscode" {
+		// VS Code par mot de passe (sans code) : le binôme rejoint le code-server de l'hôte
+		// (résolu à l'attribution). L'hôte ouvre son propre VS Code via « Ouvrir VS Code ».
+		config.Database.Create(&grant)
+		writeJSON(w, map[string]any{"ok": true, "target": grant.Target, "mode": grant.Mode, "editor": "vscode", "expires_at": grant.ExpiresAt})
+		return
+	}
+
+	// Jupyter : session collaborative temps réel sur la VM infra (montant SES fichiers).
+	collabIP, port, err := provisionCollabSession(id.Email, hostIP)
+	if err != nil {
+		http.Error(w, "session collaborative indisponible: "+err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+	grant.CollabIP = collabIP
+	grant.CollabPortRW = port
+	config.Database.Create(&grant)
 	url := mintProxySession(w, id.Email, "jupyter", body.PoolID, body.OwnerID, collabProxyTarget(id.Email, collabIP, port))
-	writeJSON(w, map[string]any{
-		"ok":         true,
-		"target":     grant.Target,
-		"mode":       grant.Mode,
-		"expires_at": grant.ExpiresAt,
-		"url":        url, // l'hôte ouvre la session collaborative ici
-	})
+	writeJSON(w, map[string]any{"ok": true, "target": grant.Target, "mode": grant.Mode, "editor": "jupyter", "expires_at": grant.ExpiresAt, "url": url})
 }
 
 func listVscodeGrants(w http.ResponseWriter, r *http.Request, id httpIdentity) {
@@ -272,8 +277,21 @@ func handleVscodeJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Rejoint la MÊME session collaborative que l'hôte sur la VM infra (Jupyter temps réel) →
-	// co-édition live. Pas la VM étudiante.
+	// VS Code par mot de passe : on ouvre le code-server DE L'HÔTE (sa VM) → éditeur partagé,
+	// sans code à échanger (comme avant). autoSave côté code-server → l'autre voit vite les modifs.
+	if grant.Editor == "vscode" {
+		vmID, ip, e := resolveStudentVM(grant.PoolID, grant.OwnerID, grant.Target)
+		if e != nil {
+			http.Error(w, "VS Code de l'hôte introuvable: "+e.Error(), http.StatusServiceUnavailable)
+			return
+		}
+		tgt := proxyTarget{Target: grant.Target, VMID: vmID, IP: ip, Port: kindPort("vscode", "write"), Mode: "write"}
+		proxyURL := mintProxySession(w, id.Email, "vscode", grant.PoolID, grant.OwnerID, tgt)
+		writeJSON(w, map[string]any{"url": proxyURL, "editor": "vscode", "target": grant.Target})
+		return
+	}
+
+	// Jupyter : rejoint la MÊME session collaborative que l'hôte sur la VM infra (temps réel).
 	if grant.CollabIP == "" || grant.CollabPortRW == 0 {
 		http.Error(w, "session collaborative non initialisée (l'hôte doit (re)partager)", http.StatusServiceUnavailable)
 		return

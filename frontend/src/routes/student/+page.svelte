@@ -67,9 +67,9 @@
     if (!selectedPool || sharePassword.length < 4) { shareErr = true; shareMsg = $_('studentDash.sharePwdShort'); return; }
     sharing = true; shareMsg = ""; shareErr = false; shareUrl = "";
     try {
-      const r = await shareVscode(selectedPool.pool_id, selectedPool.user_id, shareMode, sharePassword, shareTtl);
+      const r = await shareVscode(selectedPool.pool_id, selectedPool.user_id, shareMode, sharePassword, shareTtl, collabEditor);
       shareErr = false;
-      shareMsg = $_('studentDash.shareOk');
+      shareMsg = collabEditor === 'vscode' ? $_('studentDash.shareOkVscode') : $_('studentDash.shareOk');
       shareUrl = r.url || "";
     } catch (e: any) { shareErr = true; shareMsg = e?.message || $_('studentDash.shareError'); }
     finally { sharing = false; }
@@ -641,28 +641,17 @@
             {@const inputCls = "w-full px-3 py-2.5 rounded-lg text-sm bg-white dark:bg-white/[0.04] border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition"}
             <div class="pt-1">
               <p class="px-0.5 mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">{$_('studentDash.collaboration')}</p>
-              <!-- choix de l'éditeur : Jupyter (temps réel auto) ou VS Code (temps réel via OCT) -->
+              <!-- choix de l'éditeur de collaboration -->
               <div class="grid grid-cols-2 gap-1 p-1 mb-2 rounded-lg bg-neutral-100 dark:bg-white/5">
                 <button type="button" onclick={() => collabEditor = 'jupyter'}
                   class="py-1.5 rounded-md text-[13px] font-medium transition-all {collabEditor === 'jupyter' ? 'bg-white dark:bg-sky-600 text-sky-700 dark:text-white shadow-sm' : 'text-neutral-500 dark:text-neutral-400'}">JupyterLab</button>
                 <button type="button" onclick={() => collabEditor = 'vscode'}
                   class="py-1.5 rounded-md text-[13px] font-medium transition-all {collabEditor === 'vscode' ? 'bg-white dark:bg-sky-600 text-sky-700 dark:text-white shadow-sm' : 'text-neutral-500 dark:text-neutral-400'}">VS Code</button>
               </div>
+              <p class="px-0.5 mb-2 text-[11px] leading-relaxed text-neutral-400 dark:text-neutral-500">
+                {collabEditor === 'jupyter' ? $_('studentDash.collabJupyterNote') : $_('studentDash.collabVscodeNote')}
+              </p>
 
-            {#if collabEditor === 'vscode'}
-              <div class="mt-1 rounded-xl border border-neutral-200 dark:border-white/10 p-3.5 space-y-3">
-                <p class="text-[13px] text-neutral-600 dark:text-neutral-300 leading-relaxed">{$_('studentDash.vscodeCollabHint')}</p>
-                <ol class="text-[12px] text-neutral-500 dark:text-neutral-400 leading-relaxed list-decimal pl-4 space-y-0.5">
-                  <li>{$_('studentDash.vscodeCollabStep1')}</li>
-                  <li>{$_('studentDash.vscodeCollabStep2')}</li>
-                  <li>{$_('studentDash.vscodeCollabStep3')}</li>
-                </ol>
-                <button onclick={() => openApp('vscode')} disabled={!codeReady || openingApp === 'vscode'}
-                  class="w-full py-2.5 rounded-lg font-semibold text-sm bg-sky-600 hover:bg-sky-500 text-white transition-colors disabled:opacity-50">
-                  {codeReady ? $_('studentDash.openVsCode') : $_('studentDash.startingVsCode')}
-                </button>
-              </div>
-            {:else}
               <div class="grid grid-cols-2 gap-2">
                 <button onclick={() => { showShare = !showShare; showJoin = false; }}
                   class="py-2 rounded-lg text-sm font-medium border transition-all
@@ -713,7 +702,6 @@
                   {#if joinMsg}<p class="text-xs {joinErr ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}">{joinMsg}</p>{/if}
                 </div>
               {/if}
-            {/if}
             </div>
           {:else}
             <div class="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-xl font-semibold text-base

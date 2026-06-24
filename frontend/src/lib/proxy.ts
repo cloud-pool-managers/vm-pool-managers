@@ -66,11 +66,12 @@ export async function shareVscode(
   mode: ProxyMode,
   password: string,
   ttlHours = 24,
-): Promise<{ ok: boolean; target: string; mode: ProxyMode; expires_at: string; url: string }> {
+  editor: 'jupyter' | 'vscode' = 'jupyter',
+): Promise<{ ok: boolean; target: string; mode: ProxyMode; expires_at: string; url?: string; editor: string }> {
   const res = await apiFetch('/api/vscode-grant', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pool_id: poolId, owner_id: ownerId, mode, password, ttl_hours: ttlHours }),
+    body: JSON.stringify({ pool_id: poolId, owner_id: ownerId, mode, password, ttl_hours: ttlHours, editor }),
   });
   if (!res.ok) {
     throw new Error((await res.text()) || `share ${res.status}`);
