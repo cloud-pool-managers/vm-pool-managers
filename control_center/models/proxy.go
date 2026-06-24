@@ -36,6 +36,13 @@ type VscodeGrant struct {
 	Target       string    `gorm:"index"` // identité (email) de l'élève qui partage SA VM
 	PasswordHash string    // bcrypt du mot de passe de partage
 	Mode         string    // "read" | "write"
+	// Session de collaboration hébergée sur la VM infra dédiée (colabVscodeInfra) : un
+	// code-server qui monte les fichiers de l'hôte (sshfs). Hôte + invité écriture → port RW
+	// (éditeur partagé) ; invité lecture → port RO (montage :ro). La collaboration ne tourne
+	// donc PAS sur la VM étudiante mais sur la VM infra centrale.
+	CollabIP     string // IP de la VM infra
+	CollabPortRW int    // port code-server lecture+écriture
+	CollabPortRO int    // port code-server lecture seule
 	ExpiresAt    time.Time // expiration du partage
 	CreatedAt    time.Time `gorm:"autoCreateTime"`
 }

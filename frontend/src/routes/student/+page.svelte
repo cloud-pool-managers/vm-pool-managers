@@ -59,13 +59,15 @@
   let sharePassword = $state("");
   let shareTtl = $state(24);
   let shareMsg = $state(""); let shareErr = $state(false); let sharing = $state(false);
+  let shareUrl = $state("");
   async function doShare() {
     if (!selectedPool || sharePassword.length < 4) { shareErr = true; shareMsg = $_('studentDash.sharePwdShort'); return; }
-    sharing = true; shareMsg = ""; shareErr = false;
+    sharing = true; shareMsg = ""; shareErr = false; shareUrl = "";
     try {
-      await shareVscode(selectedPool.pool_id, selectedPool.user_id, shareMode, sharePassword, shareTtl);
+      const r = await shareVscode(selectedPool.pool_id, selectedPool.user_id, shareMode, sharePassword, shareTtl);
       shareErr = false;
       shareMsg = $_('studentDash.shareOk');
+      shareUrl = r.url || "";
     } catch (e: any) { shareErr = true; shareMsg = e?.message || $_('studentDash.shareError'); }
     finally { sharing = false; }
   }
@@ -670,6 +672,12 @@
                     {$_('studentDash.shareGenerate')}
                   </button>
                   {#if shareMsg}<p class="text-xs {shareErr ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}">{shareMsg}</p>{/if}
+                  {#if shareUrl}
+                    <button onclick={() => openInNewTab(shareUrl)}
+                      class="w-full py-2.5 rounded-lg font-semibold text-sm border border-sky-500 text-sky-600 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-500/10 transition-colors">
+                      {$_('studentDash.openCollabSession')}
+                    </button>
+                  {/if}
                   <p class="text-[11px] leading-relaxed text-neutral-400 dark:text-neutral-500">{$_('studentDash.shareHint')}</p>
                 </div>
               {/if}

@@ -2,7 +2,10 @@ package grpc
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +15,58 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+// --- Sessions de collaboration sur la VM infra dédiée (colabVscodeInfra) ---
+// Au lieu de proxifier vers le code-server de la VM étudiante, on lance un code-server
+// sur la VM infra qui monte (sshfs) les fichiers de l'hôte. Hôte + invité écriture
+// partagent l'instance RW ; invité lecture → instance RO (:ro). La collaboration ne
+// tourne donc pas sur les VMs étudiantes.
+
+func collabEnv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+// collabSafeID normalise un email en identifiant sûr (nom de conteneur / dossier).
+func collabSafeID(email string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '.', r == '-':
+			return r
+		default:
+			return '_'
+		}
+	}, strings.ToLower(strings.TrimSpace(email)))
+}
+
+// provisionCollabSession lance (idempotent) la session de collaboration de l'hôte sur la
+// VM infra via SSH (script collab-up.sh) et renvoie (ip_infra, portRW, portRO).
+func provisionCollabSession(hostEmail, hostIP string) (string, int, int, error) {
+	colabIP := collabEnv("COLLAB_VM_IP", "157.136.249.81")
+	user := collabEnv("COLLAB_VM_USER", "ubuntu")
+	key := collabEnv("COLLAB_SSH_KEY", "/home/ubuntu/.ssh/id_ed25519")
+	safe := collabSafeID(hostEmail)
+	cmd := exec.Command("ssh", "-i", key,
+		"-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-o", "ConnectTimeout=12",
+		user+"@"+colabIP, "sudo /opt/collab/collab-up.sh "+safe+" "+hostIP)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", 0, 0, fmt.Errorf("collab-up: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+	// Dernière ligne non vide = "RW RO".
+	lines := strings.Fields(strings.TrimSpace(string(out)))
+	if len(lines) < 2 {
+		return "", 0, 0, fmt.Errorf("réponse collab-up inattendue: %q", string(out))
+	}
+	rw, e1 := strconv.Atoi(lines[len(lines)-2])
+	ro, e2 := strconv.Atoi(lines[len(lines)-1])
+	if e1 != nil || e2 != nil {
+		return "", 0, 0, fmt.Errorf("ports collab invalides: %q", string(out))
+	}
+	return colabIP, rw, ro, nil
+}
 
 // Partage de VS Code entre élèves (Phase C).
 //
@@ -65,10 +120,17 @@ func createVscodeGrant(w http.ResponseWriter, r *http.Request, id httpIdentity) 
 	if body.Mode == "write" {
 		mode = "write"
 	}
-	// La cible est TOUJOURS l'identité authentifiée : on ne partage que sa propre VM.
-	// On vérifie au passage que cet élève a bien une VM dans ce pool.
-	if _, _, err := resolveStudentVM(body.PoolID, body.OwnerID, id.Email); err != nil {
+	// La cible est TOUJOURS l'identité authentifiée : on ne partage que SES fichiers.
+	// On récupère l'IP de SA VM (source des fichiers à monter sur la VM infra).
+	_, hostIP, err := resolveStudentVM(body.PoolID, body.OwnerID, id.Email)
+	if err != nil {
 		http.Error(w, "vous n'avez pas de VM dans ce pool: "+err.Error(), http.StatusForbidden)
+		return
+	}
+	// Lance la session de collaboration sur la VM infra (code-server montant SES fichiers).
+	collabIP, rw, ro, err := provisionCollabSession(id.Email, hostIP)
+	if err != nil {
+		http.Error(w, "session collaborative indisponible: "+err.Error(), http.StatusServiceUnavailable)
 		return
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
@@ -91,14 +153,27 @@ func createVscodeGrant(w http.ResponseWriter, r *http.Request, id httpIdentity) 
 		Target:       id.Email,
 		PasswordHash: string(hash),
 		Mode:         mode,
+		CollabIP:     collabIP,
+		CollabPortRW: rw,
+		CollabPortRO: ro,
 		ExpiresAt:    time.Now().Add(ttl),
 	}
 	config.Database.Create(&grant)
+
+	// L'hôte ouvre lui aussi la session collaborative (éditeur partagé RW sur la VM infra),
+	// pas son propre VS Code → on lui pose une ProxySession vers l'instance RW.
+	hostTgt := proxyTarget{
+		Target: id.Email,
+		VMID:   "collab-" + collabSafeID(id.Email) + "-rw",
+		IP:     collabIP, Port: rw, Mode: "write",
+	}
+	url := mintProxySession(w, id.Email, "vscode", body.PoolID, body.OwnerID, hostTgt)
 	writeJSON(w, map[string]any{
 		"ok":         true,
 		"target":     grant.Target,
 		"mode":       grant.Mode,
 		"expires_at": grant.ExpiresAt,
+		"url":        url, // l'hôte ouvre la session collaborative ici
 	})
 }
 
@@ -191,16 +266,21 @@ func handleVscodeJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vmID, ip, err := resolveStudentVM(body.PoolID, body.OwnerID, body.Target)
-	if err != nil {
-		http.Error(w, "VM de la cible introuvable: "+err.Error(), http.StatusServiceUnavailable)
+	// Cible la session de collaboration sur la VM infra (pas la VM étudiante) : instance RW
+	// partagée (écriture) ou RO (lecture seule, montage :ro).
+	if grant.CollabIP == "" || grant.CollabPortRW == 0 {
+		http.Error(w, "session collaborative non initialisée (l'hôte doit (re)partager)", http.StatusServiceUnavailable)
 		return
+	}
+	port, suffix := grant.CollabPortRW, "rw"
+	if grant.Mode == "read" {
+		port, suffix = grant.CollabPortRO, "ro"
 	}
 	tgt := proxyTarget{
 		Target: body.Target,
-		VMID:   vmID,
-		IP:     ip,
-		Port:   kindPort("vscode", grant.Mode),
+		VMID:   "collab-" + collabSafeID(body.Target) + "-" + suffix,
+		IP:     grant.CollabIP,
+		Port:   port,
 		Mode:   grant.Mode,
 	}
 	proxyURL := mintProxySession(w, id.Email, "vscode", body.PoolID, body.OwnerID, tgt)

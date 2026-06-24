@@ -66,7 +66,7 @@ export async function shareVscode(
   mode: ProxyMode,
   password: string,
   ttlHours = 24,
-): Promise<{ ok: boolean; target: string; mode: ProxyMode; expires_at: string }> {
+): Promise<{ ok: boolean; target: string; mode: ProxyMode; expires_at: string; url: string }> {
   const res = await apiFetch('/api/vscode-grant', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

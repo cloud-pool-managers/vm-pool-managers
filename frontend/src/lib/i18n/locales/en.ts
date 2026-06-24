@@ -276,6 +276,7 @@ export default {
     "startingVsCode": "Starting VS Code…",
     "proxyError": "Could not open the application.",
     "collaboration": "Collaboration",
+    "openCollabSession": "Open the collaborative session",
     "shareMyVsCode": "Share my VS Code",
     "joinPartner": "Join a partner",
     "modeRead": "Read only",
