@@ -41,9 +41,10 @@ func collabSafeID(email string) string {
 	}, strings.ToLower(strings.TrimSpace(email)))
 }
 
-// provisionCollabSession lance (idempotent) la session de collaboration de l'hôte sur la
-// VM infra via SSH (script collab-up.sh) et renvoie (ip_infra, portRW, portRO).
-func provisionCollabSession(hostEmail, hostIP string) (string, int, int, error) {
+// provisionCollabSession lance (idempotent) la session de collaboration de l'hôte sur la VM
+// infra via SSH (script collab-up.sh) : un JupyterLab collaboratif (RTC) montant les fichiers
+// de l'hôte. Renvoie (ip_infra, port).
+func provisionCollabSession(hostEmail, hostIP string) (string, int, error) {
 	colabIP := collabEnv("COLLAB_VM_IP", "157.136.249.81")
 	user := collabEnv("COLLAB_VM_USER", "ubuntu")
 	key := collabEnv("COLLAB_SSH_KEY", "/home/ubuntu/.ssh/id_ed25519")
@@ -53,19 +54,30 @@ func provisionCollabSession(hostEmail, hostIP string) (string, int, int, error) 
 		user+"@"+colabIP, "sudo /opt/collab/collab-up.sh "+safe+" "+hostIP)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", 0, 0, fmt.Errorf("collab-up: %v: %s", err, strings.TrimSpace(string(out)))
+		return "", 0, fmt.Errorf("collab-up: %v: %s", err, strings.TrimSpace(string(out)))
 	}
-	// Dernière ligne non vide = "RW RO".
-	lines := strings.Fields(strings.TrimSpace(string(out)))
-	if len(lines) < 2 {
-		return "", 0, 0, fmt.Errorf("réponse collab-up inattendue: %q", string(out))
+	// Dernier champ = le port du Jupyter collaboratif.
+	fields := strings.Fields(strings.TrimSpace(string(out)))
+	if len(fields) == 0 {
+		return "", 0, fmt.Errorf("réponse collab-up vide: %q", string(out))
 	}
-	rw, e1 := strconv.Atoi(lines[len(lines)-2])
-	ro, e2 := strconv.Atoi(lines[len(lines)-1])
-	if e1 != nil || e2 != nil {
-		return "", 0, 0, fmt.Errorf("ports collab invalides: %q", string(out))
+	port, e := strconv.Atoi(fields[len(fields)-1])
+	if e != nil {
+		return "", 0, fmt.Errorf("port collab invalide: %q", string(out))
 	}
-	return colabIP, rw, ro, nil
+	return colabIP, port, nil
+}
+
+// collabProxyTarget construit la cible proxy (jupyter) vers la session collaborative de l'hôte
+// sur la VM infra. Le base_url du Jupyter collab est calé sur ce VMID.
+func collabProxyTarget(hostEmail, collabIP string, port int) proxyTarget {
+	return proxyTarget{
+		Target: hostEmail,
+		VMID:   "collab-" + collabSafeID(hostEmail) + "-jl",
+		IP:     collabIP,
+		Port:   port,
+		Mode:   "write",
+	}
 }
 
 // Partage de VS Code entre élèves (Phase C).
@@ -127,8 +139,8 @@ func createVscodeGrant(w http.ResponseWriter, r *http.Request, id httpIdentity) 
 		http.Error(w, "vous n'avez pas de VM dans ce pool: "+err.Error(), http.StatusForbidden)
 		return
 	}
-	// Lance la session de collaboration sur la VM infra (code-server montant SES fichiers).
-	collabIP, rw, ro, err := provisionCollabSession(id.Email, hostIP)
+	// Lance la session de collaboration sur la VM infra (Jupyter collaboratif montant SES fichiers).
+	collabIP, port, err := provisionCollabSession(id.Email, hostIP)
 	if err != nil {
 		http.Error(w, "session collaborative indisponible: "+err.Error(), http.StatusServiceUnavailable)
 		return
@@ -154,20 +166,14 @@ func createVscodeGrant(w http.ResponseWriter, r *http.Request, id httpIdentity) 
 		PasswordHash: string(hash),
 		Mode:         mode,
 		CollabIP:     collabIP,
-		CollabPortRW: rw,
-		CollabPortRO: ro,
+		CollabPortRW: port, // port du Jupyter collaboratif sur la VM infra
 		ExpiresAt:    time.Now().Add(ttl),
 	}
 	config.Database.Create(&grant)
 
-	// L'hôte ouvre lui aussi la session collaborative (éditeur partagé RW sur la VM infra),
-	// pas son propre VS Code → on lui pose une ProxySession vers l'instance RW.
-	hostTgt := proxyTarget{
-		Target: id.Email,
-		VMID:   "collab-" + collabSafeID(id.Email) + "-rw",
-		IP:     collabIP, Port: rw, Mode: "write",
-	}
-	url := mintProxySession(w, id.Email, "vscode", body.PoolID, body.OwnerID, hostTgt)
+	// L'hôte ouvre la session collaborative (Jupyter temps réel sur la VM infra), pas son
+	// propre éditeur → ProxySession jupyter vers la session collab. Le binôme ouvrira la MÊME.
+	url := mintProxySession(w, id.Email, "jupyter", body.PoolID, body.OwnerID, collabProxyTarget(id.Email, collabIP, port))
 	writeJSON(w, map[string]any{
 		"ok":         true,
 		"target":     grant.Target,
@@ -266,23 +272,13 @@ func handleVscodeJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Cible la session de collaboration sur la VM infra (pas la VM étudiante) : instance RW
-	// partagée (écriture) ou RO (lecture seule, montage :ro).
+	// Rejoint la MÊME session collaborative que l'hôte sur la VM infra (Jupyter temps réel) →
+	// co-édition live. Pas la VM étudiante.
 	if grant.CollabIP == "" || grant.CollabPortRW == 0 {
 		http.Error(w, "session collaborative non initialisée (l'hôte doit (re)partager)", http.StatusServiceUnavailable)
 		return
 	}
-	port, suffix := grant.CollabPortRW, "rw"
-	if grant.Mode == "read" {
-		port, suffix = grant.CollabPortRO, "ro"
-	}
-	tgt := proxyTarget{
-		Target: body.Target,
-		VMID:   "collab-" + collabSafeID(body.Target) + "-" + suffix,
-		IP:     grant.CollabIP,
-		Port:   port,
-		Mode:   grant.Mode,
-	}
-	proxyURL := mintProxySession(w, id.Email, "vscode", body.PoolID, body.OwnerID, tgt)
+	tgt := collabProxyTarget(grant.Target, grant.CollabIP, grant.CollabPortRW)
+	proxyURL := mintProxySession(w, id.Email, "jupyter", body.PoolID, body.OwnerID, tgt)
 	writeJSON(w, map[string]any{"url": proxyURL, "mode": grant.Mode, "target": grant.Target})
 }

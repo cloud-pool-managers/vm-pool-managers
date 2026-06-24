@@ -636,7 +636,6 @@
 
             <!-- Collaboration : partager mon VS Code / rejoindre un binôme -->
             {@const inputCls = "w-full px-3 py-2.5 rounded-lg text-sm bg-white dark:bg-white/[0.04] border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition"}
-            {@const segCls = (on: boolean) => `py-1.5 rounded-md text-[13px] font-medium transition-all ${on ? 'bg-white dark:bg-sky-600 text-sky-700 dark:text-white shadow-sm' : 'text-neutral-500 dark:text-neutral-400'}`}
             <div class="pt-1">
               <p class="px-0.5 mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">{$_('studentDash.collaboration')}</p>
               <div class="grid grid-cols-2 gap-2">
@@ -654,10 +653,6 @@
 
               {#if showShare}
                 <div class="mt-2 rounded-xl border border-neutral-200 dark:border-white/10 p-3.5 space-y-3">
-                  <div class="grid grid-cols-2 gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-white/5">
-                    <button type="button" onclick={() => shareMode = 'read'} class={segCls(shareMode === 'read')}>{$_('studentDash.modeRead')}</button>
-                    <button type="button" onclick={() => shareMode = 'write'} class={segCls(shareMode === 'write')}>{$_('studentDash.modeWrite')}</button>
-                  </div>
                   <input type="password" bind:value={sharePassword} placeholder={$_('studentDash.sharePwdPlaceholder')} class={inputCls} />
                   <div class="flex items-center justify-between text-[13px] text-neutral-500 dark:text-neutral-400">
                     <span>{$_('studentDash.shareTtl')}</span>
