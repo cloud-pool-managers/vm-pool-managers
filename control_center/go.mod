@@ -8,7 +8,7 @@ require (
 	github.com/gophercloud/gophercloud/v2 v2.12.0
 	github.com/gophercloud/utils/v2 v2.0.0-20260424064311-2eeed4ceb3e9
 	github.com/improbable-eng/grpc-web v0.15.0
-	github.com/jackc/pgx/v5 v5.9.2
+	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.12.3
 	github.com/prometheus/client_golang v1.23.2
@@ -26,8 +26,8 @@ require (
 	golang.org/x/crypto v0.51.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
-	gorm.io/driver/postgres v1.6.0
-	gorm.io/gorm v1.31.1
+	gorm.io/driver/postgres v1.6.2
+	gorm.io/gorm v1.31.2
 	gorm.io/plugin/opentelemetry v0.1.16
 )
 
