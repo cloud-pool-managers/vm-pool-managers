@@ -91,3 +91,36 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: '0'
         run: go build ./...
+
+  # The frontend was not built here at all, and that is how it came to sit
+  # unbuildable on main: #22 took typescript to 7, no job installed the tree
+  # afterwards, and `npm install` has failed ERESOLVE ever since -- which is
+  # also why every Renovate pull request since then reports "Artifact file
+  # update failure" and carries no npm change at all.
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # 1. PROVES: package.json and package-lock.json agree, and the tree
+      #    resolves. `npm ci` refuses on either failure, which is exactly how
+      #    a bump that the peer ranges do not admit shows up.
+      - name: npm ci
+        run: npm ci
+
+      # 2. PROVES: the application still builds.
+      - name: build
+        run: npm run build
+
+      # 3. PROVES: svelte-check finds no type error.
+      - name: check
+        run: npm run check
